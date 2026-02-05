@@ -1,0 +1,104 @@
+/**
+ * This ruleset enforces a strict user-ownership security model for the SkillOrbit
+ * application. It is designed for rapid prototyping, focusing on robust
+ * authorization while remaining flexible on data schemas.
+ *
+ * Core Philosophy:
+ * The security model is centered around the principle that users have exclusive
+ * control over their own data. All authorization logic is derived directly from
+ * the user's authentication UID, ensuring that access controls are simple,
+ * performant, and easy to audit.
+ *
+ * Data Structure:
+ * All user-specific data is stored in a single top-level collection: /users.
+ * Each user's profile and related data are located under a document whose ID
+ * matches the user's UID (e.g., /users/{userId}). This path-based ownership
+ * model is the foundation of the security rules.
+ *
+ * Key Security Decisions:
+ * - User Isolation: Users can only read, write, and delete their own document
+ *   within the /users collection. They cannot access or even know about the
+ *   existence of other users' documents.
+ * - No User Listing: To protect user privacy and prevent data scraping, listing
+ *   the entire /users collection is explicitly forbidden for all clients.
+ * - Path and Data Consistency: On creation, the rules enforce that the `id` field
+ *   within a user document must match the document's ID in the path ({userId}).
+ *   This critical link is then made immutable on update.
+ * - Default Deny: All operations are denied by default and must be explicitly
+ *   granted by a specific rule.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ----------------------------------------------------------------------
+    //
+    // Helper Functions
+    //
+    // ----------------------------------------------------------------------
+
+    /**
+     * Checks if the current request is from an authenticated user.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * Checks if the requesting user's UID matches the provided userId.
+     * This is the primary function for establishing document ownership.
+     */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /**
+     * For state-changing operations (update, delete), this ensures the user
+     * is the owner AND that the document they are trying to modify
+     * actually exists.
+     */
+    function isExistingOwner(userId) {
+      return isOwner(userId) && resource != null;
+    }
+
+    /**
+     * On create, validates that the document's internal 'id' field matches
+     * the user's UID from the path, ensuring relational integrity.
+     */
+    function hasValidUserIdOnCreate(userId) {
+      return request.resource.data.id == userId;
+    }
+
+    /**
+     * On update, ensures the document's internal 'id' field cannot be changed.
+     * This prevents re-assigning ownership of the document.
+     */
+    function isUserIdImmutable() {
+      return request.resource.data.id == resource.data.id;
+    }
+
+
+    // ----------------------------------------------------------------------
+    //
+    // Collection Rules
+    //
+    // ----------------------------------------------------------------------
+
+    /**
+     * @description Manages access to a user's own profile document. This is private data.
+     * @path /users/{userId}
+     * @allow (get) A signed-in user (UID: 'user123') can read their own document at /users/user123.
+     * @allow (create) A new user (UID: 'user123') can create their profile document at /users/user123.
+     * @deny (get) A signed-in user (UID: 'user123') is denied from reading another user's document at /users/user456.
+     * @deny (list) No user, signed-in or otherwise, can list the documents in the /users collection.
+     * @principle Restricts access to a user's own data tree based on their auth UID.
+     */
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if false;
+      allow create: if isOwner(userId) && hasValidUserIdOnCreate(userId);
+      allow update: if isExistingOwner(userId) && isUserIdImmutable();
+      allow delete: if isExistingOwner(userId);
+    }
+  }
+}

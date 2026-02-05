@@ -1,0 +1,78 @@
+{
+  "entities": {
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user in the SkillOrbit application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the user entity."
+        },
+        "email": {
+          "type": "string",
+          "description": "User's email address.",
+          "format": "email"
+        },
+        "username": {
+          "type": "string",
+          "description": "The username of the user."
+        },
+        "firstName": {
+          "type": "string",
+          "description": "The first name of the user."
+        },
+        "lastName": {
+          "type": "string",
+          "description": "The last name of the user."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the user account was created.",
+          "format": "date-time"
+        },
+        "lastLogin": {
+          "type": "string",
+          "description": "Timestamp indicating when the user last logged in.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "email",
+        "username",
+        "firstName",
+        "lastName",
+        "createdAt"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores user profiles. Uses path-based ownership for private user data. All user data lives under this path.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to ensure authorization independence, clarity, and scalability for the SkillOrbit application.  Authorization Independence is achieved by limiting authorization to `request.auth.uid` only and storing roles in the database.  The structure promotes easy debugging through clear path-based ownership and consistent naming conventions.  The design uses structural segregation to ensure homogeneous security postures for collections.\n\nPrivate user data is stored under `/users/{userId}`, enabling simple ownership-based security rules.  This design avoids the use of `get()` calls in security rules by ensuring that all necessary authorization data is available within the document or can be inferred from the path.\n\nQAPs are addressed by ensuring each collection has a homogenous security posture. All documents within a collection have similar security needs. This simplifies security rules and avoids filtering data based on authorization within a single collection.\n"
+  }
+}
