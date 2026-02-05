@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import {
   BrainCircuit,
   Home,
@@ -10,6 +10,8 @@ import {
   PanelLeft,
   Cpu,
   Settings,
+  LogOut,
+  Loader2,
 } from "lucide-react"
 
 import {
@@ -28,9 +30,17 @@ import { Logo } from "@/components/logo"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { useAuth, useUser } from "@/firebase"
+import { signOut } from "firebase/auth"
 
 function AppSidebar() {
   const pathname = usePathname()
+  const { user } = useUser()
+  const auth = useAuth()
+
+  const handleSignOut = () => {
+    signOut(auth)
+  }
 
   const isActive = (path: string) => {
     return pathname === path
@@ -81,7 +91,25 @@ function AppSidebar() {
         </SidebarMenu>
       </SidebarContent>
       <SidebarFooter>
-        <div className="flex items-center gap-2">
+        {user ? (
+          <div className="w-full">
+            <div className="flex items-center gap-2 mb-2">
+              <Avatar className="h-9 w-9 border-2 border-primary/50 animate-glow">
+                <AvatarImage src={user.photoURL || `https://picsum.photos/seed/${user.uid}/40/40`} alt={user.email || 'user'} data-ai-hint="person face" />
+                <AvatarFallback>{user.email?.[0].toUpperCase()}</AvatarFallback>
+              </Avatar>
+              <div className="flex flex-col overflow-hidden">
+                <span className="text-sm font-medium truncate">{user.displayName || user.email}</span>
+                <span className="text-xs text-sidebar-foreground/70 truncate">{user.email}</span>
+              </div>
+            </div>
+            <Button variant="ghost" size="sm" className="w-full justify-start" onClick={handleSignOut}>
+              <LogOut className="mr-2 h-4 w-4" />
+              <span>Sign Out</span>
+            </Button>
+          </div>
+        ) : (
+           <div className="flex items-center gap-2">
             <Avatar className="h-9 w-9 border-2 border-primary/50 animate-glow">
               <AvatarImage src="https://picsum.photos/seed/avatar/40/40" alt="@student" data-ai-hint="person face" />
               <AvatarFallback>S</AvatarFallback>
@@ -91,6 +119,7 @@ function AppSidebar() {
               <span className="text-xs text-sidebar-foreground/70">student@email.com</span>
             </div>
           </div>
+        )}
       </SidebarFooter>
     </Sidebar>
   )
@@ -101,6 +130,23 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
+  const { user, isUserLoading } = useUser();
+  const router = useRouter();
+
+  React.useEffect(() => {
+    if (!isUserLoading && !user) {
+      router.push('/login');
+    }
+  }, [user, isUserLoading, router]);
+
+  if (isUserLoading || !user) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-background">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+      </div>
+    )
+  }
+
   return (
     <SidebarProvider>
       <div className="flex min-h-screen">

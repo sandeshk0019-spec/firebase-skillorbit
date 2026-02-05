@@ -2,8 +2,8 @@
 
 import React, { DependencyList, createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
 import { FirebaseApp } from 'firebase/app';
-import { Firestore } from 'firebase/firestore';
-import { Auth, User, onAuthStateChanged } from 'firebase/auth';
+import { Firestore, doc, getDoc, setDoc } from 'firebase/firestore';
+import { Auth, User, onAuthStateChanged, updateProfile } from 'firebase/auth';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener'
 
 interface FirebaseProviderProps {
@@ -69,8 +69,8 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
 
   // Effect to subscribe to Firebase auth state changes
   useEffect(() => {
-    if (!auth) { // If no Auth service instance, cannot determine user state
-      setUserAuthState({ user: null, isUserLoading: false, userError: new Error("Auth service not provided.") });
+    if (!auth || !firestore) { // If no Auth service instance, cannot determine user state
+      setUserAuthState({ user: null, isUserLoading: false, userError: new Error("Auth or Firestore service not provided.") });
       return;
     }
 
@@ -79,6 +79,49 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     const unsubscribe = onAuthStateChanged(
       auth,
       (firebaseUser) => { // Auth state determined
+        if (firebaseUser) {
+          const creationTime = new Date(firebaseUser.metadata.creationTime || 0).getTime();
+          const lastSignInTime = new Date(firebaseUser.metadata.lastSignInTime || 0).getTime();
+          const isNewUser = lastSignInTime - creationTime < 5000; // 5 seconds threshold
+
+          if (isNewUser) {
+            const pendingProfileRaw = localStorage.getItem('pendingUserProfile');
+            if (pendingProfileRaw) {
+              try {
+                const profileData = JSON.parse(pendingProfileRaw);
+                const userDocRef = doc(firestore, 'users', firebaseUser.uid);
+                
+                getDoc(userDocRef).then(docSnap => {
+                  if (!docSnap.exists()) {
+                    setDoc(userDocRef, {
+                      id: firebaseUser.uid,
+                      email: firebaseUser.email,
+                      createdAt: firebaseUser.metadata.creationTime || new Date().toISOString(),
+                      lastLogin: firebaseUser.metadata.lastSignInTime || new Date().toISOString(),
+                      username: profileData.username,
+                      firstName: profileData.firstName,
+                      lastName: profileData.lastName,
+                    }).then(() => {
+                       updateProfile(firebaseUser, {
+                        displayName: `${profileData.firstName} ${profileData.lastName}`,
+                      }).catch(e => console.error("Error updating auth profile", e));
+                    }).catch(e => {
+                        console.error("Error creating user profile document:", e);
+                    });
+                  }
+                  localStorage.removeItem('pendingUserProfile');
+                }).catch(e => {
+                    console.error("Error checking for user profile:", e);
+                    localStorage.removeItem('pendingUserProfile'); // Still remove it to prevent issues
+                });
+
+              } catch (e) {
+                console.error("Failed to parse pending user profile:", e);
+                localStorage.removeItem('pendingUserProfile');
+              }
+            }
+          }
+        }
         setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null });
       },
       (error) => { // Auth listener error
@@ -87,7 +130,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
       }
     );
     return () => unsubscribe(); // Cleanup
-  }, [auth]); // Depends on the auth instance
+  }, [auth, firestore]);
 
   // Memoize the context value
   const contextValue = useMemo((): FirebaseContextState => {

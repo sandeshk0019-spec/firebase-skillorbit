@@ -42,11 +42,8 @@ export default function LandingPage() {
           <span className="text-xl font-semibold font-headline">SkillOrbit</span>
         </Link>
         <nav className="ml-auto flex gap-4 sm:gap-6">
-           <Button variant="ghost" asChild>
-             <Link href="/dashboard">Features</Link>
-           </Button>
-           <Button variant="ghost" asChild>
-             <Link href="/dashboard">About</Link>
+           <Button variant="outline" asChild className="animate-pulse-glow">
+             <Link href="/login">Login</Link>
            </Button>
         </nav>
       </header>
