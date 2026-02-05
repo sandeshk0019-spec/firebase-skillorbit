@@ -2,11 +2,11 @@
 
 import { useState, useRef, useEffect } from "react"
 import { receiveTutoringAssistance } from "@/ai/flows/receive-tutoring-assistance"
-import { Bot, Loader2, Send, Paperclip, User } from "lucide-react"
+import { BrainCircuit, Loader2, Send, Paperclip, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { useToast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
 
@@ -48,7 +48,6 @@ export default function TutorPage() {
         title: "Error",
         description: "The AI tutor is currently unavailable. Please try again later.",
       })
-      // Optionally remove the user's message if the API call fails
       setMessages(messages)
     } finally {
       setIsLoading(false)
@@ -64,30 +63,30 @@ export default function TutorPage() {
   
   return (
     <div className="flex h-[calc(100vh-120px)] w-full max-w-4xl mx-auto">
-      <Card className="flex flex-col w-full">
+      <Card className="flex flex-col w-full bg-card/50">
         <CardHeader>
           <div className="flex items-center gap-4">
-            <div className="bg-primary/10 p-3 rounded-lg">
-              <Bot className="w-6 h-6 text-primary" />
+            <div className="bg-primary/10 p-3 rounded-lg animate-pulse-glow">
+              <BrainCircuit className="w-6 h-6 text-primary" />
             </div>
             <div>
-              <CardTitle className="font-headline text-2xl">AI Tutor</CardTitle>
-              <CardDescription>Ask a question and get a helpful explanation.</CardDescription>
+              <CardTitle className="font-headline text-2xl">Cognitive Tutor</CardTitle>
+              <CardDescription>Interface with the AI for a deeper understanding.</CardDescription>
             </div>
           </div>
         </CardHeader>
         <CardContent className="flex-1 overflow-y-auto p-4 space-y-6">
           {messages.length === 0 && (
-            <div className="text-center text-muted-foreground">
+            <div className="text-center text-muted-foreground animate-in fade-in">
               <p>No messages yet. Ask something like:</p>
-              <p className="font-medium">"Can you explain photosynthesis?"</p>
+              <p className="font-medium text-foreground/80">"Can you explain the theory of relativity in simple terms?"</p>
             </div>
           )}
           {messages.map((message, index) => (
             <div key={index} className={cn("flex items-start gap-4", message.role === 'user' ? 'justify-end' : 'justify-start')}>
               {message.role === 'assistant' && (
-                <Avatar>
-                  <AvatarFallback><Bot /></AvatarFallback>
+                <Avatar className="animate-glow border-2 border-primary/50">
+                  <AvatarFallback className="bg-transparent"><BrainCircuit /></AvatarFallback>
                 </Avatar>
               )}
               <div className={cn(
@@ -95,7 +94,7 @@ export default function TutorPage() {
                 message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'
               )}>
                  {message.role === 'assistant' ? (
-                  <div className="prose dark:prose-invert" dangerouslySetInnerHTML={{ __html: message.content }} />
+                  <div className="prose dark:prose-invert prose-p:text-foreground/90 prose-headings:text-primary" dangerouslySetInnerHTML={{ __html: message.content }} />
                 ) : (
                   <p>{message.content}</p>
                 )}
@@ -108,9 +107,9 @@ export default function TutorPage() {
             </div>
           ))}
           {isLoading && (
-            <div className="flex items-start gap-4">
-              <Avatar>
-                <AvatarFallback><Bot /></AvatarFallback>
+            <div className="flex items-start gap-4 animate-in fade-in">
+              <Avatar className="animate-glow border-2 border-primary/50">
+                <AvatarFallback className="bg-transparent"><BrainCircuit /></AvatarFallback>
               </Avatar>
               <div className="bg-muted rounded-lg p-3 flex items-center">
                 <Loader2 className="h-5 w-5 animate-spin" />
@@ -125,8 +124,8 @@ export default function TutorPage() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Type your question here..."
-              className="pr-24"
+              placeholder="Transmit your query..."
+              className="pr-24 bg-background/50"
               rows={1}
             />
             <div className="absolute top-1/2 right-3 -translate-y-1/2 flex gap-2">

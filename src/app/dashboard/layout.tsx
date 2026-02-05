@@ -4,11 +4,11 @@ import * as React from "react"
 import Link from "next/link"
 import { usePathname } from 'next/navigation'
 import {
-  Bot,
+  BrainCircuit,
   Home,
-  Mic,
+  Webhook,
   PanelLeft,
-  Puzzle,
+  Cpu,
   Settings,
 } from "lucide-react"
 
@@ -57,15 +57,15 @@ function AppSidebar() {
           <SidebarMenuItem>
             <Link href="/dashboard/quiz" legacyBehavior passHref>
               <SidebarMenuButton isActive={isActive('/dashboard/quiz')} tooltip="AI Quiz Generator">
-                <Puzzle />
-                <span>AI Quiz Generator</span>
+                <Cpu />
+                <span>AI Quiz</span>
               </SidebarMenuButton>
             </Link>
           </SidebarMenuItem>
           <SidebarMenuItem>
             <Link href="/dashboard/tutor" legacyBehavior passHref>
               <SidebarMenuButton isActive={isActive('/dashboard/tutor')} tooltip="AI Tutor">
-                <Bot />
+                <BrainCircuit />
                 <span>AI Tutor</span>
               </SidebarMenuButton>
             </Link>
@@ -73,8 +73,8 @@ function AppSidebar() {
           <SidebarMenuItem>
             <Link href="/dashboard/dyslexia-support" legacyBehavior passHref>
               <SidebarMenuButton isActive={isActive('/dashboard/dyslexia-support')} tooltip="Dyslexia Support">
-                <Mic />
-                <span>Dyslexia Support</span>
+                <Webhook />
+                <span>Speech Tools</span>
               </SidebarMenuButton>
             </Link>
           </SidebarMenuItem>
@@ -82,7 +82,7 @@ function AppSidebar() {
       </SidebarContent>
       <SidebarFooter>
         <div className="flex items-center gap-2">
-            <Avatar className="h-9 w-9">
+            <Avatar className="h-9 w-9 border-2 border-primary/50 animate-glow">
               <AvatarImage src="https://picsum.photos/seed/avatar/40/40" alt="@student" data-ai-hint="person face" />
               <AvatarFallback>S</AvatarFallback>
             </Avatar>
@@ -106,7 +106,7 @@ export default function DashboardLayout({
       <div className="flex min-h-screen">
         <AppSidebar />
         <SidebarInset className="flex-1 flex flex-col">
-           <header className="flex h-14 items-center gap-4 border-b bg-background/80 backdrop-blur-sm px-6 sticky top-0 z-30">
+           <header className="flex h-14 items-center gap-4 border-b border-border/50 bg-background/80 backdrop-blur-sm px-6 sticky top-0 z-30">
             <SidebarTrigger className="md:hidden"/>
             <div className="flex-1">
               <h1 className="text-lg font-semibold md:text-xl font-headline">

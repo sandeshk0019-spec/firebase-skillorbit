@@ -11,7 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { Loader2, Puzzle, CheckCircle, XCircle } from "lucide-react";
+import { Loader2, Cpu, CheckCircle, XCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const formSchema = z.object({
@@ -92,15 +92,15 @@ export default function QuizPage() {
 
   return (
     <div className="container mx-auto max-w-3xl">
-      <Card>
+      <Card className="bg-card/50">
         <CardHeader>
           <div className="flex items-center gap-4">
-            <div className="bg-primary/10 p-3 rounded-lg">
-              <Puzzle className="w-6 h-6 text-primary" />
+            <div className="bg-primary/10 p-3 rounded-lg animate-pulse-glow">
+              <Cpu className="w-6 h-6 text-primary" />
             </div>
             <div>
-              <CardTitle className="font-headline text-2xl">AI Quiz Generator</CardTitle>
-              <CardDescription>Enter a subject and topic to generate a quiz.</CardDescription>
+              <CardTitle className="font-headline text-2xl">AI Quiz Matrix</CardTitle>
+              <CardDescription>Input subject and topic to generate a custom quiz.</CardDescription>
             </div>
           </div>
         </CardHeader>
@@ -115,7 +115,7 @@ export default function QuizPage() {
                     <FormItem>
                       <FormLabel>Subject</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., History" {...field} />
+                        <Input placeholder="e.g., Neuroscience" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -128,13 +128,13 @@ export default function QuizPage() {
                     <FormItem>
                       <FormLabel>Topic</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., The Roman Empire" {...field} />
+                        <Input placeholder="e.g., Long-term Potentiation" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-                <Button type="submit" disabled={isLoading} className="w-full">
+                <Button type="submit" disabled={isLoading} className="w-full animate-pulse-glow">
                   {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                   Generate Quiz
                 </Button>
@@ -145,18 +145,18 @@ export default function QuizPage() {
           {isLoading && (
             <div className="flex flex-col items-center justify-center text-center p-8">
               <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-              <p className="font-semibold">Generating your quiz...</p>
+              <p className="font-semibold">Synthesizing knowledge matrix...</p>
               <p className="text-muted-foreground">This may take a moment.</p>
             </div>
           )}
 
           {quiz && !showResults && (
-            <div className="space-y-6">
+            <div className="space-y-6 animate-in fade-in">
               <p className="text-sm text-muted-foreground">Question {currentQuestionIndex + 1} of {quiz.length}</p>
               <h2 className="text-xl font-semibold">{quiz[currentQuestionIndex].question}</h2>
               <RadioGroup onValueChange={handleAnswerSelect} value={userAnswers[currentQuestionIndex]} className="gap-4">
                 {quiz[currentQuestionIndex].options.map((option, i) => (
-                  <Label key={i} className="flex items-center space-x-3 p-4 border rounded-lg hover:bg-muted cursor-pointer has-[input:checked]:bg-primary/10 has-[input:checked]:border-primary">
+                  <Label key={i} className="flex items-center space-x-3 p-4 border rounded-lg hover:bg-muted cursor-pointer has-[input:checked]:bg-primary/20 has-[input:checked]:border-primary transition-colors">
                     <RadioGroupItem value={option} id={`q${currentQuestionIndex}-o${i}`} />
                     <span>{option}</span>
                   </Label>
@@ -169,12 +169,12 @@ export default function QuizPage() {
           )}
 
           {showResults && quiz && (
-            <div className="space-y-6">
-              <h2 className="text-2xl font-headline text-center">Quiz Results</h2>
+            <div className="space-y-6 animate-in fade-in">
+              <h2 className="text-2xl font-headline text-center">Results Analysis</h2>
               <p className="text-center text-4xl font-bold">{score} / {quiz.length}</p>
               <div className="space-y-4">
                 {quiz.map((q, i) => (
-                  <Card key={i} className={userAnswers[i] === q.correctAnswer ? 'border-green-500' : 'border-red-500'}>
+                  <Card key={i} className={userAnswers[i] === q.correctAnswer ? 'border-green-500 bg-green-500/10' : 'border-red-500 bg-red-500/10'}>
                     <CardHeader>
                       <CardTitle className="text-base font-semibold">{q.question}</CardTitle>
                     </CardHeader>
@@ -184,15 +184,15 @@ export default function QuizPage() {
                     </CardContent>
                     <CardFooter>
                       {userAnswers[i] === q.correctAnswer ? (
-                        <span className="text-sm font-medium text-green-600 flex items-center"><CheckCircle className="w-4 h-4 mr-1"/> Correct</span>
+                        <span className="text-sm font-medium text-green-400 flex items-center"><CheckCircle className="w-4 h-4 mr-1"/> Correct</span>
                       ) : (
-                        <span className="text-sm font-medium text-red-600 flex items-center"><XCircle className="w-4 h-4 mr-1"/> Incorrect</span>
+                        <span className="text-sm font-medium text-red-400 flex items-center"><XCircle className="w-4 h-4 mr-1"/> Incorrect</span>
                       )}
                     </CardFooter>
                   </Card>
                 ))}
               </div>
-              <Button onClick={resetQuiz} className="w-full">Take Another Quiz</Button>
+              <Button onClick={resetQuiz} className="w-full">Generate Another Quiz</Button>
             </div>
           )}
         </CardContent>

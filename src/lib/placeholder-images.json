@@ -2,33 +2,33 @@
   "placeholderImages": [
     {
       "id": "hero",
-      "description": "Abstract orbital paths on a dark background.",
-      "imageUrl": "https://images.unsplash.com/photo-1579792685643-a4bb28186899?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHxzcGFjZSUyMGFic3RyYWN0fGVufDB8fHx8MTc3MDMxMzMwOHww&ixlib=rb-4.1.0&q=80&w=1080",
-      "imageHint": "space abstract"
+      "description": "Abstract network of glowing nodes and connections.",
+      "imageUrl": "https://images.unsplash.com/photo-1531297484001-80022131f5a1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxmdXR1cmlzdGljJTIwdGVjaG5vbG9neXxlbnwwfHx8fDE3NzA0MzQ0MjV8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "futuristic technology"
     },
     {
       "id": "quiz",
-      "description": "A person thinking while looking at a notebook.",
-      "imageUrl": "https://images.unsplash.com/photo-1593698054469-2bb6fdf4b512?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxzdHVkZW50JTIwc3R1ZHlpbmd8ZW58MHx8fHwxNzcwMjYyMTAyfDA&ixlib=rb-4.1.0&q=80&w=1080",
-      "imageHint": "student studying"
+      "description": "A glowing brain made of circuits.",
+      "imageUrl": "https://images.unsplash.com/photo-1620712943543-285f7267a84a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxBSSUyMGJyYWlufGVufDB8fHx8MTc3MDQzNDQyNnww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "AI brain"
     },
     {
       "id": "tutor",
-      "description": "A friendly teacher helping a student.",
-      "imageUrl": "https://images.unsplash.com/photo-1649920442906-3c8ef428fb6e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHx0ZWFjaGVyJTIwc3R1ZGVudHxlbnwwfHx8fDE3NzAzMTMzMDh8MA&ixlib=rb-4.1.0&q=80&w=1080",
-      "imageHint": "teacher student"
+      "description": "A robot hand pointing at a holographic screen.",
+      "imageUrl": "https://images.unsplash.com/photo-1696272193539-7a0d0d54e4b5?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxhaSUyMHR1dG9yfGVufDB8fHx8MTc3MDQzNDQyN3ww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "ai tutor"
     },
     {
       "id": "dyslexia",
-      "description": "A child reading a book with focus.",
-      "imageUrl": "https://images.unsplash.com/photo-1575198731708-eea0f0d1e21a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8Y2hpbGQlMjByZWFkaW5nfGVufDB8fHx8MTc3MDIxOTA2Nnww&ixlib=rb-4.1.0&q=80&w=1080",
-      "imageHint": "child reading"
+      "description": "Abstract colorful sound waves.",
+      "imageUrl": "https://images.unsplash.com/photo-1599292258485-4f4a3a6064f5?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHxhdWRpbyUyMHdhdmVzfGVufDB8fHx8MTc3MDQzNDQyOHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "audio waves"
     },
     {
       "id": "dashboard-welcome",
-      "description": "A vibrant abstract image representing learning and technology.",
-      "imageUrl": "https://images.unsplash.com/photo-1759646827278-27c5733e0cee?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxsZWFybmluZyUyMHRlY2hub2xvZ3l8ZW58MHx8fHwxNzcwMzEzMzA5fDA&ixlib=rb-4.1.0&q=80&w=1080",
-      "imageHint": "learning technology"
+      "description": "A person interacting with a futuristic UI with data visualizations.",
+      "imageUrl": "https://images.unsplash.com/photo-1678483749019-a8682d8142a3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxmdXR1cmlzdGljJTIwVUl8ZW58MHx8fHwxNzcwNDM0NDI5fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "futuristic UI"
     }
   ]
 }

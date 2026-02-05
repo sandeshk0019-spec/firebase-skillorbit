@@ -6,27 +6,31 @@ export function Logo() {
           <stop offset="0%" style={{ stopColor: 'hsl(var(--primary))' }} />
           <stop offset="100%" style={{ stopColor: 'hsl(var(--secondary))' }} />
         </linearGradient>
+        <filter id="glow">
+          <feGaussianBlur stdDeviation="3.5" result="coloredBlur" />
+          <feMerge>
+            <feMergeNode in="coloredBlur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
       </defs>
-      <circle cx="50" cy="50" r="40" fill="none" stroke="url(#g)" strokeWidth="8" />
-      <circle cx="50" cy="50" r="10" fill="hsl(var(--accent))" />
-      <circle
-        cx="50"
-        cy="50"
-        r="25"
+      {/* Outer hexagon */}
+      <path
+        d="M 50,10 L 93.3,35 V 85 L 50,110 L 6.7,85 V 35 Z"
+        fill="none"
+        stroke="url(#g)"
+        strokeWidth="5"
+        style={{ filter: 'url(#glow)' }}
+      />
+      {/* Inner circuit pattern */}
+      <path
+        d="M 50,50 m -20,0 h 10 l 5,-8.66 l 10,0 l 5,8.66 h 10 M 50,50 m 0,-20 v 10 l 8.66,5 v 10 l -8.66,5 v 10 M 50,50 m 0,-20 v 10 l -8.66,5 v 10 l 8.66,5 v 10"
         fill="none"
         stroke="hsl(var(--accent))"
-        strokeWidth="4"
-        strokeDasharray="8"
-      >
-        <animateTransform
-          attributeName="transform"
-          type="rotate"
-          from="0 50 50"
-          to="360 50 50"
-          dur="10s"
-          repeatCount="indefinite"
-        />
-      </circle>
+        strokeWidth="3"
+        strokeLinecap="round"
+      />
+      <circle cx="50" cy="50" r="5" fill="hsl(var(--accent))" />
     </svg>
   );
 }
