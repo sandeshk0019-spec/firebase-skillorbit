@@ -9,6 +9,7 @@ import { useAuth, useUser } from "@/firebase";
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
+  signInAnonymously,
 } from "firebase/auth";
 
 import { Button } from "@/components/ui/button";
@@ -29,7 +30,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, LogIn, UserPlus } from "lucide-react";
+import { Loader2, LogIn, UserPlus, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Logo } from "@/components/logo";
 
@@ -52,6 +53,7 @@ export default function LoginPage() {
   const { user, isUserLoading } = useUser();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [authAction, setAuthAction] = useState<"signIn" | "signUp" | "guest" | null>(null);
   const [activeTab, setActiveTab] = useState("sign-in");
 
   const signInForm = useForm<z.infer<typeof signInSchema>>({
@@ -72,10 +74,10 @@ export default function LoginPage() {
 
   const onSignInSubmit = (values: z.infer<typeof signInSchema>) => {
     setIsLoading(true);
+    setAuthAction("signIn");
     signInWithEmailAndPassword(auth, values.email, values.password)
       .catch((error: any) => {
         let description = "An unexpected error occurred. Please try again.";
-        // "auth/invalid-credential" covers wrong password and user not found cases.
         if (error.code === 'auth/invalid-credential') {
           description = "Invalid email or password. Please check your credentials and try again.";
         } else {
@@ -87,11 +89,13 @@ export default function LoginPage() {
           description: description,
         });
         setIsLoading(false);
+        setAuthAction(null);
       });
   };
 
   const onSignUpSubmit = (values: z.infer<typeof signUpSchema>) => {
     setIsLoading(true);
+    setAuthAction("signUp");
     const { username, firstName, lastName, email, password } = values;
 
     const profileData = { username, firstName, lastName };
@@ -107,9 +111,25 @@ export default function LoginPage() {
                 description: error.message || "Could not create account. Please try again.",
             });
             setIsLoading(false);
+            setAuthAction(null);
         });
   };
   
+  const handleGuestSignIn = () => {
+    setIsLoading(true);
+    setAuthAction("guest");
+    signInAnonymously(auth)
+      .catch((error: any) => {
+        toast({
+          variant: "destructive",
+          title: "Guest Sign-in Failed",
+          description: error.message || "Could not sign in as guest. Please try again.",
+        });
+        setIsLoading(false);
+        setAuthAction(null);
+      });
+  };
+
   if (isUserLoading || (!isUserLoading && user)) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center">
@@ -168,7 +188,7 @@ export default function LoginPage() {
                     )}
                   />
                   <Button type="submit" disabled={isLoading} className="w-full animate-pulse-glow">
-                    {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {isLoading && authAction === 'signIn' && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Connect
                   </Button>
                 </form>
@@ -245,13 +265,27 @@ export default function LoginPage() {
                     )}
                   />
                   <Button type="submit" disabled={isLoading} className="w-full animate-pulse-glow">
-                    {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {isLoading && authAction === 'signUp' && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Create Account
                   </Button>
                 </form>
               </Form>
             </TabsContent>
           </Tabs>
+          <div className="relative my-4">
+            <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-border/50" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-card px-2 text-muted-foreground">
+                Or
+                </span>
+            </div>
+          </div>
+          <Button variant="outline" className="w-full" onClick={handleGuestSignIn} disabled={isLoading}>
+            {isLoading && authAction === 'guest' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <User className="mr-2 h-4 w-4" />}
+            Sign in as Guest
+          </Button>
         </CardContent>
       </Card>
     </div>

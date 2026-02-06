@@ -11,8 +11,11 @@
           "description": "Unique identifier for the user entity."
         },
         "email": {
-          "type": "string",
-          "description": "User's email address.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "User's email address. Null for anonymous users.",
           "format": "email"
         },
         "username": {
@@ -40,7 +43,6 @@
       },
       "required": [
         "id",
-        "email",
         "username",
         "firstName",
         "lastName",

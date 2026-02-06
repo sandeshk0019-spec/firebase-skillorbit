@@ -85,39 +85,64 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
           const isNewUser = lastSignInTime - creationTime < 5000; // 5 seconds threshold
 
           if (isNewUser) {
-            const pendingProfileRaw = localStorage.getItem('pendingUserProfile');
-            if (pendingProfileRaw) {
-              try {
-                const profileData = JSON.parse(pendingProfileRaw);
-                const userDocRef = doc(firestore, 'users', firebaseUser.uid);
-                
-                getDoc(userDocRef).then(docSnap => {
-                  if (!docSnap.exists()) {
-                    setDoc(userDocRef, {
-                      id: firebaseUser.uid,
-                      email: firebaseUser.email,
-                      createdAt: firebaseUser.metadata.creationTime || new Date().toISOString(),
-                      lastLogin: firebaseUser.metadata.lastSignInTime || new Date().toISOString(),
-                      username: profileData.username,
-                      firstName: profileData.firstName,
-                      lastName: profileData.lastName,
-                    }).then(() => {
-                       updateProfile(firebaseUser, {
-                        displayName: `${profileData.firstName} ${profileData.lastName}`,
-                      }).catch(e => console.error("Error updating auth profile", e));
-                    }).catch(e => {
-                        console.error("Error creating user profile document:", e);
-                    });
-                  }
-                  localStorage.removeItem('pendingUserProfile');
-                }).catch(e => {
-                    console.error("Error checking for user profile:", e);
-                    localStorage.removeItem('pendingUserProfile'); // Still remove it to prevent issues
-                });
+            const userDocRef = doc(firestore, 'users', firebaseUser.uid);
+            
+            if (firebaseUser.isAnonymous) {
+              const guestProfile = {
+                displayName: 'Guest Voyager',
+                username: `guest_${firebaseUser.uid.substring(0, 8)}`,
+                firstName: 'Guest',
+                lastName: 'Voyager',
+              };
+              setDoc(userDocRef, {
+                id: firebaseUser.uid,
+                email: null,
+                createdAt: firebaseUser.metadata.creationTime || new Date().toISOString(),
+                lastLogin: firebaseUser.metadata.lastSignInTime || new Date().toISOString(),
+                username: guestProfile.username,
+                firstName: guestProfile.firstName,
+                lastName: guestProfile.lastName,
+              }).then(() => {
+                 updateProfile(firebaseUser, {
+                  displayName: guestProfile.displayName,
+                }).catch(e => console.error("Error updating guest auth profile", e));
+              }).catch(e => {
+                  console.error("Error creating guest user profile document:", e);
+              });
+            } else {
+              const pendingProfileRaw = localStorage.getItem('pendingUserProfile');
+              if (pendingProfileRaw) {
+                try {
+                  const profileData = JSON.parse(pendingProfileRaw);
+                  
+                  getDoc(userDocRef).then(docSnap => {
+                    if (!docSnap.exists()) {
+                      setDoc(userDocRef, {
+                        id: firebaseUser.uid,
+                        email: firebaseUser.email,
+                        createdAt: firebaseUser.metadata.creationTime || new Date().toISOString(),
+                        lastLogin: firebaseUser.metadata.lastSignInTime || new Date().toISOString(),
+                        username: profileData.username,
+                        firstName: profileData.firstName,
+                        lastName: profileData.lastName,
+                      }).then(() => {
+                         updateProfile(firebaseUser, {
+                          displayName: `${profileData.firstName} ${profileData.lastName}`,
+                        }).catch(e => console.error("Error updating auth profile", e));
+                      }).catch(e => {
+                          console.error("Error creating user profile document:", e);
+                      });
+                    }
+                    localStorage.removeItem('pendingUserProfile');
+                  }).catch(e => {
+                      console.error("Error checking for user profile:", e);
+                      localStorage.removeItem('pendingUserProfile');
+                  });
 
-              } catch (e) {
-                console.error("Failed to parse pending user profile:", e);
-                localStorage.removeItem('pendingUserProfile');
+                } catch (e) {
+                  console.error("Failed to parse pending user profile:", e);
+                  localStorage.removeItem('pendingUserProfile');
+                }
               }
             }
           }
