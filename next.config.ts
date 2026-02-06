@@ -1,6 +1,9 @@
 import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
+  serverActions: {
+    maxDuration: 120, // 2 minutes for video generation
+  },
   /* config options here */
   typescript: {
     ignoreBuildErrors: true,

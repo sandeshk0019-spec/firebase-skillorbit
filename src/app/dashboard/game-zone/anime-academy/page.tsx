@@ -2,11 +2,12 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { BookOpen, XCircle, ChevronRight } from 'lucide-react';
+import { BookOpen, XCircle, ChevronRight, Video, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { generateAnimeVideo } from '@/ai/flows/generate-anime-video';
 
 const topics = {
   'newtons-third-law': {
@@ -75,19 +76,52 @@ type TopicKey = keyof typeof topics;
 
 export default function AnimeAcademyPage() {
     const [selectedTopic, setSelectedTopic] = useState<TopicKey | null>(null);
-    const [showEpisode, setShowEpisode] = useState(false);
+    
+    // New state for video generation
+    const [videoUrl, setVideoUrl] = useState<string | null>(null);
+    const [isVideoLoading, setIsVideoLoading] = useState(false);
+    const [videoError, setVideoError] = useState<string | null>(null);
 
     const episodeData = selectedTopic ? topics[selectedTopic].episode : null;
     
-    const handleStart = () => {
-        if (selectedTopic) {
-            setShowEpisode(true);
+    const handleGenerateVideo = async () => {
+        if (!episodeData) return;
+    
+        setIsVideoLoading(true);
+        setVideoUrl(null);
+        setVideoError(null);
+    
+        // Construct the script from scenes
+        const script = episodeData.scenes.map(scene => `Scene: ${scene.title}\n${scene.content}`).join('\n\n');
+        
+        try {
+            const result = await generateAnimeVideo({ script });
+            setVideoUrl(result.videoDataUri);
+        } catch (error: any) {
+            console.error("Video generation failed:", error);
+            setVideoError(error.message || "Failed to generate video. The AI model may be busy. Please try again later.");
+        } finally {
+            setIsVideoLoading(false);
         }
     }
     
     const handleTopicChange = (value: string) => {
-      setSelectedTopic(value as TopicKey);
-      setShowEpisode(false);
+      if (value) {
+        setSelectedTopic(value as TopicKey);
+      } else {
+        setSelectedTopic(null);
+      }
+      // Reset video state when topic changes
+      setVideoUrl(null);
+      setIsVideoLoading(false);
+      setVideoError(null);
+    }
+    
+    const resetView = () => {
+        setSelectedTopic(null);
+        setVideoUrl(null);
+        setIsVideoLoading(false);
+        setVideoError(null);
     }
 
   return (
@@ -102,14 +136,14 @@ export default function AnimeAcademyPage() {
             </div>
           </div>
            <Link href="/dashboard/game-zone">
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" onClick={resetView}>
                 <XCircle className="w-8 h-8" />
               </Button>
             </Link>
         </header>
 
         <main>
-            {!showEpisode && (
+            {!selectedTopic && (
                 <Card className="bg-card/50 text-center animate-in fade-in-0 duration-500">
                     <CardHeader>
                         <CardTitle className="font-headline">Select Your Training Arc</CardTitle>
@@ -126,63 +160,47 @@ export default function AnimeAcademyPage() {
                                 ))}
                             </SelectContent>
                         </Select>
-                        <Button onClick={handleStart} disabled={!selectedTopic} className="animate-pulse-glow">
-                           <ChevronRight className="mr-2"/> Start Episode
-                        </Button>
                     </CardContent>
                 </Card>
             )}
 
-            {showEpisode && episodeData && (
+            {selectedTopic && episodeData && (
                  <div className="animate-in fade-in-0 duration-500">
                     <Card className="bg-black/20 backdrop-blur-md border border-white/10">
                         <CardHeader>
-                            <Button variant="link" className="text-muted-foreground p-0 h-auto justify-start" onClick={() => setShowEpisode(false)}>
+                            <Button variant="link" className="text-muted-foreground p-0 h-auto justify-start" onClick={() => handleTopicChange('')}>
                                 &larr; Back to Topic Selection
                             </Button>
-                            <CardTitle className="font-headline text-2xl text-primary mt-2">{episodeData.episodeTitle}</CardTitle>
+                            <CardTitle className="font-headline text-2xl text-primary mt-2">{topics[selectedTopic].title}</CardTitle>
+                             <CardDescription>{episodeData.episodeTitle}</CardDescription>
                         </CardHeader>
-                        <CardContent className="space-y-6">
-                            {episodeData.scenes.map((scene, index) => (
-                                <div key={index} className="p-4 bg-muted/50 rounded-lg border border-white/10">
-                                    <h3 className="font-headline text-lg text-secondary mb-2">{scene.title}</h3>
-                                    <p
-                                      className="whitespace-pre-wrap text-foreground/90 leading-relaxed"
-                                      dangerouslySetInnerHTML={{ __html: scene.content.replace(/\*\*([^*]+)\*\*/g, '<strong class="text-primary font-bold">$1</strong>') }}
-                                    />
+                        <CardContent className="space-y-6 text-center">
+                            {isVideoLoading ? (
+                                <div className="flex flex-col items-center justify-center p-8 gap-4">
+                                    <Loader2 className="w-16 h-16 text-primary animate-spin"/>
+                                    <h3 className="font-headline text-xl text-primary">Generating Anime Episode...</h3>
+                                    <p className="text-muted-foreground max-w-md">Our AI is rendering your video. This mission can take a couple of minutes. Please wait.</p>
                                 </div>
-                            ))}
-
-                            {episodeData.summary.coreConcept && (
-                                <>
-                                <Separator className="my-4 bg-white/20"/>
-                                <div className="space-y-4">
-                                     <h3 className="font-headline text-xl text-primary text-center">Master's Summary</h3>
-                                     <div className="p-4 bg-muted/50 rounded-lg">
-                                        <h4 className="font-semibold text-secondary">Core Concept</h4>
-                                        <p className="text-foreground/80 mt-1">{episodeData.summary.coreConcept}</p>
-                                     </div>
-                                      <div className="p-4 bg-muted/50 rounded-lg">
-                                        <h4 className="font-semibold text-secondary">Shortcut / Trick</h4>
-                                        <p className="text-foreground/80 mt-1">{episodeData.summary.shortcut}</p>
-                                     </div>
-                                      <div className="p-4 bg-muted/50 rounded-lg">
-                                        <h4 className="font-semibold text-secondary">Common Mistake</h4>
-                                        <p className="text-foreground/80 mt-1">{episodeData.summary.commonMistake}</p>
-                                     </div>
+                            ) : videoUrl ? (
+                                <div className="aspect-video bg-black rounded-lg overflow-hidden border border-primary/50">
+                                    <video src={videoUrl} controls autoPlay className="w-full h-full" />
                                 </div>
-                                </>
-                            )}
-                            
-                            {episodeData.trainingChallenge && (
-                                <>
-                                <Separator className="my-4 bg-white/20"/>
-                                 <div className="p-4 bg-primary/10 rounded-lg border border-primary/50 text-center">
-                                    <h3 className="font-headline text-xl text-primary">Training Challenge</h3>
-                                    <p className="text-lg mt-2">{episodeData.trainingChallenge}</p>
-                                     <p className="text-sm text-muted-foreground mt-4">(Think about it! In the next episode, we might reveal the answer.)</p>
+                            ) : (
+                                <div className="flex flex-col items-center justify-center p-8 gap-4">
+                                    <Video className="w-16 h-16 text-primary/50"/>
+                                    <h3 className="font-headline text-xl">Ready to Watch?</h3>
+                                    <p className="text-muted-foreground max-w-md">Click the button below to have our AI generate a unique anime-style video for this lesson.</p>
+                                    <Button onClick={handleGenerateVideo} size="lg" className="animate-pulse-glow mt-4" disabled={selectedTopic !== 'chemical-bonding'}>
+                                        <ChevronRight className="mr-2"/> 
+                                        {selectedTopic === 'chemical-bonding' ? 'Generate Video Episode' : 'Video Generation Coming Soon'}
+                                    </Button>
+                                     {videoError && (
+                                        <Alert variant="destructive" className="mt-4 text-left">
+                                            <AlertTitle>Generation Failed</AlertTitle>
+                                            <AlertDescription>{videoError}</AlertDescription>
+                                        </Alert>
+                                    )}
                                 </div>
-                                </>
                             )}
                         </CardContent>
                     </Card>
