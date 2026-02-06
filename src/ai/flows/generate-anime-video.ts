@@ -28,15 +28,13 @@ export type GenerateAnimeVideoOutput = z.infer<
 
 async function downloadVideoAsDataUri(video: MediaPart): Promise<string> {
   const fetch = (await import('node-fetch')).default;
-  const apiKey = process.env.GEMINI_API_KEY;
 
   if (!video.media?.url) {
     throw new Error('Video URL not found in media part.');
   }
 
   // The URL from Veo is a temporary download link. It needs to be fetched.
-  // The example in the docs suggests appending the API key.
-  const downloadUrl = `${video.media.url}${apiKey ? `&key=${apiKey}` : ''}`;
+  const downloadUrl = video.media.url;
 
   const videoDownloadResponse = await fetch(downloadUrl);
 
