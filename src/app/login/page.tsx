@@ -6,9 +6,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useRouter } from "next/navigation";
 import { useAuth, useUser } from "@/firebase";
-import { initiateEmailSignIn } from "@/firebase/non-blocking-login";
 import {
   createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
 } from "firebase/auth";
 
 import { Button } from "@/components/ui/button";
@@ -72,8 +72,22 @@ export default function LoginPage() {
 
   const onSignInSubmit = (values: z.infer<typeof signInSchema>) => {
     setIsLoading(true);
-    initiateEmailSignIn(auth, values.email, values.password);
-    // The onAuthStateChanged listener in useUser/FirebaseProvider will handle the redirect
+    signInWithEmailAndPassword(auth, values.email, values.password)
+      .catch((error: any) => {
+        let description = "An unexpected error occurred. Please try again.";
+        // "auth/invalid-credential" covers wrong password and user not found cases.
+        if (error.code === 'auth/invalid-credential') {
+          description = "Invalid email or password. Please check your credentials and try again.";
+        } else {
+          description = error.message;
+        }
+        toast({
+          variant: "destructive",
+          title: "Sign-in Failed",
+          description: description,
+        });
+        setIsLoading(false);
+      });
   };
 
   const onSignUpSubmit = (values: z.infer<typeof signUpSchema>) => {
