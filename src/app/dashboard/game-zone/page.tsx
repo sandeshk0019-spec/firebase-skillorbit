@@ -1,6 +1,6 @@
 'use client';
 
-import { Brain, Keyboard, Calculator, BrainCircuit, FlaskConical, Gamepad2 } from 'lucide-react';
+import { Brain, Keyboard, Calculator, BrainCircuit, FlaskConical, Gamepad2, BookOpen } from 'lucide-react';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -23,7 +23,7 @@ const games = [
     color: "text-emerald-500",
     hoverColor: "hover:border-emerald-500/80",
     href: "/dashboard/game-zone/cosmic-typer",
-    comingSoon: true,
+    comingSoon: false,
   },
   {
     title: "Math Voyager",
@@ -41,6 +41,15 @@ const games = [
     color: "text-purple-500",
     hoverColor: "hover:border-purple-500/80",
     href: "/dashboard/quiz",
+    comingSoon: false,
+  },
+  {
+    title: "Anime Academy",
+    tagline: "Learn Through Stories",
+    icon: BookOpen,
+    color: "text-red-500",
+    hoverColor: "hover:border-red-500/80",
+    href: "/dashboard/game-zone/anime-academy",
     comingSoon: false,
   },
   {
