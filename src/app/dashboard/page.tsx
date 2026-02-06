@@ -1,6 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowRight, BrainCircuit, Cpu, Webhook } from 'lucide-react';
+import { ArrowRight, BrainCircuit, Cpu, Webhook, Gamepad2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
@@ -15,6 +15,13 @@ export default function DashboardPage() {
       description: "Synthesize knowledge into custom quizzes on any subject.",
       href: "/dashboard/quiz",
       cta: "Generate Quiz",
+    },
+    {
+      icon: Gamepad2,
+      title: "Game Zone",
+      description: "Engage with interactive mini-games to sharpen your skills.",
+      href: "/dashboard/game-zone",
+      cta: "Enter Zone",
     },
     {
       icon: BrainCircuit,
@@ -56,7 +63,7 @@ export default function DashboardPage() {
         </div>
       </Card>
       
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-2">
         {features.map((feature, index) => (
           <Card 
             key={feature.title} 

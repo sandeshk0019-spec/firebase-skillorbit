@@ -12,6 +12,7 @@ import {
   Settings,
   LogOut,
   Loader2,
+  Gamepad2,
 } from "lucide-react"
 
 import {
@@ -69,6 +70,14 @@ function AppSidebar() {
               <SidebarMenuButton isActive={isActive('/dashboard/quiz')} tooltip="AI Quiz Generator">
                 <Cpu />
                 <span>AI Quiz</span>
+              </SidebarMenuButton>
+            </Link>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <Link href="/dashboard/game-zone" legacyBehavior passHref>
+              <SidebarMenuButton isActive={isActive('/dashboard/game-zone')} tooltip="Game Zone">
+                <Gamepad2 />
+                <span>Game Zone</span>
               </SidebarMenuButton>
             </Link>
           </SidebarMenuItem>
