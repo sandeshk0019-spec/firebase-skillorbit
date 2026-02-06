@@ -92,7 +92,7 @@ export default function AnimeAcademyPage() {
         setVideoError(null);
     
         // Construct the script from scenes
-        const script = episodeData.scenes.map(scene => `Scene: ${scene.title}\n${scene.content}`).join('\n\n');
+        const script = episodeData.scenes.map(scene => `**${scene.title}**\n${scene.content}`).join('\n\n');
         
         try {
             const result = await generateAnimeVideo({ script });
@@ -190,9 +190,9 @@ export default function AnimeAcademyPage() {
                                     <Video className="w-16 h-16 text-primary/50"/>
                                     <h3 className="font-headline text-xl">Ready to Watch?</h3>
                                     <p className="text-muted-foreground max-w-md">Click the button below to have our AI generate a unique anime-style video for this lesson.</p>
-                                    <Button onClick={handleGenerateVideo} size="lg" className="animate-pulse-glow mt-4" disabled={selectedTopic !== 'chemical-bonding'}>
-                                        <ChevronRight className="mr-2"/> 
-                                        {selectedTopic === 'chemical-bonding' ? 'Generate Video Episode' : 'Video Generation Coming Soon'}
+                                    <Button onClick={handleGenerateVideo} size="lg" className="animate-pulse-glow mt-4" disabled={isVideoLoading}>
+                                        <ChevronRight className="mr-2"/>
+                                        Generate Video Episode
                                     </Button>
                                      {videoError && (
                                         <Alert variant="destructive" className="mt-4 text-left">
