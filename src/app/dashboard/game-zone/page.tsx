@@ -4,7 +4,6 @@ import { Brain, Keyboard, Calculator, BrainCircuit, FlaskConical, Gamepad2 } fro
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from '@/lib/utils';
 
 const games = [
@@ -14,8 +13,8 @@ const games = [
     icon: Brain,
     color: "text-yellow-500",
     hoverColor: "hover:border-yellow-500/80",
-    href: "#",
-    disabled: true,
+    href: "/dashboard/game-zone/zen-match",
+    comingSoon: false,
   },
   {
     title: "Cosmic Typer",
@@ -23,8 +22,8 @@ const games = [
     icon: Keyboard,
     color: "text-emerald-500",
     hoverColor: "hover:border-emerald-500/80",
-    href: "#",
-    disabled: true,
+    href: "/dashboard/game-zone/cosmic-typer",
+    comingSoon: true,
   },
   {
     title: "Math Voyager",
@@ -32,8 +31,8 @@ const games = [
     icon: Calculator,
     color: "text-blue-500",
     hoverColor: "hover:border-blue-500/80",
-    href: "#",
-    disabled: true,
+    href: "/dashboard/game-zone/math-voyager",
+    comingSoon: true,
   },
   {
     title: "AI Quiz Master",
@@ -42,7 +41,7 @@ const games = [
     color: "text-purple-500",
     hoverColor: "hover:border-purple-500/80",
     href: "/dashboard/quiz",
-    disabled: false,
+    comingSoon: false,
   },
   {
     title: "Chem Lab Sim",
@@ -50,8 +49,8 @@ const games = [
     icon: FlaskConical,
     color: "text-cyan-500",
     hoverColor: "hover:border-cyan-500/80",
-    href: "#",
-    disabled: true,
+    href: "/dashboard/game-zone/chem-lab-sim",
+    comingSoon: true,
   },
 ];
 
@@ -77,11 +76,11 @@ export default function GameZonePage() {
   );
 }
 
-const GameCard = ({ title, tagline, icon: Icon, color, hoverColor, href, disabled }: typeof games[0]) => {
+const GameCard = ({ title, tagline, icon: Icon, color, hoverColor, href, comingSoon }: typeof games[0]) => {
   const cardContent = (
     <div className={cn(
       "h-full flex flex-col bg-black/20 backdrop-blur-md border border-white/10 rounded-[2rem] transition-all duration-300 transform hover:scale-105",
-      !disabled && hoverColor
+      hoverColor
     )}>
       <div className="flex-row items-center gap-4 p-8 flex">
         <Icon className={cn("w-10 h-10", color)} />
@@ -91,33 +90,20 @@ const GameCard = ({ title, tagline, icon: Icon, color, hoverColor, href, disable
         </div>
       </div>
       <div className="flex-grow flex items-end justify-end p-6">
-        <Button size="lg" disabled={disabled} className="rounded-full bg-white/10 hover:bg-white/20 text-white shadow-lg">
-          Play
+        <Button size="lg" className="rounded-full bg-white/10 hover:bg-white/20 text-white shadow-lg">
+          {comingSoon ? "Soon" : "Play"}
         </Button>
       </div>
     </div>
   );
-
-  const cardWrapper = (
+  
+  return (
     <div className="h-full min-h-[250px]">
-      {disabled ? (
-         <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="w-full h-full cursor-not-allowed opacity-60">{cardContent}</div>
-            </TooltipTrigger>
-            <TooltipContent className="bg-black border-purple-500 text-white">
-              <p>Coming Soon!</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      ) : (
-        <Link href={href} className="w-full h-full block">
-          {cardContent}
-        </Link>
-      )}
+       <Link href={href} className={cn("w-full h-full block", comingSoon && "pointer-events-none")}>
+         <div className={cn(comingSoon && "opacity-60")}>
+            {cardContent}
+         </div>
+      </Link>
     </div>
   );
-  
-  return cardWrapper;
 };
