@@ -42,14 +42,31 @@ const topics = {
   'chemical-bonding': {
     title: 'Chemical Bonding',
     episode: {
-        episodeTitle: "Episode Title: The Quest for Stability!",
-        scenes: [{title: "Coming Soon!", content: "This episode is currently in production by our top narrative engineers."}],
+        episodeTitle: "Episode Title: The Unbreakable Attraction!",
+        scenes: [
+            {
+                title: "Scene 1 – Chaos in Atom City",
+                content: "In glowing Atom City, stability is everything… but today, chaos rules. Electrons are running wild.\n\nA **Sodium (Na)** atom appears, its aura flickering violently.\n\n**Sodium:** 'Why do I feel so incomplete? This one electron… it makes me so unstable!'\n\nFrom a distance, a trembling **Chlorine (Cl)** atom watches, its dark green aura pulsing with need.\n\n**Chlorine:** 'I need just one more… or I’ll never be whole.'\n\n⚡ Alarms blare — UNSTABLE ATOMS DETECTED ⚡"
+            },
+            {
+                title: "Scene 2 – The Clash of Needs",
+                content: "Na and Cl face each other, energy crackling between them. An electron glows like a blue spirit.\n\n**Na:** 'You’re missing one… I have one extra.'\n\n**Cl:** 'Then give it to me! But know this—once taken, there’s no return.'\n\n**Narrator:** 'When one atom loses and another gains… a powerful force awakens.'\n\nThe electron transfers. A massive shockwave erupts.\n\n💥 **IONIC BOND FORMED** 💥"
+            },
+            {
+                title: "Scene 3 – The Power Reveal",
+                content: "A wise figure of pure energy, **Master Elementa**, materializes.\n\n**Master Elementa:** 'You have transformed! Sodium, by giving away your electron, you are now a positive ion, Na+. Chlorine, by accepting it, you are a negative ion, Cl-. You are complete, but you are also charged.'\n\n**Na+:** 'I feel... lighter. Stable. But I feel this pull...'\n\n**Cl-:** '...a pull towards you. Why?'\n\n**Master Elementa:** 'That is the power of the **Ionic Bond**. Opposites attract. Your charges now bind you with an unbreakable electrostatic force. You have satisfied the **Octet Rule** and formed Sodium Chloride!'"
+            },
+            {
+                title: "Scene 4 – Victory & Understanding",
+                content: "Na+ and Cl- are now surrounded by a stable, crystalline aura, moving together in harmony. They no longer flicker or tremble.\n\n**Narrator:** 'Together, they achieved what they could not alone: stability. They formed a new substance, a crystal lattice of salt, strong and orderly.'\n\n**Na+ & Cl- (in unison):** 'We are balanced. We are one.'\n\n**Master Elementa:** 'Remember this. The quest for a full outer shell drives all atoms. The result is a bond that can build worlds.'"
+            }
+        ],
         summary: {
-            coreConcept: "",
-            shortcut: "",
-            commonMistake: ""
+            coreConcept: "An ionic bond is a chemical bond where one atom transfers electrons to another. This creates oppositely charged ions (a positive metal and a negative nonmetal) that attract each other like magnets.",
+            shortcut: "Think 'Givers & Takers.' Metals are givers (lose electrons, become +). Nonmetals are takers (gain electrons, become -). Givers and takers stick together.",
+            commonMistake: "Thinking atoms 'share' electrons in an ionic bond. That's a covalent bond! In ionic bonds, it's a complete transfer—one atom loses, the other gains."
         },
-        trainingChallenge: ""
+        trainingChallenge: "Magnesium (Mg) has two electrons to give. Fluorine (F) only needs one. How many Fluorine atoms are needed to form a stable ionic bond with one Magnesium atom?"
     }
   }
 };
@@ -129,7 +146,10 @@ export default function AnimeAcademyPage() {
                             {episodeData.scenes.map((scene, index) => (
                                 <div key={index} className="p-4 bg-muted/50 rounded-lg border border-white/10">
                                     <h3 className="font-headline text-lg text-secondary mb-2">{scene.title}</h3>
-                                    <p className="whitespace-pre-wrap text-foreground/90 leading-relaxed">{scene.content.replace(/\*\*([^*]+)\*\*/g, '<strong class=\"text-primary\">$1</strong>')}</p>
+                                    <p
+                                      className="whitespace-pre-wrap text-foreground/90 leading-relaxed"
+                                      dangerouslySetInnerHTML={{ __html: scene.content.replace(/\*\*([^*]+)\*\*/g, '<strong class="text-primary font-bold">$1</strong>') }}
+                                    />
                                 </div>
                             ))}
 
