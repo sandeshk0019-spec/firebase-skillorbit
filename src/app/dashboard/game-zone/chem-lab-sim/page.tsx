@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { XCircle, Flame, Snowflake, RotateCw, TestTube, Beaker, FlaskConical, Atom, Minus } from 'lucide-react';
+import { XCircle, Flame, Snowflake, RotateCw, TestTube, Beaker, FlaskConical, Atom, Minus, Droplet } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 // Define types for better type-safety
@@ -432,3 +432,5 @@ export default function ChemLabSimPage() {
     </div>
   );
 }
+
+    
