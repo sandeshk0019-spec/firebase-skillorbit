@@ -175,11 +175,7 @@ export default function AnimeAcademyPage() {
                              <CardDescription>{episodeData.episodeTitle}</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-6 text-center">
-                            {selectedTopic === 'chemical-bonding' ? (
-                                <div className="aspect-video bg-black rounded-lg overflow-hidden border border-primary/50">
-                                    <video src="/videos/chemical-bonding.mp4" controls autoPlay className="w-full h-full" />
-                                </div>
-                            ) : isVideoLoading ? (
+                            {isVideoLoading ? (
                                 <div className="flex flex-col items-center justify-center p-8 gap-4">
                                     <Loader2 className="w-16 h-16 text-primary animate-spin"/>
                                     <h3 className="font-headline text-xl text-primary">Generating Anime Episode...</h3>
