@@ -39,6 +39,22 @@
           "type": "string",
           "description": "Timestamp indicating when the user last logged in.",
           "format": "date-time"
+        },
+        "totalQuizzes": {
+            "type": "number",
+            "description": "The total number of quizzes the user has completed."
+        },
+        "totalCorrectAnswers": {
+            "type": "number",
+            "description": "The total number of correct answers across all quizzes."
+        },
+        "totalQuestionsAnswered": {
+            "type": "number",
+            "description": "The total number of questions answered across all quizzes."
+        },
+        "gamesPlayed": {
+            "type": "number",
+            "description": "The total number of games the user has played."
         }
       },
       "required": [
@@ -48,6 +64,109 @@
         "lastName",
         "createdAt"
       ]
+    },
+    "QuizAttempt": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "QuizAttempt",
+      "type": "object",
+      "description": "Represents a single attempt at a quiz by a user.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the quiz attempt."
+        },
+        "userId": {
+          "type": "string",
+          "description": "The ID of the user who took the quiz."
+        },
+        "subject": {
+          "type": "string",
+          "description": "The subject of the quiz."
+        },
+        "topic": {
+          "type": "string",
+          "description": "The topic of the quiz."
+        },
+        "score": {
+          "type": "number",
+          "description": "The number of correct answers."
+        },
+        "totalQuestions": {
+          "type": "number",
+          "description": "The total number of questions in the quiz."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the quiz was completed.",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "userId", "subject", "topic", "score", "totalQuestions", "createdAt"]
+    },
+    "GameScore": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "GameScore",
+      "type": "object",
+      "description": "Represents a score achieved by a user in a game.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the game score record."
+        },
+        "userId": {
+          "type": "string",
+          "description": "The ID of the user who played the game."
+        },
+        "gameId": {
+          "type": "string",
+          "description": "A unique identifier for the game (e.g., 'cosmic-typer')."
+        },
+        "gameName": {
+            "type": "string",
+            "description": "The display name of the game (e.g., 'Cosmic Typer')."
+        },
+        "score": {
+          "type": "number",
+          "description": "The score achieved by the user."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the game was played.",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "userId", "gameId", "gameName", "score", "createdAt"]
+    },
+    "Activity": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "Activity",
+        "type": "object",
+        "description": "Represents a single user action for the activity feed.",
+        "properties": {
+            "id": { "type": "string" },
+            "userId": { "type": "string" },
+            "type": {
+                "type": "string",
+                "enum": ["QUIZ_COMPLETED", "GAME_PLAYED", "ACHIEVEMENT_UNLOCKED"]
+            },
+            "description": { "type": "string" },
+            "createdAt": { "type": "string", "format": "date-time" },
+            "refId": { "type": "string", "description": "Optional reference to another document (e.g., quizAttemptId)." }
+        },
+        "required": ["id", "userId", "type", "description", "createdAt"]
+    },
+    "Achievement": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "Achievement",
+        "type": "object",
+        "description": "Represents an achievement unlocked by a user.",
+        "properties": {
+            "id": { "type": "string" },
+            "userId": { "type": "string" },
+            "achievementId": { "type": "string", "description": "Key from the predefined achievements list." },
+            "unlockedAt": { "type": "string", "format": "date-time" }
+        },
+        "required": ["id", "userId", "achievementId", "unlockedAt"]
     }
   },
   "auth": {
@@ -73,8 +192,24 @@
             }
           ]
         }
+      },
+      {
+        "path": "/users/{userId}/quizAttempts/{attemptId}",
+        "definition": { "entityName": "QuizAttempt", "schema": { "$ref": "#/backend/entities/QuizAttempt" } }
+      },
+      {
+        "path": "/users/{userId}/gameScores/{scoreId}",
+        "definition": { "entityName": "GameScore", "schema": { "$ref": "#/backend/entities/GameScore" } }
+      },
+      {
+        "path": "/users/{userId}/activities/{activityId}",
+        "definition": { "entityName": "Activity", "schema": { "$ref": "#/backend/entities/Activity" } }
+      },
+      {
+        "path": "/users/{userId}/achievements/{achievementId}",
+        "definition": { "entityName": "Achievement", "schema": { "$ref": "#/backend/entities/Achievement" } }
       }
     ],
-    "reasoning": "The Firestore structure is designed to ensure authorization independence, clarity, and scalability for the SkillOrbit application.  Authorization Independence is achieved by limiting authorization to `request.auth.uid` only and storing roles in the database.  The structure promotes easy debugging through clear path-based ownership and consistent naming conventions.  The design uses structural segregation to ensure homogeneous security postures for collections.\n\nPrivate user data is stored under `/users/{userId}`, enabling simple ownership-based security rules.  This design avoids the use of `get()` calls in security rules by ensuring that all necessary authorization data is available within the document or can be inferred from the path.\n\nQAPs are addressed by ensuring each collection has a homogenous security posture. All documents within a collection have similar security needs. This simplifies security rules and avoids filtering data based on authorization within a single collection.\n"
+    "reasoning": "The Firestore structure is designed to ensure authorization independence, clarity, and scalability for the SkillOrbit application.  Authorization Independence is achieved by limiting authorization to `request.auth.uid` only and storing roles in the database.  The structure promotes easy debugging through clear path-based ownership and consistent naming conventions.  The design uses structural segregation to ensure homogeneous security postures for collections.\n\nPrivate user data is stored under `/users/{userId}`, enabling simple ownership-based security rules. All user-specific progress and activity data are stored in subcollections under the user's document, which naturally inherits the same ownership-based security. This design avoids the use of `get()` calls in security rules by ensuring that all necessary authorization data is available within the document or can be inferred from the path.\n\nQAPs are addressed by ensuring each collection has a homogenous security posture. All documents within a collection have similar security needs. This simplifies security rules and avoids filtering data based on authorization within a single collection.\n"
   }
 }

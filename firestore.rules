@@ -13,17 +13,22 @@
  * All user-specific data is stored in a single top-level collection: /users.
  * Each user's profile and related data are located under a document whose ID
  * matches the user's UID (e.g., /users/{userId}). This path-based ownership
- * model is the foundation of the security rules.
+ * model is the foundation of the security rules. All progress and activity data
+ * are stored in subcollections under the user's document, inheriting the same
+ * ownership rules.
  *
  * Key Security Decisions:
  * - User Isolation: Users can only read, write, and delete their own document
- *   within the /users collection. They cannot access or even know about the
- *   existence of other users' documents.
- * - No User Listing: To protect user privacy and prevent data scraping, listing
- *   the entire /users collection is explicitly forbidden for all clients.
+ *   and subcollection documents within their user path (/users/{userId}/...).
+ *   They cannot access or even know about the existence of other users' data.
+ * - No User Listing: To protect user privacy, listing the entire /users
+ *   collection is explicitly forbidden for all clients.
  * - Path and Data Consistency: On creation, the rules enforce that the `id` field
  *   within a user document must match the document's ID in the path ({userId}).
  *   This critical link is then made immutable on update.
+ * - Immutable Progress: To maintain data integrity, quiz attempts, game scores,
+ *   activities, and achievements are write-once. They can be created and read,
+ *   but not updated or deleted from the client.
  * - Default Deny: All operations are denied by default and must be explicitly
  *   granted by a specific rule.
  */
@@ -85,20 +90,54 @@ service cloud.firestore {
     // ----------------------------------------------------------------------
 
     /**
-     * @description Manages access to a user's own profile document. This is private data.
+     * @description Manages access to a user's own profile document and all related subcollections.
      * @path /users/{userId}
-     * @allow (get) A signed-in user (UID: 'user123') can read their own document at /users/user123.
-     * @allow (create) A new user (UID: 'user123') can create their profile document at /users/user123.
-     * @deny (get) A signed-in user (UID: 'user123') is denied from reading another user's document at /users/user456.
-     * @deny (list) No user, signed-in or otherwise, can list the documents in the /users collection.
-     * @principle Restricts access to a user's own data tree based on their auth UID.
+     * @allow (get, update) A signed-in user can read and update their own profile document.
+     * @allow (create) A new user can create their profile document.
+     * @deny (list, delete) No user can list all users or delete their own profile from the client.
      */
     match /users/{userId} {
       allow get: if isOwner(userId);
       allow list: if false;
       allow create: if isOwner(userId) && hasValidUserIdOnCreate(userId);
       allow update: if isExistingOwner(userId) && isUserIdImmutable();
-      allow delete: if isExistingOwner(userId);
+      allow delete: if false; // Prevent client-side deletion of user profile
+
+      /**
+       * @description User's quiz history. Write-once, read-many.
+       */
+      match /quizAttempts/{attemptId} {
+        allow read, create: if isOwner(userId);
+        allow list: if isOwner(userId);
+        allow update, delete: if false;
+      }
+
+      /**
+       * @description User's game scores. Write-once, read-many.
+       */
+      match /gameScores/{scoreId} {
+        allow read, create: if isOwner(userId);
+        allow list: if isOwner(userId);
+        allow update, delete: if false;
+      }
+
+      /**
+       * @description User's activity feed. Write-once, read-many.
+       */
+      match /activities/{activityId} {
+        allow read, create: if isOwner(userId);
+        allow list: if isOwner(userId);
+        allow update, delete: if false;
+      }
+
+      /**
+       * @description User's unlocked achievements. Write-once, read-many.
+       */
+      match /achievements/{achievementId} {
+        allow read, create: if isOwner(userId);
+        allow list: if isOwner(userId);
+        allow update, delete: if false;
+      }
     }
   }
 }

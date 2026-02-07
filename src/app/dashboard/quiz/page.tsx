@@ -11,8 +11,12 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { Loader2, Cpu, CheckCircle, XCircle } from "lucide-react";
+import { Loader2, Cpu, CheckCircle, XCircle, Trophy } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useUser, useFirestore } from "@/firebase";
+import { collection, doc, addDoc, serverTimestamp, runTransaction, getDoc, setDoc } from "firebase/firestore";
+import { type QuizAttempt, type Activity } from "@/types";
+import { achievements } from "@/lib/achievements";
 
 const formSchema = z.object({
   subject: z.string().min(2, { message: "Subject must be at least 2 characters." }),
@@ -22,12 +26,16 @@ const formSchema = z.object({
 type QuizQuestion = GenerateQuizQuestionsOutput["questions"][0];
 
 export default function QuizPage() {
-  const [isLoading, setIsLoading] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [quiz, setQuiz] = useState<QuizQuestion[] | null>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [userAnswers, setUserAnswers] = useState<string[]>([]);
   const [showResults, setShowResults] = useState(false);
+  
   const { toast } = useToast();
+  const { user } = useUser();
+  const firestore = useFirestore();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -35,7 +43,7 @@ export default function QuizPage() {
   });
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    setIsLoading(true);
+    setIsGenerating(true);
     setQuiz(null);
     setShowResults(false);
     setUserAnswers([]);
@@ -49,7 +57,7 @@ export default function QuizPage() {
         toast({
           variant: "destructive",
           title: "Error",
-          description: "Failed to generate quiz. Please try a different topic.",
+          description: "Failed to generate quiz. The AI might be unable to create questions for this topic. Please try a different one.",
         });
       }
     } catch (error) {
@@ -57,10 +65,10 @@ export default function QuizPage() {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "An unexpected error occurred. Please try again.",
+        description: "An unexpected error occurred while generating the quiz. Please try again.",
       });
     } finally {
-      setIsLoading(false);
+      setIsGenerating(false);
     }
   };
 
@@ -70,11 +78,115 @@ export default function QuizPage() {
     setUserAnswers(newAnswers);
   };
 
+  const score = quiz ? userAnswers.reduce((acc, answer, index) => {
+    return answer === quiz[index].correctAnswer ? acc + 1 : acc;
+  }, 0) : 0;
+
+  const handleFinishQuiz = async () => {
+    if (!quiz || !user) return;
+    
+    setIsSubmitting(true);
+
+    try {
+        const userRef = doc(firestore, "users", user.uid);
+        const now = serverTimestamp();
+
+        // 1. Save Quiz Attempt
+        const quizAttemptData: Omit<QuizAttempt, 'id'> = {
+            userId: user.uid,
+            subject: form.getValues("subject"),
+            topic: form.getValues("topic"),
+            score: score,
+            totalQuestions: quiz.length,
+            createdAt: now as any,
+        };
+        const attemptRef = await addDoc(collection(userRef, "quizAttempts"), quizAttemptData);
+
+        // 2. Save Activity
+        const activityData: Omit<Activity, 'id'> = {
+            userId: user.uid,
+            type: 'QUIZ_COMPLETED',
+            description: `Scored ${score}/${quiz.length} on a quiz about ${quizAttemptData.topic}.`,
+            refId: attemptRef.id,
+            createdAt: now as any,
+        };
+        await addDoc(collection(userRef, "activities"), activityData);
+
+        // 3. Update User Profile Stats in a Transaction
+        await runTransaction(firestore, async (transaction) => {
+            const userDoc = await transaction.get(userRef);
+            if (!userDoc.exists()) {
+                throw "User document does not exist!";
+            }
+            const oldTotalQuizzes = userDoc.data().totalQuizzes || 0;
+            const oldTotalCorrect = userDoc.data().totalCorrectAnswers || 0;
+            const oldTotalAnswered = userDoc.data().totalQuestionsAnswered || 0;
+
+            transaction.update(userRef, {
+                totalQuizzes: oldTotalQuizzes + 1,
+                totalCorrectAnswers: oldTotalCorrect + score,
+                totalQuestionsAnswered: oldTotalAnswered + quiz.length,
+            });
+        });
+        
+        // 4. Check for achievements
+        await checkAndUnlockAchievement('FIRST_QUIZ');
+        if(score === quiz.length) {
+            await checkAndUnlockAchievement('PERFECT_SCORE');
+        }
+
+    } catch (error) {
+        console.error("Error saving quiz results:", error);
+        toast({
+            variant: "destructive",
+            title: "Submission Error",
+            description: "Could not save your quiz results. Please try again.",
+        });
+    } finally {
+        setIsSubmitting(false);
+        setShowResults(true);
+    }
+  }
+
+  const checkAndUnlockAchievement = async (achievementId: keyof typeof achievements) => {
+      if (!user) return;
+      const achRef = doc(firestore, 'users', user.uid, 'achievements', achievementId);
+      const achDoc = await getDoc(achRef);
+
+      if (!achDoc.exists()) {
+          const achData = achievements[achievementId];
+          await setDoc(achRef, {
+              userId: user.uid,
+              achievementId: achievementId,
+              unlockedAt: serverTimestamp(),
+          });
+          await addDoc(collection(firestore, 'users', user.uid, 'activities'), {
+              userId: user.uid,
+              type: 'ACHIEVEMENT_UNLOCKED',
+              description: `Unlocked: ${achData.name}`,
+              createdAt: serverTimestamp(),
+          });
+
+          toast({
+              title: "Achievement Unlocked!",
+              description: (
+                  <div className="flex items-center gap-3">
+                      <Trophy className="w-8 h-8 text-yellow-400" />
+                      <div>
+                          <p className="font-semibold">{achData.name}</p>
+                          <p className="text-xs">{achData.description}</p>
+                      </div>
+                  </div>
+              ),
+          });
+      }
+  };
+
   const handleNextQuestion = () => {
     if (quiz && currentQuestionIndex < quiz.length - 1) {
       setCurrentQuestionIndex(currentQuestionIndex + 1);
     } else {
-      setShowResults(true);
+      handleFinishQuiz();
     }
   };
 
@@ -85,10 +197,6 @@ export default function QuizPage() {
     setCurrentQuestionIndex(0);
     form.reset();
   };
-
-  const score = quiz ? userAnswers.reduce((acc, answer, index) => {
-    return answer === quiz[index].correctAnswer ? acc + 1 : acc;
-  }, 0) : 0;
 
   return (
     <div className="container mx-auto max-w-3xl">
@@ -105,7 +213,7 @@ export default function QuizPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {!quiz && !isLoading && (
+          {!quiz && !isGenerating && (
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                 <FormField
@@ -134,15 +242,15 @@ export default function QuizPage() {
                     </FormItem>
                   )}
                 />
-                <Button type="submit" disabled={isLoading} className="w-full animate-pulse-glow">
-                  {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                <Button type="submit" disabled={isGenerating} className="w-full animate-pulse-glow">
+                  {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                   Generate Quiz
                 </Button>
               </form>
             </Form>
           )}
 
-          {isLoading && (
+          {isGenerating && (
             <div className="flex flex-col items-center justify-center text-center p-8">
               <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
               <p className="font-semibold">Synthesizing knowledge matrix...</p>
@@ -162,8 +270,9 @@ export default function QuizPage() {
                   </Label>
                 ))}
               </RadioGroup>
-              <Button onClick={handleNextQuestion} disabled={!userAnswers[currentQuestionIndex]} className="w-full">
-                {currentQuestionIndex < quiz.length - 1 ? "Next Question" : "Finish Quiz"}
+              <Button onClick={handleNextQuestion} disabled={!userAnswers[currentQuestionIndex] || isSubmitting} className="w-full">
+                 {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                {currentQuestionIndex < quiz.length - 1 ? "Next Question" : "Finish & Save"}
               </Button>
             </div>
           )}
@@ -172,23 +281,18 @@ export default function QuizPage() {
             <div className="space-y-6 animate-in fade-in">
               <h2 className="text-2xl font-headline text-center">Results Analysis</h2>
               <p className="text-center text-4xl font-bold">{score} / {quiz.length}</p>
-              <div className="space-y-4">
+              <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
                 {quiz.map((q, i) => (
                   <Card key={i} className={userAnswers[i] === q.correctAnswer ? 'border-green-500 bg-green-500/10' : 'border-red-500 bg-red-500/10'}>
-                    <CardHeader>
-                      <CardTitle className="text-base font-semibold">{q.question}</CardTitle>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base font-semibold">{i+1}. {q.question}</CardTitle>
                     </CardHeader>
-                    <CardContent>
-                      <p className="text-sm">Your answer: {userAnswers[i]}</p>
-                      {userAnswers[i] !== q.correctAnswer && <p className="text-sm">Correct answer: {q.correctAnswer}</p>}
+                    <CardContent className="text-sm">
+                      <p className={userAnswers[i] === q.correctAnswer ? 'text-green-400' : 'text-red-400'}>
+                          Your answer: {userAnswers[i] || "No answer"}
+                      </p>
+                      {userAnswers[i] !== q.correctAnswer && <p className="text-green-400">Correct answer: {q.correctAnswer}</p>}
                     </CardContent>
-                    <CardFooter>
-                      {userAnswers[i] === q.correctAnswer ? (
-                        <span className="text-sm font-medium text-green-400 flex items-center"><CheckCircle className="w-4 h-4 mr-1"/> Correct</span>
-                      ) : (
-                        <span className="text-sm font-medium text-red-400 flex items-center"><XCircle className="w-4 h-4 mr-1"/> Incorrect</span>
-                      )}
-                    </CardFooter>
                   </Card>
                 ))}
               </div>
