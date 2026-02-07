@@ -32,7 +32,7 @@ const games = [
     color: "text-blue-500",
     hoverColor: "hover:border-blue-500/80",
     href: "/dashboard/game-zone/math-voyager",
-    comingSoon: true,
+    comingSoon: false,
   },
   {
     title: "AI Quiz Master",
