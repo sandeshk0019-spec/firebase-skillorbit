@@ -113,7 +113,7 @@ export default function MathVoyagerPage() {
               gameSpeed += 0.1;
               items = [];
               generateQuestion();
-              return; // BUG FIX: Exit the update loop for this frame to prevent errors
+              return; // This prevents a crash by exiting the update loop for this frame.
             } else {
               setScore((s) => Math.max(0, s - 5));
               setIsShaking(true);
