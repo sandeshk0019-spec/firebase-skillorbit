@@ -113,17 +113,15 @@ export default function MathVoyagerPage() {
               gameSpeed += 0.1;
               items = [];
               generateQuestion();
+              return; // BUG FIX: Exit the update loop for this frame to prevent errors
             } else {
               setScore((s) => Math.max(0, s - 5));
               setIsShaking(true);
               setTimeout(() => setIsShaking(false), 200);
+              items.splice(i, 1);
             }
-            items.splice(i, 1);
-            continue;
-          }
-
-          // Remove off-screen items
-          if (item.y > canvas.height + item.radius) {
+          } else if (item.y > canvas.height + item.radius) {
+            // Remove off-screen items
             items.splice(i, 1);
           }
         }
