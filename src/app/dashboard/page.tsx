@@ -3,11 +3,10 @@
 import { useMemo } from 'react';
 import { useUser, useFirestore, useDoc, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, limit, doc } from 'firebase/firestore';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
+import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import { Loader2, TrendingUp, History, Trophy, BrainCircuit, Gamepad2, BookOpenCheck } from 'lucide-react';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { Loader2, TrendingUp, History, Trophy, BrainCircuit, Gamepad2 } from 'lucide-react';
 import { type UserProfile, type QuizAttempt, type Activity, type Achievement as AchievementType } from '@/types';
 import { achievements } from '@/lib/achievements';
 import { formatDistanceToNow } from 'date-fns';
