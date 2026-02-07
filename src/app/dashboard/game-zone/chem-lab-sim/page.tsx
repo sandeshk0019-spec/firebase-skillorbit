@@ -60,7 +60,9 @@ const tools = [
 
 export default function ChemLabSimPage() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
-    const [consoleLogs, setConsoleLogs] = useState<string[]>(['> Lab initialized. Ready for experimentation.']);
+    const [consoleLogs, setConsoleLogs] = useState<{ message: string; level: 'info' | 'warn' | 'danger' }[]>([
+        { message: '> Lab initialized. Ready for experimentation.', level: 'info' },
+    ]);
     
     // Use useRef for lab state to prevent re-renders on every animation frame
     const labState = useRef<LabState>({
@@ -79,9 +81,9 @@ export default function ChemLabSimPage() {
     const animationFrameId = useRef<number>();
     const frameCount = useRef(0);
 
-    const logToConsole = (message: string) => {
-        setConsoleLogs(prev => [`> ${message}`, ...prev].slice(0, 50));
-    };
+    const logToConsole = useCallback((message: string, level: 'info' | 'warn' | 'danger' = 'info') => {
+        setConsoleLogs(prev => [{ message: `> ${message}`, level }, ...prev].slice(0, 50));
+    }, []);
 
     const getPhColor = useCallback((ph: number) => {
         if (ph < 3) return { r: 255, g: 0, b: 0 }; // Strong Acid
@@ -102,7 +104,7 @@ export default function ChemLabSimPage() {
                 vy: type === 'bubble' || type === 'steam' ? -speed : Math.sin(angle) * speed - (type === 'fire' ? 3 : 0),
                 life: type === 'fire' ? 40 + Math.random() * 20 : 80 + Math.random() * 40,
                 type,
-                radius: Math.random() * (type === 'fire' ? 4 : 3) + 2,
+                radius: Math.random() * (type === 'fire' ? 5 : 4) + 2,
             });
         }
     }, []);
@@ -122,12 +124,12 @@ export default function ChemLabSimPage() {
                 state.ph = Math.max(0, state.ph - 3);
                 state.composition.push('acid', 'Cl-');
                 if (state.composition.includes('magnesium')) {
-                    logToConsole('Reaction: Magnesium + Acid -> Bubbles (H₂)');
+                    logToConsole('Reaction: Magnesium + Acid -> Bubbles (H₂)', 'warn');
                     spawnParticles(30, 'bubble', 400, 400);
                     reactionOccurred = true;
                 }
                  if (state.composition.includes('silver_nitrate')) {
-                    logToConsole('Reaction: Acid (Cl-) + Silver Nitrate -> White Precipitate (AgCl)');
+                    logToConsole('Reaction: Acid (Cl-) + Silver Nitrate -> White Precipitate (AgCl)', 'warn');
                     state.precipitate = Math.min(100, state.precipitate + 20);
                     reactionOccurred = true;
                 }
@@ -143,7 +145,7 @@ export default function ChemLabSimPage() {
             case 'sodium':
             case 'potassium':
                 if (state.composition.includes('water')) {
-                    logToConsole(`DANGER: ${type} reacts violently with water!`);
+                    logToConsole(`DANGER: ${type} reacts violently with water!`, 'danger');
                     state.isExploding = true;
                     state.explosionTimer = 50; // duration of shake
                     state.temp += 50;
@@ -160,7 +162,7 @@ export default function ChemLabSimPage() {
             case 'salt':
                 state.composition.push('salt', 'Cl-');
                 if (state.composition.includes('silver_nitrate')) {
-                    logToConsole('Reaction: Salt (Cl-) + Silver Nitrate -> White Precipitate (AgCl)');
+                    logToConsole('Reaction: Salt (Cl-) + Silver Nitrate -> White Precipitate (AgCl)', 'warn');
                     state.precipitate = Math.min(100, state.precipitate + 20);
                     reactionOccurred = true;
                 }
@@ -168,7 +170,7 @@ export default function ChemLabSimPage() {
             case 'silver_nitrate':
                 state.composition.push('silver_nitrate');
                 if (state.composition.includes('Cl-')) {
-                    logToConsole('Reaction: Silver Nitrate + Chloride -> White Precipitate (AgCl)');
+                    logToConsole('Reaction: Silver Nitrate + Chloride -> White Precipitate (AgCl)', 'warn');
                     state.precipitate = Math.min(100, state.precipitate + 20);
                     reactionOccurred = true;
                 }
@@ -190,7 +192,7 @@ export default function ChemLabSimPage() {
 
         if(!reactionOccurred) spawnParticles(10, 'bubble', 400, 400);
 
-    }, [getPhColor, spawnParticles]);
+    }, [getPhColor, spawnParticles, logToConsole]);
 
     const labAction = useCallback((action: string) => {
         logToConsole(`Action: ${action}.`);
@@ -201,7 +203,7 @@ export default function ChemLabSimPage() {
         } else if (action === 'mix') {
             spawnParticles(20, 'bubble', 400, 400);
         }
-    }, [spawnParticles]);
+    }, [spawnParticles, logToConsole]);
     
     const resetLab = useCallback(() => {
         logToConsole('Lab reset.');
@@ -217,7 +219,7 @@ export default function ChemLabSimPage() {
             isExploding: false,
             explosionTimer: 0,
         };
-    }, []);
+    }, [logToConsole]);
 
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -269,15 +271,28 @@ export default function ChemLabSimPage() {
             const beakerBottom = 550;
             const beakerWidth = 200;
             const beakerHeight = 350;
+            const beakerX = canvas.width / 2 - beakerWidth / 2;
+            
             ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
             ctx.lineWidth = 3;
             ctx.beginPath();
-            ctx.moveTo(canvas.width / 2 - beakerWidth / 2 - 20, beakerBottom - beakerHeight);
-            ctx.lineTo(canvas.width / 2 - beakerWidth / 2, beakerBottom - beakerHeight + 30);
-            ctx.lineTo(canvas.width / 2 - beakerWidth / 2, beakerBottom);
-            ctx.quadraticCurveTo(canvas.width / 2, beakerBottom + 20, canvas.width / 2 + beakerWidth / 2, beakerBottom);
-            ctx.lineTo(canvas.width / 2 + beakerWidth / 2, beakerBottom - beakerHeight + 30);
-            ctx.lineTo(canvas.width / 2 + beakerWidth / 2 + 20, beakerBottom - beakerHeight);
+            ctx.moveTo(beakerX - 20, beakerBottom - beakerHeight);
+            ctx.lineTo(beakerX, beakerBottom - beakerHeight + 30);
+            ctx.lineTo(beakerX, beakerBottom);
+            ctx.quadraticCurveTo(canvas.width / 2, beakerBottom + 20, beakerX + beakerWidth, beakerBottom);
+            ctx.lineTo(beakerX + beakerWidth, beakerBottom - beakerHeight + 30);
+            ctx.lineTo(beakerX + beakerWidth + 20, beakerBottom - beakerHeight);
+            ctx.stroke();
+
+             // Add highlights for glass effect
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(beakerX + 20, beakerBottom - beakerHeight + 50);
+            ctx.lineTo(beakerX + 20, beakerBottom - 40);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.ellipse(beakerX + beakerWidth - 10, beakerBottom - beakerHeight + 120, 3, 50, 0, 0, Math.PI * 2);
             ctx.stroke();
 
             // Draw Liquid
@@ -285,14 +300,13 @@ export default function ChemLabSimPage() {
                 const liquidY = beakerBottom - state.volume;
                 ctx.fillStyle = `rgba(${state.color.r}, ${state.color.g}, ${state.color.b}, ${state.color.a})`;
                 ctx.beginPath();
-                ctx.moveTo(canvas.width / 2 - beakerWidth / 2, beakerBottom);
-                ctx.lineTo(canvas.width / 2 + beakerWidth / 2, beakerBottom);
+                ctx.moveTo(beakerX, beakerBottom);
+                ctx.lineTo(beakerX + beakerWidth, beakerBottom);
                 
-                // Sine wave for surface
-                const amplitude = state.isBoiling ? 5 : 2;
+                const amplitude = state.isBoiling ? 6 : state.explosionTimer > 0 ? 8 : 2;
                 for (let x = beakerWidth; x >= 0; x--) {
                     const waveY = liquidY + Math.sin((x + frameCount.current) * 0.1) * amplitude;
-                    ctx.lineTo(canvas.width / 2 - beakerWidth / 2 + x, waveY);
+                    ctx.lineTo(beakerX + x, waveY);
                 }
                 
                 ctx.closePath();
@@ -306,31 +320,38 @@ export default function ChemLabSimPage() {
                 const pileY = beakerBottom - baseHeight;
 
                 ctx.beginPath();
-                ctx.moveTo(canvas.width / 2 - beakerWidth / 2, beakerBottom);
+                ctx.moveTo(beakerX, beakerBottom);
                 for (let x = 0; x <= beakerWidth; x += 15) {
-                    const currentX = canvas.width / 2 - beakerWidth / 2 + x;
+                    const currentX = beakerX + x;
                     const randomY = pileY + Math.sin(x * 0.5) * 5 + (Math.random() - 0.5) * 5;
                     ctx.lineTo(currentX, randomY > beakerBottom ? beakerBottom : randomY);
                 }
-                ctx.lineTo(canvas.width / 2 + beakerWidth / 2, beakerBottom);
+                ctx.lineTo(beakerX + beakerWidth, beakerBottom);
                 ctx.closePath();
                 ctx.fill();
             }
-
 
             // Draw Particles
             state.particles.forEach(p => {
                 let alpha = p.life / 100;
                 if (p.type === 'fire') {
-                    ctx.fillStyle = `rgba(255, ${Math.random() * 150}, 0, ${alpha})`;
+                    ctx.fillStyle = `rgba(255, ${Math.random() * 150 + 50}, 0, ${alpha})`;
+                    ctx.shadowColor = 'rgba(255, 100, 0, 0.8)';
+                    ctx.shadowBlur = 10;
                 } else if (p.type === 'smoke') {
-                    ctx.fillStyle = `rgba(100, 100, 100, ${alpha * 0.5})`;
-                } else {
-                    ctx.fillStyle = `rgba(200, 220, 255, ${alpha * 0.7})`;
+                    ctx.fillStyle = `rgba(120, 120, 120, ${alpha * 0.5})`;
+                } else { // Bubbles or steam
+                    ctx.strokeStyle = `rgba(220, 230, 255, ${alpha * 0.8})`;
+                    ctx.lineWidth = 1.5;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                    ctx.stroke();
+                    return; // skip fill for bubbles/steam
                 }
                 ctx.beginPath();
                 ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
                 ctx.fill();
+                ctx.shadowBlur = 0; // reset shadow
             });
 
             if (state.isExploding) {
@@ -338,12 +359,16 @@ export default function ChemLabSimPage() {
             }
 
             // Draw HUD
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-            ctx.font = '16px "Montserrat", sans-serif';
+            ctx.fillStyle = 'rgba(220, 230, 255, 0.9)';
+            ctx.font = '16px "Courier New", monospace';
             ctx.textAlign = 'left';
+            ctx.shadowColor = 'hsl(var(--primary))';
+            ctx.shadowBlur = 5;
             ctx.fillText(`Temp: ${state.temp.toFixed(1)}°C`, 20, 40);
             ctx.fillText(`pH: ${state.ph.toFixed(1)}`, 20, 65);
             ctx.fillText(`Volume: ${state.volume.toFixed(0)}ml`, 20, 90);
+            ctx.shadowBlur = 0;
+
 
             animationFrameId.current = requestAnimationFrame(labGameLoop);
         };
@@ -359,11 +384,11 @@ export default function ChemLabSimPage() {
     }, [labAdd, spawnParticles, getPhColor, resetLab]); // Only re-run if these functions change (they are memoized)
 
   return (
-    <div className="flex flex-col h-[calc(100vh-120px)] w-full p-4 bg-background text-foreground">
+    <div className="flex flex-col h-[calc(100vh-120px)] w-full p-4 bg-background text-foreground animate-in fade-in duration-500">
         <header className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-4">
-            <FlaskConical className="w-8 h-8 text-cyan-400" />
-            <h1 className="font-headline text-3xl">Chem Lab Pro</h1>
+            <FlaskConical className="w-8 h-8 text-cyan-400 animate-glow" style={{animationDuration: '3s'}} />
+            <h1 className="font-headline text-3xl text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-blue-500">Chem Lab Pro</h1>
           </div>
           <Link href="/dashboard/game-zone">
             <Button variant="ghost" size="icon">
@@ -373,19 +398,24 @@ export default function ChemLabSimPage() {
         </header>
         <div className="flex flex-1 flex-col md:flex-row gap-4">
             {/* Left Panel: Shelf */}
-            <Card className="w-full md:w-1/4 bg-black/20 backdrop-blur-md border-white/10">
+            <Card className="w-full md:w-1/4 bg-black/30 backdrop-blur-sm border-white/10 animate-in slide-in-from-left-5 duration-500">
                 <CardHeader><CardTitle className="font-headline text-primary">Reagent Shelf</CardTitle></CardHeader>
                 <CardContent className="flex flex-col h-[calc(100%-80px)]">
                     <ScrollArea className="flex-grow pr-4">
                         <div className="space-y-6">
                             {Object.entries(chemicals).map(([group, items]) => (
                                 <div key={group}>
-                                    <h3 className="font-semibold text-muted-foreground uppercase text-sm mb-2">{group}</h3>
+                                    <h3 className="font-semibold text-muted-foreground uppercase text-sm mb-2 tracking-wider">{group}</h3>
                                     <div className="grid grid-cols-2 gap-2">
                                         {items.map(item => (
-                                            <Button key={item.id} variant="outline" className="flex-col h-20" onClick={() => labAdd(item.id)}>
+                                            <Button 
+                                                key={item.id} 
+                                                variant="outline" 
+                                                className="flex flex-col items-center justify-center text-center h-24 p-2 transition-all hover:scale-105 hover:bg-accent/50 hover:border-primary/50" 
+                                                onClick={() => labAdd(item.id)}
+                                            >
                                                 <item.icon className="w-6 h-6 mb-1"/>
-                                                <span className="text-xs text-center">{item.name}</span>
+                                                <span className="text-xs text-wrap leading-tight">{item.name}</span>
                                             </Button>
                                         ))}
                                     </div>
@@ -394,14 +424,14 @@ export default function ChemLabSimPage() {
                         </div>
                     </ScrollArea>
                     <div className="mt-4 border-t border-white/10 pt-4">
-                        <h3 className="font-semibold text-muted-foreground uppercase text-sm mb-2">Tools</h3>
+                        <h3 className="font-semibold text-muted-foreground uppercase text-sm mb-2 tracking-wider">Tools</h3>
                         <div className="grid grid-cols-4 gap-2">
                             {tools.map(tool => (
-                                <Button key={tool.id} variant="secondary" size="icon" className="h-14 w-full" onClick={() => labAction(tool.id)}>
+                                <Button key={tool.id} variant="secondary" size="icon" className="h-14 w-full transition-transform hover:scale-105" onClick={() => labAction(tool.id)}>
                                     <tool.icon className="w-6 h-6"/>
                                 </Button>
                             ))}
-                            <Button variant="destructive" size="icon" className="h-14 w-full" onClick={resetLab}>
+                            <Button variant="destructive" size="icon" className="h-14 w-full transition-transform hover:scale-105" onClick={resetLab}>
                                 <XCircle className="w-6 h-6" />
                                 <span className="sr-only">Clear Lab</span>
                             </Button>
@@ -411,17 +441,23 @@ export default function ChemLabSimPage() {
             </Card>
 
             {/* Right Panel: Simulation */}
-            <div className="flex-1 flex flex-col gap-4">
-                <div className={cn("flex-1 bg-[#1e1e2e] rounded-lg relative overflow-hidden border border-primary/20", labState.current.isExploding && 'animate-shake')}>
+            <div className="flex-1 flex flex-col gap-4 animate-in slide-in-from-right-5 duration-500">
+                <div className={cn("flex-1 bg-[#1e1e2e] rounded-lg relative overflow-hidden border border-primary/20 shadow-[inset_0_0_20px_rgba(0,0,0,0.5)]", labState.current.isExploding && 'animate-shake')}>
                     <canvas ref={canvasRef} width="800" height="600" className="absolute top-0 left-0 w-full h-full" />
                 </div>
-                <Card className="h-1/4 bg-black/50 border-white/10">
-                    <CardHeader className="p-2 border-b border-white/10"><CardTitle className="text-sm font-mono">Event Log</CardTitle></CardHeader>
+                <Card className="h-1/4 bg-black/60 backdrop-blur-sm border-white/10">
+                    <CardHeader className="p-2 border-b border-white/10">
+                      <CardTitle className="text-sm font-mono text-green-300">Event Log</CardTitle>
+                    </CardHeader>
                     <CardContent className="p-0">
                         <ScrollArea className="h-[120px]">
                             <div className="p-2">
                             {consoleLogs.map((log, i) => (
-                                <p key={i} className="font-mono text-xs text-green-400 whitespace-nowrap">{log}</p>
+                                <p key={i} className={cn("font-mono text-xs whitespace-nowrap", {
+                                    'text-green-400': log.level === 'info',
+                                    'text-yellow-400': log.level === 'warn',
+                                    'text-red-400 font-bold': log.level === 'danger',
+                                })}>{log.message}</p>
                             ))}
                             </div>
                         </ScrollArea>
