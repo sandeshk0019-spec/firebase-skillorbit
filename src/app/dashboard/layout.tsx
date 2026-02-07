@@ -58,44 +58,44 @@ function AppSidebar() {
       <SidebarContent>
         <SidebarMenu>
           <SidebarMenuItem>
-            <Link href="/dashboard" legacyBehavior passHref>
-              <SidebarMenuButton isActive={isActive('/dashboard')} tooltip="Dashboard">
+            <SidebarMenuButton asChild isActive={isActive('/dashboard')} tooltip="Dashboard">
+              <Link href="/dashboard">
                 <Home />
                 <span>Dashboard</span>
-              </SidebarMenuButton>
-            </Link>
+              </Link>
+            </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <Link href="/dashboard/quiz" legacyBehavior passHref>
-              <SidebarMenuButton isActive={isActive('/dashboard/quiz')} tooltip="AI Quiz Generator">
+            <SidebarMenuButton asChild isActive={isActive('/dashboard/quiz')} tooltip="AI Quiz Generator">
+              <Link href="/dashboard/quiz">
                 <Cpu />
                 <span>AI Quiz</span>
-              </SidebarMenuButton>
-            </Link>
+              </Link>
+            </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <Link href="/dashboard/game-zone" legacyBehavior passHref>
-              <SidebarMenuButton isActive={isActive('/dashboard/game-zone')} tooltip="Game Zone">
+            <SidebarMenuButton asChild isActive={isActive('/dashboard/game-zone')} tooltip="Game Zone">
+              <Link href="/dashboard/game-zone">
                 <Gamepad2 />
                 <span>Game Zone</span>
-              </SidebarMenuButton>
-            </Link>
+              </Link>
+            </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <Link href="/dashboard/tutor" legacyBehavior passHref>
-              <SidebarMenuButton isActive={isActive('/dashboard/tutor')} tooltip="AI Tutor">
+            <SidebarMenuButton asChild isActive={isActive('/dashboard/tutor')} tooltip="AI Tutor">
+              <Link href="/dashboard/tutor">
                 <BrainCircuit />
                 <span>AI Tutor</span>
-              </SidebarMenuButton>
-            </Link>
+              </Link>
+            </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <Link href="/dashboard/dyslexia-support" legacyBehavior passHref>
-              <SidebarMenuButton isActive={isActive('/dashboard/dyslexia-support')} tooltip="Dyslexia Support">
+            <SidebarMenuButton asChild isActive={isActive('/dashboard/dyslexia-support')} tooltip="Dyslexia Support">
+              <Link href="/dashboard/dyslexia-support">
                 <Webhook />
                 <span>Speech Tools</span>
-              </SidebarMenuButton>
-            </Link>
+              </Link>
+            </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarContent>
