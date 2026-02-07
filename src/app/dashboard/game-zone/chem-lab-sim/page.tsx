@@ -411,11 +411,11 @@ export default function ChemLabSimPage() {
                                             <Button 
                                                 key={item.id} 
                                                 variant="outline" 
-                                                className="flex flex-col items-center justify-center text-center h-24 p-2 transition-all hover:scale-105 hover:bg-accent/50 hover:border-primary/50" 
+                                                className="flex flex-col items-center justify-center text-center min-h-24 p-2 transition-all hover:scale-105 hover:bg-accent/50 hover:border-primary/50" 
                                                 onClick={() => labAdd(item.id)}
                                             >
                                                 <item.icon className="w-6 h-6 mb-1"/>
-                                                <span className="text-xs text-wrap leading-tight">{item.name}</span>
+                                                <span className="text-xs whitespace-normal leading-tight">{item.name}</span>
                                             </Button>
                                         ))}
                                     </div>
