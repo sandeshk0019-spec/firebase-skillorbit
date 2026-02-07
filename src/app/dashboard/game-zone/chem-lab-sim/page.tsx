@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { XCircle, Flame, Snowflake, RotateCw, TestTube, Beaker, FlaskConical, Droplet, Zap, Atom } from 'lucide-react';
+import { XCircle, Flame, Snowflake, RotateCw, TestTube, Beaker, FlaskConical, Atom, Minus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 // Define types for better type-safety
@@ -26,6 +26,7 @@ interface LabState {
   color: { r: number; g: number; b: number; a: number };
   composition: string[];
   particles: Particle[];
+  precipitate: number;
   isBoiling: boolean;
   isExploding: boolean;
   explosionTimer: number;
@@ -33,7 +34,7 @@ interface LabState {
 
 const chemicals = {
     liquids: [
-        { id: 'water', name: 'Water', icon: Droplet },
+        { id: 'water', name: 'Water (H₂O)', icon: Droplet },
         { id: 'acid', name: 'Acid (HCl)', icon: TestTube },
         { id: 'base', name: 'Base (NaOH)', icon: TestTube },
     ],
@@ -41,6 +42,7 @@ const chemicals = {
         { id: 'sodium', name: 'Sodium (Na)', icon: Atom },
         { id: 'potassium', name: 'Potassium (K)', icon: Atom },
         { id: 'magnesium', name: 'Magnesium (Mg)', icon: Atom },
+        { id: 'salt', name: 'Salt (NaCl)', icon: Minus },
     ],
     indicators: [
         { id: 'universal_indicator', name: 'Universal Indicator', icon: FlaskConical },
@@ -53,7 +55,7 @@ const chemicals = {
 const tools = [
     { id: 'heat', name: 'Heat', icon: Flame },
     { id: 'cool', name: 'Cool', icon: Snowflake },
-    { id: 'stir', name: 'Stir', icon: RotateCw },
+    { id: 'mix', name: 'Mix', icon: RotateCw },
 ];
 
 export default function ChemLabSimPage() {
@@ -68,6 +70,7 @@ export default function ChemLabSimPage() {
         color: { r: 173, g: 216, b: 230, a: 0.5 }, // Light blue for water
         composition: ['water'],
         particles: [],
+        precipitate: 0,
         isBoiling: false,
         isExploding: false,
         explosionTimer: 0,
@@ -106,8 +109,9 @@ export default function ChemLabSimPage() {
 
     const labAdd = useCallback((type: string) => {
         const state = labState.current;
-        logToConsole(`Added ${type}.`);
-        state.composition.push(type);
+        const chemical = [...chemicals.liquids, ...chemicals.solids, ...chemicals.indicators].find(c => c.id === type);
+        logToConsole(`Added ${chemical?.name || type}.`);
+
         state.volume = Math.min(450, state.volume + 25);
 
         let reactionOccurred = false;
@@ -116,17 +120,25 @@ export default function ChemLabSimPage() {
         switch(type) {
             case 'acid':
                 state.ph = Math.max(0, state.ph - 3);
+                state.composition.push('acid', 'Cl-');
                 if (state.composition.includes('magnesium')) {
                     logToConsole('Reaction: Magnesium + Acid -> Bubbles (H₂)');
                     spawnParticles(30, 'bubble', 400, 400);
                     reactionOccurred = true;
                 }
+                 if (state.composition.includes('silver_nitrate')) {
+                    logToConsole('Reaction: Acid (Cl-) + Silver Nitrate -> White Precipitate (AgCl)');
+                    state.precipitate = Math.min(100, state.precipitate + 20);
+                    reactionOccurred = true;
+                }
                 break;
             case 'base':
                 state.ph = Math.min(14, state.ph + 3);
+                state.composition.push('base');
                 break;
             case 'water':
                 state.ph += (7 - state.ph) * 0.3; // Neutralize towards 7
+                state.composition.push('water');
                 break;
             case 'sodium':
             case 'potassium':
@@ -139,10 +151,31 @@ export default function ChemLabSimPage() {
                     spawnParticles(50, 'smoke', 400, 350);
                     reactionOccurred = true;
                 }
+                state.composition.push(type);
                 break;
              case 'copper_sulfate':
                 state.color = { r: 0, g: 100, b: 255, a: 0.6 }; // Blue solution
+                state.composition.push('copper_sulfate');
                 break;
+            case 'salt':
+                state.composition.push('salt', 'Cl-');
+                if (state.composition.includes('silver_nitrate')) {
+                    logToConsole('Reaction: Salt (Cl-) + Silver Nitrate -> White Precipitate (AgCl)');
+                    state.precipitate = Math.min(100, state.precipitate + 20);
+                    reactionOccurred = true;
+                }
+                break;
+            case 'silver_nitrate':
+                state.composition.push('silver_nitrate');
+                if (state.composition.includes('Cl-')) {
+                    logToConsole('Reaction: Silver Nitrate + Chloride -> White Precipitate (AgCl)');
+                    state.precipitate = Math.min(100, state.precipitate + 20);
+                    reactionOccurred = true;
+                }
+                break;
+            default:
+                 state.composition.push(type);
+                 break;
         }
 
         // Indicator Reactions
@@ -165,7 +198,7 @@ export default function ChemLabSimPage() {
             labState.current.temp += 20;
         } else if (action === 'cool') {
             labState.current.temp = Math.max(0, labState.current.temp - 20);
-        } else if (action === 'stir') {
+        } else if (action === 'mix') {
             spawnParticles(20, 'bubble', 400, 400);
         }
     }, [spawnParticles]);
@@ -179,6 +212,7 @@ export default function ChemLabSimPage() {
             color: { r: 173, g: 216, b: 230, a: 0.5 },
             composition: ['water'],
             particles: [],
+            precipitate: 0,
             isBoiling: false,
             isExploding: false,
             explosionTimer: 0,
@@ -251,20 +285,38 @@ export default function ChemLabSimPage() {
                 const liquidY = beakerBottom - state.volume;
                 ctx.fillStyle = `rgba(${state.color.r}, ${state.color.g}, ${state.color.b}, ${state.color.a})`;
                 ctx.beginPath();
-                ctx.moveTo(canvas.width / 2 - beakerWidth / 2, liquidY);
+                ctx.moveTo(canvas.width / 2 - beakerWidth / 2, beakerBottom);
+                ctx.lineTo(canvas.width / 2 + beakerWidth / 2, beakerBottom);
                 
                 // Sine wave for surface
                 const amplitude = state.isBoiling ? 5 : 2;
-                for (let x = 0; x <= beakerWidth; x++) {
+                for (let x = beakerWidth; x >= 0; x--) {
                     const waveY = liquidY + Math.sin((x + frameCount.current) * 0.1) * amplitude;
                     ctx.lineTo(canvas.width / 2 - beakerWidth / 2 + x, waveY);
                 }
-
-                ctx.lineTo(canvas.width/2 + beakerWidth/2, beakerBottom);
-                ctx.lineTo(canvas.width/2 - beakerWidth/2, beakerBottom);
+                
                 ctx.closePath();
                 ctx.fill();
             }
+
+            // Draw Precipitate
+            if (state.precipitate > 0) {
+                ctx.fillStyle = 'rgba(240, 240, 245, 0.9)';
+                const baseHeight = state.precipitate * 0.5;
+                const pileY = beakerBottom - baseHeight;
+
+                ctx.beginPath();
+                ctx.moveTo(canvas.width / 2 - beakerWidth / 2, beakerBottom);
+                for (let x = 0; x <= beakerWidth; x += 15) {
+                    const currentX = canvas.width / 2 - beakerWidth / 2 + x;
+                    const randomY = pileY + Math.sin(x * 0.5) * 5 + (Math.random() - 0.5) * 5;
+                    ctx.lineTo(currentX, randomY > beakerBottom ? beakerBottom : randomY);
+                }
+                ctx.lineTo(canvas.width / 2 + beakerWidth / 2, beakerBottom);
+                ctx.closePath();
+                ctx.fill();
+            }
+
 
             // Draw Particles
             state.particles.forEach(p => {
@@ -304,64 +356,78 @@ export default function ChemLabSimPage() {
             }
         };
 
-    }, [labAdd, spawnParticles, getPhColor]); // Only re-run if these functions change (they are memoized)
+    }, [labAdd, spawnParticles, getPhColor, resetLab]); // Only re-run if these functions change (they are memoized)
 
   return (
-    <div className="flex flex-col md:flex-row h-[calc(100vh-120px)] w-full gap-4 p-4 bg-background text-foreground">
-        {/* Left Panel: Shelf */}
-        <Card className="w-full md:w-1/4 bg-black/20 backdrop-blur-md border-white/10">
-            <CardHeader><CardTitle className="font-headline text-primary">Chem Shelf</CardTitle></CardHeader>
-            <CardContent>
-                <ScrollArea className="h-[calc(100vh-350px)] pr-4">
-                    <div className="space-y-6">
-                        {Object.entries(chemicals).map(([group, items]) => (
-                            <div key={group}>
-                                <h3 className="font-semibold text-muted-foreground uppercase text-sm mb-2">{group}</h3>
-                                <div className="grid grid-cols-2 gap-2">
-                                    {items.map(item => (
-                                        <Button key={item.id} variant="outline" className="flex-col h-20" onClick={() => labAdd(item.id)}>
-                                            <item.icon className="w-6 h-6 mb-1"/>
-                                            <span className="text-xs text-center">{item.name}</span>
-                                        </Button>
-                                    ))}
+    <div className="flex flex-col h-[calc(100vh-120px)] w-full p-4 bg-background text-foreground">
+        <header className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-4">
+            <FlaskConical className="w-8 h-8 text-cyan-400" />
+            <h1 className="font-headline text-3xl">Chem Lab Pro</h1>
+          </div>
+          <Link href="/dashboard/game-zone">
+            <Button variant="ghost" size="icon">
+              <XCircle className="w-8 h-8" />
+            </Button>
+          </Link>
+        </header>
+        <div className="flex flex-1 flex-col md:flex-row gap-4">
+            {/* Left Panel: Shelf */}
+            <Card className="w-full md:w-1/4 bg-black/20 backdrop-blur-md border-white/10">
+                <CardHeader><CardTitle className="font-headline text-primary">Reagent Shelf</CardTitle></CardHeader>
+                <CardContent className="flex flex-col h-[calc(100%-80px)]">
+                    <ScrollArea className="flex-grow pr-4">
+                        <div className="space-y-6">
+                            {Object.entries(chemicals).map(([group, items]) => (
+                                <div key={group}>
+                                    <h3 className="font-semibold text-muted-foreground uppercase text-sm mb-2">{group}</h3>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {items.map(item => (
+                                            <Button key={item.id} variant="outline" className="flex-col h-20" onClick={() => labAdd(item.id)}>
+                                                <item.icon className="w-6 h-6 mb-1"/>
+                                                <span className="text-xs text-center">{item.name}</span>
+                                            </Button>
+                                        ))}
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
-                    </div>
-                </ScrollArea>
-                <div className="mt-4 border-t border-white/10 pt-4">
-                     <h3 className="font-semibold text-muted-foreground uppercase text-sm mb-2">Tools</h3>
-                     <div className="grid grid-cols-4 gap-2">
-                         {tools.map(tool => (
-                             <Button key={tool.id} variant="secondary" size="icon" className="h-14 w-full" onClick={() => labAction(tool.id)}>
-                                <tool.icon className="w-6 h-6"/>
-                             </Button>
-                         ))}
-                         <Button variant="destructive" size="icon" className="h-14 w-full" onClick={resetLab}>
-                            <XCircle className="w-6 h-6" />
-                         </Button>
-                     </div>
-                </div>
-            </CardContent>
-        </Card>
-
-        {/* Right Panel: Simulation */}
-        <div className="flex-1 flex flex-col gap-4">
-            <div className={cn("flex-1 bg-[#0a0a1a] rounded-lg relative overflow-hidden border border-primary/20", labState.current.isExploding && 'animate-shake')}>
-                <canvas ref={canvasRef} width="800" height="600" className="absolute top-0 left-0 w-full h-full" />
-            </div>
-            <Card className="h-1/4 bg-black/50 border-white/10">
-                 <CardHeader className="p-2 border-b border-white/10"><CardTitle className="text-sm font-mono">Event Log</CardTitle></CardHeader>
-                 <CardContent className="p-0">
-                    <ScrollArea className="h-[120px]">
-                        <div className="p-2">
-                        {consoleLogs.map((log, i) => (
-                            <p key={i} className="font-mono text-xs text-green-400 whitespace-nowrap">{log}</p>
-                        ))}
+                            ))}
                         </div>
                     </ScrollArea>
-                 </CardContent>
+                    <div className="mt-4 border-t border-white/10 pt-4">
+                        <h3 className="font-semibold text-muted-foreground uppercase text-sm mb-2">Tools</h3>
+                        <div className="grid grid-cols-4 gap-2">
+                            {tools.map(tool => (
+                                <Button key={tool.id} variant="secondary" size="icon" className="h-14 w-full" onClick={() => labAction(tool.id)}>
+                                    <tool.icon className="w-6 h-6"/>
+                                </Button>
+                            ))}
+                            <Button variant="destructive" size="icon" className="h-14 w-full" onClick={resetLab}>
+                                <XCircle className="w-6 h-6" />
+                                <span className="sr-only">Clear Lab</span>
+                            </Button>
+                        </div>
+                    </div>
+                </CardContent>
             </Card>
+
+            {/* Right Panel: Simulation */}
+            <div className="flex-1 flex flex-col gap-4">
+                <div className={cn("flex-1 bg-[#1e1e2e] rounded-lg relative overflow-hidden border border-primary/20", labState.current.isExploding && 'animate-shake')}>
+                    <canvas ref={canvasRef} width="800" height="600" className="absolute top-0 left-0 w-full h-full" />
+                </div>
+                <Card className="h-1/4 bg-black/50 border-white/10">
+                    <CardHeader className="p-2 border-b border-white/10"><CardTitle className="text-sm font-mono">Event Log</CardTitle></CardHeader>
+                    <CardContent className="p-0">
+                        <ScrollArea className="h-[120px]">
+                            <div className="p-2">
+                            {consoleLogs.map((log, i) => (
+                                <p key={i} className="font-mono text-xs text-green-400 whitespace-nowrap">{log}</p>
+                            ))}
+                            </div>
+                        </ScrollArea>
+                    </CardContent>
+                </Card>
+            </div>
         </div>
     </div>
   );

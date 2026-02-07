@@ -59,7 +59,7 @@ const games = [
     color: "text-cyan-500",
     hoverColor: "hover:border-cyan-500/80",
     href: "/dashboard/game-zone/chem-lab-sim",
-    comingSoon: true,
+    comingSoon: false,
   },
 ];
 
