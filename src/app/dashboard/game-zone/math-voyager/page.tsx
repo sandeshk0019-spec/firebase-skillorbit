@@ -75,6 +75,7 @@ export default function MathVoyagerPage() {
     };
 
     const spawnItem = () => {
+      if(!canvas) return;
       const radius = 25;
       const x = Math.random() * (canvas.width - radius * 2) + radius;
       const y = -radius;
@@ -96,6 +97,7 @@ export default function MathVoyagerPage() {
     };
     
     const update = () => {
+      if(!canvas) return;
       // Move player
       if (player.isMovingLeft && player.x > player.width / 2) {
         player.x -= player.dx;
@@ -104,7 +106,7 @@ export default function MathVoyagerPage() {
         player.x += player.dx;
       }
 
-      // Spawn items
+      // Spawn items on a timer
       spawnTimer.current++;
       if (spawnTimer.current % Math.max(30, 100 / gameSpeed.current) === 0) {
         spawnItem();
@@ -113,7 +115,7 @@ export default function MathVoyagerPage() {
       // Move and check items
       for (let i = items.current.length - 1; i >= 0; i--) {
         const item = items.current[i];
-        if (!item) continue; // Safety check
+        if (!item) continue;
         
         item.y += item.dy;
 
@@ -123,9 +125,15 @@ export default function MathVoyagerPage() {
           if (item.isCorrect) {
             setScore((s) => s + 10);
             gameSpeed.current += 0.1;
-            items.current = [];
-            generateQuestion();
-            return; // Return to exit the update function for this frame and prevent errors.
+            items.current = []; // Clear all bubbles
+            generateQuestion(); // Get a new question
+            
+            // Immediately spawn a new set of bubbles to prevent empty screen
+            for (let j = 0; j < 3; j++) {
+              spawnItem();
+            }
+
+            return; // Exit loop for this frame since items array was modified
           } else {
             setScore((s) => Math.max(0, s - 5));
             setIsShaking(true);
@@ -139,7 +147,13 @@ export default function MathVoyagerPage() {
             setScore((s) => Math.max(0, s - 10));
             items.current = [];
             generateQuestion();
-            return;
+            
+            // Immediately spawn bubbles if correct answer is missed
+            for (let j = 0; j < 3; j++) {
+              spawnItem();
+            }
+
+            return; // Exit loop
           }
           items.current.splice(i, 1);
         }
@@ -195,6 +209,7 @@ export default function MathVoyagerPage() {
     
     const handleTouchStart = (e: TouchEvent) => {
       e.preventDefault();
+      if(!canvas) return;
       const touchX = e.touches[0].clientX - canvas.getBoundingClientRect().left;
       if (touchX < player.x) {
         player.isMovingLeft = true;
@@ -207,6 +222,7 @@ export default function MathVoyagerPage() {
       
     const handleTouchMove = (e: TouchEvent) => {
       e.preventDefault();
+      if(!canvas) return;
       const touchX = e.touches[0].clientX - canvas.getBoundingClientRect().left;
       if (touchX < player.x) {
         player.isMovingLeft = true;
