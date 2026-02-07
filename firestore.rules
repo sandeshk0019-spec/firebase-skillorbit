@@ -106,32 +106,44 @@ service cloud.firestore {
       /**
        * @description User's quiz history. Write-once, read-many.
        */
+      match /quizAttempts {
+        allow list, create: if isOwner(userId);
+      }
       match /quizAttempts/{attemptId} {
-        allow read, create: if isOwner(userId);
+        allow get: if isOwner(userId);
         allow update, delete: if false;
       }
 
       /**
        * @description User's game scores. Write-once, read-many.
        */
+      match /gameScores {
+         allow list, create: if isOwner(userId);
+      }
       match /gameScores/{scoreId} {
-        allow read, create: if isOwner(userId);
+        allow get: if isOwner(userId);
         allow update, delete: if false;
       }
 
       /**
        * @description User's activity feed. Write-once, read-many.
        */
+      match /activities {
+        allow list, create: if isOwner(userId);
+      }
       match /activities/{activityId} {
-        allow read, create: if isOwner(userId);
+        allow get: if isOwner(userId);
         allow update, delete: if false;
       }
 
       /**
-       * @description User's unlocked achievements. Write-once, read-many.
+       * @description User's unlocked achievements. Read-many, write-once with specific ID.
        */
+      match /achievements {
+          allow list: if isOwner(userId);
+      }
       match /achievements/{achievementId} {
-        allow read, create: if isOwner(userId);
+        allow get, create: if isOwner(userId);
         allow update, delete: if false;
       }
     }
