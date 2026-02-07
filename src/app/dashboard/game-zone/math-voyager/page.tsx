@@ -82,6 +82,9 @@ export default function MathVoyagerPage() {
       const dy = 1.5 * gameSpeed.current;
 
       const hasCorrectAnswer = items.current.some(item => item.isCorrect);
+      
+      // Smart spawning: if no correct answer is on screen, force the next one to be correct.
+      // This is particularly important for the immediate respawn after a correct answer.
       const isCorrect = !hasCorrectAnswer || Math.random() < 0.25;
       
       let value: number;
@@ -178,7 +181,7 @@ export default function MathVoyagerPage() {
         items.current.forEach(item => {
           ctx.beginPath();
           ctx.arc(item.x, item.y, item.radius, 0, Math.PI * 2);
-          ctx.strokeStyle = item.isCorrect ? '#10b981' : '#ef4444';
+          ctx.strokeStyle = '#38bdf8';
           ctx.lineWidth = 3;
           ctx.stroke();
           
