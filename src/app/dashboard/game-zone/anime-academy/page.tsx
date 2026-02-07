@@ -162,7 +162,7 @@ function VideoPlayer({ src }: { src: string }) {
 {`[Your Project Folder]/
 ├── public/
 │   └── videos/
-│       └── chemical-bonding.mp4
+│       └── your-video-file.mp4
 ├── src/
 ├── package.json
 ...`}
@@ -197,8 +197,11 @@ export default function AnimeAcademyPage() {
     const [videoError, setVideoError] = useState<string | null>(null);
 
     const episodeData = selectedTopic ? topics[selectedTopic]?.episode : null;
-    const isChemicalBonding = selectedTopic === 'chemical-bonding';
     
+    const localVideoPath = selectedTopic === 'chemical-bonding' ? '/videos/chemical-bonding.mp4'
+      : selectedTopic === 'flemings-right-hand-rule' ? '/videos/flemings-right-hand-rule.mp4'
+      : null;
+
     const handleGenerateVideo = async () => {
         if (!episodeData) return;
     
@@ -290,8 +293,8 @@ export default function AnimeAcademyPage() {
                              <CardDescription>{episodeData.episodeTitle}</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-6 text-center">
-                           {isChemicalBonding ? (
-                                <VideoPlayer src="/videos/chemical-bonding.mp4" />
+                           {localVideoPath ? (
+                                <VideoPlayer src={localVideoPath} />
                             ) : isVideoLoading ? (
                                 <div className="flex flex-col items-center justify-center p-8 gap-4">
                                     <Loader2 className="w-16 h-16 text-primary animate-spin"/>
