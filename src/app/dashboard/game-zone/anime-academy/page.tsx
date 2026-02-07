@@ -69,6 +69,36 @@ const topics = {
         },
         trainingChallenge: "Magnesium (Mg) has two electrons to give. Fluorine (F) only needs one. How many Fluorine atoms are needed to form a stable ionic bond with one Magnesium atom?"
     }
+  },
+  'flemings-right-hand-rule': {
+    title: "Fleming's Right-Hand Rule",
+    episode: {
+        episodeTitle: "Episode Title: The Conductor's Gauntlet!",
+        scenes: [
+            {
+                title: "Scene 1 – The Unseen Deflection",
+                content: "In the high-tech Dynamo Dojo, **Rin**, a young Flux-Weaver, struggles to power a distant crystal. Her energy beam bends away at the last second.\n\n**Rin:** (Frustrated) It's no use! My energy is stable, the crystal is aligned... but something invisible is pushing the current off course. I can't complete the circuit!",
+            },
+            {
+                title: "Scene 2 – The Magnetic Ghost",
+                content: "A shimmering, spectral form materializes between Rin and the crystal—the **Magnetic Ghost**. It's a swirling vortex of energy lines.\n\n**Magnetic Ghost:** (A distorted, echoing voice) You cannot control what you cannot predict. Your power is useless if you don't understand the forces that govern it. This is my domain—the domain of the **Field**!\n\nThe Ghost flexes its form, and Rin's next energy beam is violently twisted into a useless spiral.",
+            },
+            {
+                title: "Scene 3 – The Power Reveal",
+                content: "Her mentor, **Master Ampere**, appears. He holds up his right hand.\n\n**Master Ampere:** Do not fight the Field, Rin. Command it. The secret lies in your own hand. This is the law of the **Generator Effect**.\n\nHe guides her hand. \"Your **ThuMb** represents **Motion**—the direction you move the conductor. Your **Forefinger** represents the **Field**—the direction of the magnetic force. When you have these two, your **Middle finger** will reveal the direction of the **Current** you will induce!\"",
+            },
+            {
+                title: "Scene 4 – Victory & Understanding",
+                content: "Rin's eyes light up. She looks at the Ghost (the Field) and her own potential **Motion**. Instead of firing a static beam, she thrusts her hand forward (**Motion**) through the Ghost's form (**Field**).\n\n**Rin:** \"I'm not just a cannon... I'm a conductor!\"\n\nAs her hand moves, a brilliant arc of energy—the induced **Current**—erupts from her palm, flowing exactly where her middle finger points: straight into the heart of the crystal. The crystal overloads with pure energy, shattering the Magnetic Ghost.\n\n**Master Ampere:** \"You did not overpower the field. You used its own nature, combined with motion, to create the very current you needed. That is true mastery.\"",
+            },
+        ],
+        summary: {
+            coreConcept: "Fleming's Right-Hand Rule shows the direction of induced current that flows in a conductor when it moves through a magnetic field.",
+            shortcut: "Use your right hand! Point all three fingers at 90° angles to each other. **TH**umb = **TH**rust/Motion. **F**orefinger = **F**ield. **C**enter finger = **C**urrent.",
+            commonMistake: "Using your left hand! The Left-Hand Rule is for motors (finding the direction of Force/Motion), while the Right-Hand Rule is for generators (finding the direction of induced Current).",
+        },
+        trainingChallenge: "If a wire is being pulled downwards through a magnetic field that points from left to right, in which direction will the induced current flow?",
+    }
   }
 };
 
@@ -85,6 +115,8 @@ function VideoPlayer({ src }: { src: string }) {
             const playPromise = video.play();
             if (playPromise !== undefined) {
                 playPromise.catch(err => {
+                    // Autoplay was prevented. This is common in modern browsers.
+                    // The 'controls' attribute will allow the user to manually start the video.
                     console.warn("Autoplay was prevented. User interaction might be required.", err);
                 });
             }
@@ -104,7 +136,7 @@ function VideoPlayer({ src }: { src: string }) {
                 errorText = 'The video could not be decoded. The file may be corrupt or in an unsupported format.';
                 break;
             case e.currentTarget.error?.MEDIA_ERR_SRC_NOT_SUPPORTED:
-                errorText = 'Video not found or format is not supported. Ensure the file is at public/videos/chemical-bonding.mp4.';
+                errorText = 'Video not found or format is not supported.';
                 break;
             default:
                 errorText = 'An unexpected error occurred during video playback.';
@@ -120,6 +152,23 @@ function VideoPlayer({ src }: { src: string }) {
                     <AlertTriangle className="w-12 h-12 text-destructive mb-4" />
                     <h3 className="font-headline text-lg text-destructive">Video Playback Error</h3>
                     <p className="text-muted-foreground text-sm">{error}</p>
+                    <Card className="mt-4 p-4 bg-muted/50 text-sm text-left">
+                        <CardHeader className="p-2">
+                          <CardTitle className="text-base">Troubleshooting: Check File Location</CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-2">
+                            <p className="mb-2">The `public` folder must be in the main project directory, not inside `src`.</p>
+                            <pre className="text-xs bg-black/50 p-2 rounded-md">
+{`[Your Project Folder]/
+├── public/
+│   └── videos/
+│       └── chemical-bonding.mp4
+├── src/
+├── package.json
+...`}
+                            </pre>
+                        </CardContent>
+                    </Card>
                 </div>
             ) : (
                 <video
