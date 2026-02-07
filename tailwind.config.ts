@@ -114,6 +114,11 @@ export default {
             boxShadow: '0 0 10px hsl(var(--accent)/1)',
           },
         },
+        'shake': {
+          '0%, 100%': { transform: 'translateX(0)' },
+          '10%, 30%, 50%, 70%, 90%': { transform: 'translateX(-5px)' },
+          '20%, 40%, 60%, 80%': { transform: 'translateX(5px)' },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
@@ -121,6 +126,7 @@ export default {
         'glow': 'glow 4s ease-in-out infinite',
         'float': 'float 6s ease-in-out infinite',
         'pulse-glow': 'pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'shake': 'shake 0.2s linear',
       },
     },
   },
