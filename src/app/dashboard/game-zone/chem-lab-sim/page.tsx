@@ -37,18 +37,23 @@ const chemicals = {
         { id: 'water', name: 'Water (H₂O)', icon: Droplet },
         { id: 'acid', name: 'Acid (HCl)', icon: TestTube },
         { id: 'base', name: 'Base (NaOH)', icon: TestTube },
+        { id: 'hydrogen_peroxide', name: 'Peroxide (H₂O₂)', icon: TestTube },
     ],
     solids: [
         { id: 'sodium', name: 'Sodium (Na)', icon: Atom },
         { id: 'potassium', name: 'Potassium (K)', icon: Atom },
         { id: 'magnesium', name: 'Magnesium (Mg)', icon: Atom },
-        { id: 'salt', name: 'Salt (NaCl)', icon: Minus },
+        { id: 'zinc', name: 'Zinc (Zn)', icon: Atom },
+        { id: 'iron', name: 'Iron (Fe)', icon: Atom },
     ],
     indicators: [
         { id: 'universal_indicator', name: 'Universal Indicator', icon: FlaskConical },
         { id: 'phenolphthalein', name: 'Phenolphthalein', icon: FlaskConical },
         { id: 'copper_sulfate', name: 'Copper Sulfate', icon: Beaker },
         { id: 'silver_nitrate', name: 'Silver Nitrate', icon: Beaker },
+        { id: 'salt', name: 'Salt (NaCl)', icon: Minus },
+        { id: 'potassium_iodide', name: 'Potassium Iodide (KI)', icon: Beaker },
+        { id: 'calcium_carbonate', name: 'Chalk (CaCO₃)', icon: Minus },
     ]
 };
 
@@ -128,6 +133,21 @@ export default function ChemLabSimPage() {
                     spawnParticles(30, 'bubble', 400, 400);
                     reactionOccurred = true;
                 }
+                if (state.composition.includes('zinc')) {
+                    logToConsole('Reaction: Zinc + Acid -> Bubbles (H₂)', 'warn');
+                    spawnParticles(40, 'bubble', 400, 400);
+                    reactionOccurred = true;
+                }
+                if (state.composition.includes('iron')) {
+                    logToConsole('Reaction: Iron + Acid -> Bubbles (H₂)', 'warn');
+                    spawnParticles(15, 'bubble', 400, 400);
+                    reactionOccurred = true;
+                }
+                if (state.composition.includes('calcium_carbonate')) {
+                    logToConsole('Reaction: Chalk + Acid -> Fizzing (CO₂)', 'warn');
+                    spawnParticles(60, 'bubble', 400, 400);
+                    reactionOccurred = true;
+                }
                  if (state.composition.includes('silver_nitrate')) {
                     logToConsole('Reaction: Acid (Cl-) + Silver Nitrate -> White Precipitate (AgCl)', 'warn');
                     state.precipitate = Math.min(100, state.precipitate + 20);
@@ -155,6 +175,38 @@ export default function ChemLabSimPage() {
                 }
                 state.composition.push(type);
                 break;
+            case 'magnesium':
+                state.composition.push('magnesium');
+                 if (state.composition.includes('acid')) {
+                    logToConsole('Reaction: Magnesium + Acid -> Bubbles (H₂)', 'warn');
+                    spawnParticles(30, 'bubble', 400, 400);
+                    reactionOccurred = true;
+                }
+                break;
+            case 'zinc':
+                state.composition.push('zinc');
+                 if (state.composition.includes('acid')) {
+                    logToConsole('Reaction: Zinc + Acid -> Bubbles (H₂)', 'warn');
+                    spawnParticles(40, 'bubble', 400, 400);
+                    reactionOccurred = true;
+                }
+                break;
+            case 'iron':
+                state.composition.push('iron');
+                 if (state.composition.includes('acid')) {
+                    logToConsole('Reaction: Iron + Acid -> Bubbles (H₂)', 'warn');
+                    spawnParticles(15, 'bubble', 400, 400);
+                    reactionOccurred = true;
+                }
+                break;
+            case 'calcium_carbonate':
+                state.composition.push('calcium_carbonate');
+                 if (state.composition.includes('acid')) {
+                    logToConsole('Reaction: Chalk + Acid -> Fizzing (CO₂)', 'warn');
+                    spawnParticles(60, 'bubble', 400, 400);
+                    reactionOccurred = true;
+                }
+                break;
              case 'copper_sulfate':
                 state.color = { r: 0, g: 100, b: 255, a: 0.6 }; // Blue solution
                 state.composition.push('copper_sulfate');
@@ -172,6 +224,24 @@ export default function ChemLabSimPage() {
                 if (state.composition.includes('Cl-')) {
                     logToConsole('Reaction: Silver Nitrate + Chloride -> White Precipitate (AgCl)', 'warn');
                     state.precipitate = Math.min(100, state.precipitate + 20);
+                    reactionOccurred = true;
+                }
+                break;
+            case 'hydrogen_peroxide':
+                state.composition.push('hydrogen_peroxide');
+                if (state.composition.includes('potassium_iodide')) {
+                    logToConsole('Reaction: Peroxide + Iodide -> Rapid decomposition!', 'danger');
+                    state.temp += 40;
+                    spawnParticles(150, 'steam', 400, 400);
+                    reactionOccurred = true;
+                }
+                break;
+            case 'potassium_iodide':
+                state.composition.push('potassium_iodide');
+                if (state.composition.includes('hydrogen_peroxide')) {
+                    logToConsole('Reaction: Iodide + Peroxide -> Rapid decomposition!', 'danger');
+                    state.temp += 40;
+                    spawnParticles(150, 'steam', 400, 400);
                     reactionOccurred = true;
                 }
                 break;
@@ -198,6 +268,10 @@ export default function ChemLabSimPage() {
         logToConsole(`Action: ${action}.`);
         if (action === 'heat') {
             labState.current.temp += 20;
+            if (labState.current.composition.includes('hydrogen_peroxide')) {
+                logToConsole('Reaction: Peroxide decomposes with heat', 'warn');
+                spawnParticles(20, 'steam', 400, 400);
+            }
         } else if (action === 'cool') {
             labState.current.temp = Math.max(0, labState.current.temp - 20);
         } else if (action === 'mix') {
@@ -251,7 +325,7 @@ export default function ChemLabSimPage() {
                 p.x += p.vx;
                 p.y += p.vy;
                 p.life--;
-                if (p.type === 'smoke') p.vy -= 0.05; // smoke rises
+                if (p.type === 'smoke' || p.type === 'steam') p.vy -= 0.05; // smoke and steam rises
                 if (p.life <= 0) {
                     state.particles.splice(i, 1);
                 }
@@ -333,21 +407,25 @@ export default function ChemLabSimPage() {
 
             // Draw Particles
             state.particles.forEach(p => {
-                let alpha = p.life / 100;
+                let alpha = Math.max(0, p.life / (p.type === 'fire' ? 60 : 120));
+                
                 if (p.type === 'fire') {
                     ctx.fillStyle = `rgba(255, ${Math.random() * 150 + 50}, 0, ${alpha})`;
                     ctx.shadowColor = 'rgba(255, 100, 0, 0.8)';
                     ctx.shadowBlur = 10;
                 } else if (p.type === 'smoke') {
-                    ctx.fillStyle = `rgba(120, 120, 120, ${alpha * 0.5})`;
-                } else { // Bubbles or steam
+                    ctx.fillStyle = `rgba(100, 100, 100, ${alpha * 0.5})`;
+                } else if (p.type === 'steam') {
+                    ctx.fillStyle = `rgba(220, 220, 220, ${alpha * 0.6})`;
+                } else { // Bubbles
                     ctx.strokeStyle = `rgba(220, 230, 255, ${alpha * 0.8})`;
                     ctx.lineWidth = 1.5;
                     ctx.beginPath();
                     ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
                     ctx.stroke();
-                    return; // skip fill for bubbles/steam
+                    return; // skip fill for bubbles
                 }
+
                 ctx.beginPath();
                 ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
                 ctx.fill();
@@ -381,7 +459,7 @@ export default function ChemLabSimPage() {
             }
         };
 
-    }, [labAdd, spawnParticles, getPhColor, resetLab]); // Only re-run if these functions change (they are memoized)
+    }, [labAdd, spawnParticles, getPhColor, resetLab, labAction]); // Only re-run if these functions change (they are memoized)
 
   return (
     <div className="flex flex-col h-[calc(100vh-120px)] w-full p-4 bg-background text-foreground animate-in fade-in duration-500">
@@ -411,8 +489,9 @@ export default function ChemLabSimPage() {
                                             <Button 
                                                 key={item.id} 
                                                 variant="outline" 
-                                                className="flex flex-col items-center justify-center text-center min-h-24 p-2 transition-all hover:scale-105 hover:bg-accent/50 hover:border-primary/50" 
+                                                className="flex flex-col items-center justify-center text-center p-2 transition-all hover:scale-105 hover:bg-accent/50 hover:border-primary/50" 
                                                 onClick={() => labAdd(item.id)}
+                                                style={{minHeight: '6rem'}}
                                             >
                                                 <item.icon className="w-6 h-6 mb-1"/>
                                                 <span className="text-xs whitespace-normal leading-tight">{item.name}</span>
