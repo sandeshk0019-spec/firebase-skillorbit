@@ -42,7 +42,6 @@ const topics = {
   },
   'chemical-bonding': {
     title: 'Chemical Bonding',
-    localVideoUrl: '/videos/chemical-bonding.mp4',
     episode: {
         episodeTitle: "Episode Title: The Unbreakable Attraction!",
         scenes: [
@@ -83,8 +82,7 @@ export default function AnimeAcademyPage() {
     const [isVideoLoading, setIsVideoLoading] = useState(false);
     const [videoError, setVideoError] = useState<string | null>(null);
 
-    const topicData = selectedTopic ? topics[selectedTopic] : null;
-    const episodeData = topicData?.episode;
+    const episodeData = selectedTopic ? topics[selectedTopic]?.episode : null;
     
     const handleGenerateVideo = async () => {
         if (!episodeData) return;
@@ -177,11 +175,7 @@ export default function AnimeAcademyPage() {
                              <CardDescription>{episodeData.episodeTitle}</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-6 text-center">
-                            {topicData.localVideoUrl ? (
-                                <div className="aspect-video bg-black rounded-lg overflow-hidden border border-primary/50">
-                                    <video src={topicData.localVideoUrl} controls autoPlay className="w-full h-full" />
-                                </div>
-                            ) : isVideoLoading ? (
+                            {isVideoLoading ? (
                                 <div className="flex flex-col items-center justify-center p-8 gap-4">
                                     <Loader2 className="w-16 h-16 text-primary animate-spin"/>
                                     <h3 className="font-headline text-xl text-primary">Generating Anime Episode...</h3>
