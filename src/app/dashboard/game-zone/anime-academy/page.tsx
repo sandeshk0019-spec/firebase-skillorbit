@@ -55,7 +55,7 @@ const topics = {
             },
             {
                 title: "Scene 3 – The Power Reveal",
-                content: "A wise figure of pure energy, **Master Elementa**, materializes.\n\n**Master Elementa:** 'You have transformed! Sodium, by giving away your electron, you are now a positive ion, Na+. Chlorine, by accepting it, you are a negative ion, Cl-. You are complete, but you are also charged.'\n\n**Na+:** 'I feel... lighter. Stable. But I feel this pull...'\n\n**Cl-:** '...a pull towards you. Why?'\n\n**Master Elementa:** 'That is the power of the **Ionic Bond**. Opposites attract. Your charges now bind you with an unbreakable electrostatic force. You have satisfied the **Octet Rule** and formed Sodium Chloride!'"
+                content: "A wise figure of pure energy, **Master Elementa**, materializes.\n\n**Master Elementa:** 'You have transformed! Sodium, by giving away your electron, you are now a positive ion, Na+. Chlorine, by accepting it, you are now a negative ion, Cl-. You are complete, but you are also charged.'\n\n**Na+:** 'I feel... lighter. Stable. But I feel this pull...'\n\n**Cl-:** '...a pull towards you. Why?'\n\n**Master Elementa:** 'That is the power of the **Ionic Bond**. Opposites attract. Your charges now bind you with an unbreakable electrostatic force. You have satisfied the **Octet Rule** and formed Sodium Chloride!'"
             },
             {
                 title: "Scene 4 – Victory & Understanding",
@@ -98,6 +98,36 @@ const topics = {
             commonMistake: "Using your left hand! The Left-Hand Rule is for motors (finding the direction of Force/Motion), while the Right-Hand Rule is for generators (finding the direction of induced Current).",
         },
         trainingChallenge: "If a wire is being pulled downwards through a magnetic field that points from left to right, in which direction will the induced current flow?",
+    }
+  },
+  'cell-division': {
+    title: 'Cell Division',
+    episode: {
+        episodeTitle: "Episode Title: The Mitosis Matrix!",
+        scenes: [
+            {
+                title: "Scene 1 – The Dying Cell",
+                content: "Inside the bustling metropolis of a living organism, an old, weary skin cell named Cyto is fading. Its light is dimming.\n\n**Cyto:** (Weakly) My time is... almost over. The barrier will weaken. I must... divide. The code must be passed on!",
+            },
+            {
+                title: "Scene 2 – The Replication Protocol",
+                content: "Deep within Cyto's core (the nucleus), twin sets of glowing energy strands (chromosomes) materialize. The DNA has been perfectly copied.\n\n**Narrator:** 'The sacred blueprints of life have been duplicated. Every instruction, every detail, ready for the journey.'\n\nThe nucleus membrane dissolves. The glowing chromosomes, now thick and condensed, float into the cell's center.",
+            },
+            {
+                title: "Scene 3 – The Great Alignment",
+                content: "From opposite poles of the cell, shimmering energy tethers (spindle fibers) shoot out and attach to the center of each chromosome pair.\n\n**Master Nucleus:** (A voice of ancient code) The **Metaphase Plate** is set! Align the chronicles! No chromosome left behind!\n\nThe tethers pull with perfect tension, aligning all the chromosome pairs in a single, straight line across the cell's equator. The cell hums with energy, perfectly balanced.",
+            },
+            {
+                title: "Scene 4 – The Separation & Creation",
+                content: "The command is given. The tethers shorten, pulling the chromosome pairs apart. Each half—a perfect, identical copy—is dragged to an opposite side of the cell.\n\n**Narrator:** 'The copies are separated. Two new nuclei begin to form, each a perfect mirror of the other. The cell itself begins to pinch in the middle, preparing to become two.'\n\nThe cell membrane constricts, and with a final pulse of light, Cyto splits into two identical, vibrant new cells. The barrier is strong once more.\n\n**New Cells (in unison):** 'The cycle continues. We are the future!'",
+            },
+        ],
+        summary: {
+            coreConcept: "Mitosis is the process of cell division where one cell divides into two identical daughter cells. It's essential for growth and repair in the body.",
+            shortcut: "Think 'Copy & Split.' The cell copies its DNA, lines it all up in the middle, pulls the copies apart, and then splits down the middle.",
+            commonMistake: "Confusing it with Meiosis, which is for creating reproductive cells (sperm and eggs) and results in four cells with half the genetic information.",
+        },
+        trainingChallenge: "If a cell has 46 chromosomes before mitosis, how many chromosomes will each of the two new daughter cells have?",
     }
   }
 };
@@ -200,6 +230,7 @@ export default function AnimeAcademyPage() {
     
     const localVideoPath = selectedTopic === 'chemical-bonding' ? '/videos/chemical-bonding.mp4'
       : selectedTopic === 'flemings-right-hand-rule' ? '/videos/flemings-right-hand-rule.mp4'
+      : selectedTopic === 'cell-division' ? '/videos/cell-division.mp4'
       : null;
 
     const handleGenerateVideo = async () => {
