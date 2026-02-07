@@ -55,6 +55,7 @@ export default function LandingPage() {
               alt={heroImage.description}
               data-ai-hint={heroImage.imageHint}
               fill
+              priority
               className="object-cover object-center opacity-20 animate-pulse"
               style={{animationDuration: '10s'}}
             />
