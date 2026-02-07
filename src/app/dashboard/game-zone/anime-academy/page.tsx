@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { BookOpen, XCircle, ChevronRight, Video, Loader2 } from 'lucide-react';
+import { BookOpen, XCircle, ChevronRight, Video, Loader2, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -73,6 +73,71 @@ const topics = {
 };
 
 type TopicKey = keyof typeof topics;
+
+function VideoPlayer({ src }: { src: string }) {
+    const videoRef = useRef<HTMLVideoElement>(null);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        const video = videoRef.current;
+        if (video) {
+            video.load();
+            const playPromise = video.play();
+            if (playPromise !== undefined) {
+                playPromise.catch(err => {
+                    console.warn("Autoplay was prevented. User interaction might be required.", err);
+                });
+            }
+        }
+    }, [src]);
+
+    const handleError = (e: React.SyntheticEvent<HTMLVideoElement, Event>) => {
+        let errorText = "An unknown video error occurred.";
+        switch (e.currentTarget.error?.code) {
+            case e.currentTarget.error?.MEDIA_ERR_ABORTED:
+                errorText = 'Video playback was aborted.';
+                break;
+            case e.currentTarget.error?.MEDIA_ERR_NETWORK:
+                errorText = 'A network error caused the video download to fail.';
+                break;
+            case e.currentTarget.error?.MEDIA_ERR_DECODE:
+                errorText = 'The video could not be decoded. The file may be corrupt or in an unsupported format.';
+                break;
+            case e.currentTarget.error?.MEDIA_ERR_SRC_NOT_SUPPORTED:
+                errorText = 'Video not found or format is not supported. Ensure the file is at public/videos/chemical-bonding.mp4.';
+                break;
+            default:
+                errorText = 'An unexpected error occurred during video playback.';
+                break;
+        }
+        setError(errorText);
+    };
+
+    return (
+        <div className="aspect-video bg-black rounded-lg overflow-hidden border border-primary/50 relative">
+            {error ? (
+                <div className="absolute inset-0 flex flex-col items-center justify-center p-4 text-center">
+                    <AlertTriangle className="w-12 h-12 text-destructive mb-4" />
+                    <h3 className="font-headline text-lg text-destructive">Video Playback Error</h3>
+                    <p className="text-muted-foreground text-sm">{error}</p>
+                </div>
+            ) : (
+                <video
+                    ref={videoRef}
+                    src={src}
+                    controls
+                    autoPlay
+                    muted
+                    loop
+                    playsInline
+                    className="w-full h-full"
+                    onError={handleError}
+                />
+            )}
+        </div>
+    );
+}
+
 
 export default function AnimeAcademyPage() {
     const [selectedTopic, setSelectedTopic] = useState<TopicKey | null>(null);
@@ -177,9 +242,7 @@ export default function AnimeAcademyPage() {
                         </CardHeader>
                         <CardContent className="space-y-6 text-center">
                            {isChemicalBonding ? (
-                                <div className="aspect-video bg-black rounded-lg overflow-hidden border border-primary/50">
-                                    <video src="/videos/chemical-bonding.mp4" controls autoPlay muted loop playsInline className="w-full h-full" />
-                                </div>
+                                <VideoPlayer src="/videos/chemical-bonding.mp4" />
                             ) : isVideoLoading ? (
                                 <div className="flex flex-col items-center justify-center p-8 gap-4">
                                     <Loader2 className="w-16 h-16 text-primary animate-spin"/>
