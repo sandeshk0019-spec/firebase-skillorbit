@@ -178,7 +178,7 @@ export default function AnimeAcademyPage() {
                         <CardContent className="space-y-6 text-center">
                            {isChemicalBonding ? (
                                 <div className="aspect-video bg-black rounded-lg overflow-hidden border border-primary/50">
-                                    <video src="/videos/chemical-bonding.mp4" controls autoPlay className="w-full h-full" />
+                                    <video src="/videos/chemical-bonding.mp4" controls autoPlay muted loop playsInline className="w-full h-full" />
                                 </div>
                             ) : isVideoLoading ? (
                                 <div className="flex flex-col items-center justify-center p-8 gap-4">
