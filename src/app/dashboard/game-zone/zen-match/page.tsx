@@ -1,10 +1,16 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import Link from 'next/link';
-import { XCircle, Brain } from 'lucide-react';
+import { XCircle, Brain, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { useUser, useFirestore } from '@/firebase';
+import { collection, doc, addDoc, serverTimestamp, runTransaction, getDoc, setDoc } from 'firebase/firestore';
+import { type GameScore, type Activity } from '@/types';
+import { achievements } from '@/lib/achievements';
+import { updateUserStreak } from '@/lib/streak';
+import { useToast } from "@/hooks/use-toast";
 
 // Card data structure
 interface CardData {
@@ -74,6 +80,11 @@ export default function ZenMatchPage() {
   const [moves, setMoves] = useState(0);
   const [isChecking, setIsChecking] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
+  const [hasSaved, setHasSaved] = useState(false);
+
+  const { user } = useUser();
+  const firestore = useFirestore();
+  const { toast } = useToast();
 
   // Memoize the initial game setup
   const resetGame = useMemo(() => () => {
@@ -94,13 +105,47 @@ export default function ZenMatchPage() {
     setMoves(0);
     setIsChecking(false);
     setIsComplete(false);
+    setHasSaved(false);
   }, []);
 
   // Initialize and shuffle cards
   useEffect(() => {
     resetGame();
   }, [resetGame]);
-  
+
+  const checkAndUnlockAchievement = useCallback(async (achievementId: keyof typeof achievements) => {
+    if (!user || !firestore) return;
+    const achRef = doc(firestore, 'users', user.uid, 'achievements', achievementId);
+    const achDoc = await getDoc(achRef);
+
+    if (!achDoc.exists()) {
+        const achData = achievements[achievementId];
+        await setDoc(achRef, {
+            userId: user.uid,
+            achievementId: achievementId,
+            unlockedAt: serverTimestamp(),
+        });
+        await addDoc(collection(firestore, 'users', user.uid, 'activities'), {
+            userId: user.uid,
+            type: 'ACHIEVEMENT_UNLOCKED',
+            description: `Unlocked: ${achData.name}`,
+            createdAt: serverTimestamp(),
+        });
+
+        toast({
+            title: "Achievement Unlocked!",
+            description: (
+                <div className="flex items-center gap-3">
+                    <Trophy className="w-8 h-8 text-yellow-400" />
+                    <div>
+                        <p className="font-semibold">{achData.name}</p>
+                        <p className="text-xs">{achData.description}</p>
+                    </div>
+                </div>
+            ),
+        });
+    }
+  }, [user, firestore, toast]);
 
   // Check for match
   useEffect(() => {
@@ -127,6 +172,66 @@ export default function ZenMatchPage() {
       setIsComplete(true);
     }
   }, [matchedPairs, activePairs]);
+
+  // Save game result on completion
+  useEffect(() => {
+    if (isComplete && !hasSaved) {
+      setHasSaved(true);
+      
+      const saveGameResult = async () => {
+        if (!user || !firestore) return;
+
+        try {
+            const userRef = doc(firestore, "users", user.uid);
+            const now = serverTimestamp();
+
+            // 1. Save Game Score
+            const gameScoreData: Omit<GameScore, 'id'> = {
+                userId: user.uid,
+                gameId: 'zen-match',
+                gameName: 'Zen Match',
+                score: moves,
+                createdAt: now as any,
+            };
+            const scoreRef = await addDoc(collection(userRef, "gameScores"), gameScoreData);
+
+            // 2. Save Activity
+            const activityData: Omit<Activity, 'id'> = {
+                userId: user.uid,
+                type: 'GAME_PLAYED',
+                description: `Completed a game of Zen Match in ${moves} moves.`,
+                refId: scoreRef.id,
+                createdAt: now as any,
+            };
+            await addDoc(collection(userRef, "activities"), activityData);
+
+            // 3. Update User Profile Stats in a Transaction
+            await runTransaction(firestore, async (transaction) => {
+                const userDoc = await transaction.get(userRef);
+                if (!userDoc.exists()) return;
+                const currentGamesPlayed = userDoc.data().gamesPlayed || 0;
+                transaction.update(userRef, {
+                    gamesPlayed: currentGamesPlayed + 1
+                });
+            });
+            
+            await updateUserStreak(firestore, user.uid);
+            await checkAndUnlockAchievement('ZEN_MASTER');
+
+        } catch (error) {
+             console.error("Error saving game results:", error);
+             toast({
+                variant: "destructive",
+                title: "Save Error",
+                description: "Could not save your game progress.",
+            });
+        }
+      };
+
+      saveGameResult();
+    }
+  }, [isComplete, hasSaved, user, firestore, moves, checkAndUnlockAchievement, toast]);
+
 
   const handleCardClick = (index: number) => {
     if (isChecking || flippedCards.length === 2 || flippedCards.includes(index) || matchedPairs.includes(cards[index].pairId)) {
