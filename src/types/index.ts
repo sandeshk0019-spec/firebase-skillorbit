@@ -14,6 +14,8 @@ export interface UserProfile {
   totalCorrectAnswers?: number;
   totalQuestionsAnswered?: number;
   gamesPlayed?: number;
+  currentStreak?: number;
+  lastActiveDate?: string; // YYYY-MM-DD
 }
 
 export interface QuizAttempt {

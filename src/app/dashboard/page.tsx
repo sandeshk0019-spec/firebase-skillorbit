@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useState } from 'react';
+import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { doc } from 'firebase/firestore';
+import { type UserProfile } from '@/types';
 import { Flame, BrainCircuit, Gamepad2, CheckSquare, Clock, Percent, Trophy } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -40,6 +43,15 @@ const StatCard = ({ icon, label, value, delay }: { icon: React.ElementType, labe
 
 export default function DashboardPage() {
   const [isLoaded, setIsLoaded] = useState(false);
+
+  const { user } = useUser();
+  const firestore = useFirestore();
+  const userDocRef = useMemoFirebase(
+    () => (firestore && user ? doc(firestore, 'users', user.uid) : null),
+    [firestore, user]
+  );
+  const { data: userProfile } = useDoc<UserProfile>(userDocRef);
+  const streak = userProfile?.currentStreak ?? 0;
 
   useEffect(() => {
     // Trigger entry animations
@@ -125,7 +137,7 @@ export default function DashboardPage() {
           <div className="holographic-card rounded-full px-4 py-2 flex items-center gap-2">
             <Flame className="w-5 h-5 text-amber-400" />
             <span className="font-bold">Streak:</span>
-            <span className="font-mono text-lg text-amber-300 text-pulse">32</span>
+            <span className="font-mono text-lg text-amber-300 text-pulse">{streak}</span>
           </div>
         </header>
 

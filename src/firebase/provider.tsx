@@ -103,6 +103,8 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
                 username: guestProfile.username,
                 firstName: guestProfile.firstName,
                 lastName: guestProfile.lastName,
+                currentStreak: 0,
+                lastActiveDate: "",
               }).then(() => {
                  updateProfile(firebaseUser, {
                   displayName: guestProfile.displayName,
@@ -126,6 +128,8 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
                         username: profileData.username,
                         firstName: profileData.firstName,
                         lastName: profileData.lastName,
+                        currentStreak: 0,
+                        lastActiveDate: "",
                       }).then(() => {
                          updateProfile(firebaseUser, {
                           displayName: `${profileData.firstName} ${profileData.lastName}`,

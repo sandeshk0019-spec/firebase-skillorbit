@@ -55,6 +55,15 @@
         "gamesPlayed": {
             "type": "number",
             "description": "The total number of games the user has played."
+        },
+        "currentStreak": {
+            "type": "number",
+            "description": "The user's current daily activity streak."
+        },
+        "lastActiveDate": {
+            "type": "string",
+            "description": "The last date the user was active, in YYYY-MM-DD format.",
+            "format": "date"
         }
       },
       "required": [

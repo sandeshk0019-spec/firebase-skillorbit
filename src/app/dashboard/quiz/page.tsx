@@ -17,6 +17,7 @@ import { useUser, useFirestore } from "@/firebase";
 import { collection, doc, addDoc, serverTimestamp, runTransaction, getDoc, setDoc } from "firebase/firestore";
 import { type QuizAttempt, type Activity } from "@/types";
 import { achievements } from "@/lib/achievements";
+import { updateUserStreak } from "@/lib/streak";
 
 const formSchema = z.object({
   subject: z.string().min(2, { message: "Subject must be at least 2 characters." }),
@@ -83,7 +84,7 @@ export default function QuizPage() {
   }, 0) : 0;
 
   const handleFinishQuiz = async () => {
-    if (!quiz || !user) return;
+    if (!quiz || !user || !firestore) return;
     
     setIsSubmitting(true);
 
@@ -129,7 +130,8 @@ export default function QuizPage() {
             });
         });
         
-        // 4. Check for achievements
+        // 4. Update Streak & Check for achievements
+        await updateUserStreak(firestore, user.uid);
         await checkAndUnlockAchievement('FIRST_QUIZ');
         if(score === quiz.length) {
             await checkAndUnlockAchievement('PERFECT_SCORE');
@@ -149,7 +151,7 @@ export default function QuizPage() {
   }
 
   const checkAndUnlockAchievement = async (achievementId: keyof typeof achievements) => {
-      if (!user) return;
+      if (!user || !firestore) return;
       const achRef = doc(firestore, 'users', user.uid, 'achievements', achievementId);
       const achDoc = await getDoc(achRef);
 
