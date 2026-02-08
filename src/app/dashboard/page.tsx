@@ -58,7 +58,7 @@ export default function DashboardPage() {
   // Calculate dynamic stats
   const tasksDone = (userProfile?.totalQuizzes || 0) + (userProfile?.gamesPlayed || 0);
 
-  const totalMinutes = tasksDone * 5; // Simple estimation: 5 minutes per task
+  const totalMinutes = userProfile?.totalStudyTime ?? 0;
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
   const studyTime = `${hours}h ${minutes}m`;

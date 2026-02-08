@@ -33,6 +33,7 @@ export default function QuizPage() {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [userAnswers, setUserAnswers] = useState<string[]>([]);
   const [showResults, setShowResults] = useState(false);
+  const [startTime, setStartTime] = useState<number | null>(null);
   
   const { toast } = useToast();
   const { user } = useUser();
@@ -49,11 +50,13 @@ export default function QuizPage() {
     setShowResults(false);
     setUserAnswers([]);
     setCurrentQuestionIndex(0);
+    setStartTime(null); // Reset start time
 
     try {
       const result = await generateQuizQuestions({ ...values, numberOfQuestions: 5 });
       if (result.questions && result.questions.length > 0) {
         setQuiz(result.questions);
+        setStartTime(Date.now()); // Set start time when quiz begins
       } else {
         toast({
           variant: "destructive",
@@ -87,6 +90,7 @@ export default function QuizPage() {
     if (!quiz || !user || !firestore) return;
     
     setIsSubmitting(true);
+    const durationInMinutes = startTime ? Math.round((Date.now() - startTime) / 60000) : 0;
 
     try {
         const userRef = doc(firestore, "users", user.uid);
@@ -122,11 +126,13 @@ export default function QuizPage() {
             const oldTotalQuizzes = userDoc.data().totalQuizzes || 0;
             const oldTotalCorrect = userDoc.data().totalCorrectAnswers || 0;
             const oldTotalAnswered = userDoc.data().totalQuestionsAnswered || 0;
+            const oldStudyTime = userDoc.data().totalStudyTime || 0;
 
             transaction.update(userRef, {
                 totalQuizzes: oldTotalQuizzes + 1,
                 totalCorrectAnswers: oldTotalCorrect + score,
                 totalQuestionsAnswered: oldTotalAnswered + quiz.length,
+                totalStudyTime: oldStudyTime + durationInMinutes,
             });
         });
         

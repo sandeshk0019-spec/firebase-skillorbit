@@ -56,6 +56,10 @@
             "type": "number",
             "description": "The total number of games the user has played."
         },
+        "totalStudyTime": {
+            "type": "number",
+            "description": "Total accumulated study time in minutes."
+        },
         "currentStreak": {
             "type": "number",
             "description": "The user's current daily activity streak."

@@ -14,6 +14,7 @@ export interface UserProfile {
   totalCorrectAnswers?: number;
   totalQuestionsAnswered?: number;
   gamesPlayed?: number;
+  totalStudyTime?: number; // Total study time in minutes
   currentStreak?: number;
   lastActiveDate?: string; // YYYY-MM-DD
 }

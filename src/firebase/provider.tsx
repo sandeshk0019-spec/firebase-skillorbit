@@ -103,6 +103,11 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
                 username: guestProfile.username,
                 firstName: guestProfile.firstName,
                 lastName: guestProfile.lastName,
+                totalQuizzes: 0,
+                totalCorrectAnswers: 0,
+                totalQuestionsAnswered: 0,
+                gamesPlayed: 0,
+                totalStudyTime: 0,
                 currentStreak: 0,
                 lastActiveDate: "",
               }).then(() => {
@@ -128,6 +133,11 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
                         username: profileData.username,
                         firstName: profileData.firstName,
                         lastName: profileData.lastName,
+                        totalQuizzes: 0,
+                        totalCorrectAnswers: 0,
+                        totalQuestionsAnswered: 0,
+                        gamesPlayed: 0,
+                        totalStudyTime: 0,
                         currentStreak: 0,
                         lastActiveDate: "",
                       }).then(() => {
