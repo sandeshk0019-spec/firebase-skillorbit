@@ -14,8 +14,7 @@
  * Each user's profile and related data are located under a document whose ID
  * matches the user's UID (e.g., /users/{userId}). This path-based ownership
  * model is the foundation of the security rules. All progress and activity data
- * are stored in subcollections under the user's document, inheriting the same
- * ownership rules via a nested rule structure.
+ * are stored in subcollections under the user's document.
  *
  * Key Security Decisions:
  * - User Isolation: Users can only read, write, and delete their own document
@@ -60,56 +59,59 @@ service cloud.firestore {
 
     // ----------------------------------------------------------------------
     //
-    // Collection Rules (Nested Structure)
+    // Collection Rules (Flat Structure)
     //
     // ----------------------------------------------------------------------
 
+    // USER PROFILE
     match /users/{userId} {
-      // USER PROFILE
       allow get: if isOwner(userId);
       allow create: if isOwner(userId) && hasValidIdOnCreate(userId);
       allow update: if isOwner(userId) && isUserIdImmutable();
-      allow list, delete: if false; // Users cannot list other users or delete their profile.
+      allow list, delete: if false;
+    }
 
-      // --- SUBCOLLECTIONS ---
-      // By nesting, we ensure all subcollection rules are logically tied to the {userId} owner.
+    // --- SUBCOLLECTIONS ---
 
-      // QUIZ ATTEMPTS: Allow owner to list and create. Deny direct modification.
-      match /quizAttempts/{attemptId} {
-        allow get: if isOwner(userId);
-        allow create, update, delete: if false;
-      }
-      match /quizAttempts {
-        allow list, create: if isOwner(userId);
-      }
+    // QUIZ ATTEMPTS
+    // Allow owner to read their own attempts.
+    match /users/{userId}/quizAttempts/{attemptId} {
+      allow get: if isOwner(userId);
+      allow create, update, delete: if false;
+    }
+    // Allow owner to list their attempts and create new ones (addDoc).
+    match /users/{userId}/quizAttempts {
+      allow list, create: if isOwner(userId);
+    }
 
-      // GAME SCORES: Allow owner to list and create. Deny direct modification.
-      match /gameScores/{scoreId} {
-        allow get: if isOwner(userId);
-        allow create, update, delete: if false;
-      }
-      match /gameScores {
-        allow list, create: if isOwner(userId);
-      }
+    // GAME SCORES
+    match /users/{userId}/gameScores/{scoreId} {
+      allow get: if isOwner(userId);
+      allow create, update, delete: if false;
+    }
+    match /users/{userId}/gameScores {
+      allow list, create: if isOwner(userId);
+    }
+    
+    // ACTIVITIES
+    match /users/{userId}/activities/{activityId} {
+      allow get: if isOwner(userId);
+      allow create, update, delete: if false;
+    }
+    match /users/{userId}/activities {
+      allow list, create: if isOwner(userId);
+    }
 
-      // ACTIVITIES: Allow owner to list and create. Deny direct modification.
-      match /activities/{activityId} {
-        allow get: if isOwner(userId);
-        allow create, update, delete: if false;
-      }
-      match /activities {
-        allow list, create: if isOwner(userId);
-      }
-
-      // ACHIEVEMENTS: Allow owner to list, get, and create via setDoc() with a specific ID.
-      match /achievements/{achievementId} {
-        allow get, create: if isOwner(userId);
-        allow update, delete: if false;
-      }
-      match /achievements {
-        allow list: if isOwner(userId);
-        allow create: if false; // Creation must happen on the document path.
-      }
+    // ACHIEVEMENTS
+    // Allow owner to get a specific achievement, and create one (setDoc with ID).
+    match /users/{userId}/achievements/{achievementId} {
+      allow get, create: if isOwner(userId);
+      allow update, delete: if false;
+    }
+    // Allow owner to list their achievements. Deny create (addDoc) on the collection.
+    match /users/{userId}/achievements {
+      allow list: if isOwner(userId);
+      allow create: if false;
     }
   }
 }
