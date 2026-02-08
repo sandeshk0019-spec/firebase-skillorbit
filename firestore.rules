@@ -15,7 +15,7 @@
  * matches the user's UID (e.g., /users/{userId}). This path-based ownership
  * model is the foundation of the security rules. All progress and activity data
  * are stored in subcollections under the user's document, inheriting the same
- * ownership rules.
+ * ownership rules via a nested rule structure.
  *
  * Key Security Decisions:
  * - User Isolation: Users can only read, write, and delete their own document
@@ -27,8 +27,8 @@
  *   within a user document must match the document's ID in the path ({userId}).
  *   This critical link is then made immutable on update.
  * - Immutable Progress: To maintain data integrity, quiz attempts, game scores,
- *   activities, and achievements are write-once. They can be created and read,
- *   but not updated or deleted from the client.
+ *   and activities are write-once. They can be created and read, but not
+ *   updated or deleted from the client.
  * - Default Deny: All operations are denied by default and must be explicitly
  *   granted by a specific rule.
  */
@@ -60,53 +60,56 @@ service cloud.firestore {
 
     // ----------------------------------------------------------------------
     //
-    // Collection Rules
+    // Collection Rules (Nested Structure)
     //
     // ----------------------------------------------------------------------
 
-    // USER PROFILE
     match /users/{userId} {
+      // USER PROFILE
       allow get: if isOwner(userId);
       allow create: if isOwner(userId) && hasValidIdOnCreate(userId);
       allow update: if isOwner(userId) && isUserIdImmutable();
       allow list, delete: if false; // Users cannot list other users or delete their profile.
-    }
 
-    // QUIZ ATTEMPTS: Allow owner to list, and create via addDoc(). Deny direct modification.
-    match /users/{userId}/quizAttempts/{attemptId} {
-      allow get: if isOwner(userId);
-      allow create, update, delete: if false;
-    }
-    match /users/{userId}/quizAttempts {
-      allow list, create: if isOwner(userId);
-    }
+      // --- SUBCOLLECTIONS ---
+      // By nesting, we ensure all subcollection rules are logically tied to the {userId} owner.
 
-    // GAME SCORES: Allow owner to list, and create via addDoc(). Deny direct modification.
-    match /users/{userId}/gameScores/{scoreId} {
-      allow get: if isOwner(userId);
-      allow create, update, delete: if false;
-    }
-    match /users/{userId}/gameScores {
-      allow list, create: if isOwner(userId);
-    }
+      // QUIZ ATTEMPTS: Allow owner to list and create. Deny direct modification.
+      match /quizAttempts/{attemptId} {
+        allow get: if isOwner(userId);
+        allow create, update, delete: if false;
+      }
+      match /quizAttempts {
+        allow list, create: if isOwner(userId);
+      }
 
-    // ACTIVITIES: Allow owner to list, and create via addDoc(). Deny direct modification.
-    match /users/{userId}/activities/{activityId} {
-      allow get: if isOwner(userId);
-      allow create, update, delete: if false;
-    }
-    match /users/{userId}/activities {
-      allow list, create: if isOwner(userId);
-    }
+      // GAME SCORES: Allow owner to list and create. Deny direct modification.
+      match /gameScores/{scoreId} {
+        allow get: if isOwner(userId);
+        allow create, update, delete: if false;
+      }
+      match /gameScores {
+        allow list, create: if isOwner(userId);
+      }
 
-    // ACHIEVEMENTS: Allow owner to list, get, and create via setDoc() with a specific ID.
-    match /users/{userId}/achievements/{achievementId} {
-      allow get, create: if isOwner(userId);
-      allow update, delete: if false;
-    }
-    match /users/{userId}/achievements {
-      allow list: if isOwner(userId);
-      allow create: if false; // Creation must happen on the document path.
+      // ACTIVITIES: Allow owner to list and create. Deny direct modification.
+      match /activities/{activityId} {
+        allow get: if isOwner(userId);
+        allow create, update, delete: if false;
+      }
+      match /activities {
+        allow list, create: if isOwner(userId);
+      }
+
+      // ACHIEVEMENTS: Allow owner to list, get, and create via setDoc() with a specific ID.
+      match /achievements/{achievementId} {
+        allow get, create: if isOwner(userId);
+        allow update, delete: if false;
+      }
+      match /achievements {
+        allow list: if isOwner(userId);
+        allow create: if false; // Creation must happen on the document path.
+      }
     }
   }
 }
