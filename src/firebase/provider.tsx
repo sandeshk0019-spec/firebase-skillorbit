@@ -2,7 +2,7 @@
 
 import React, { DependencyList, createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
 import { FirebaseApp } from 'firebase/app';
-import { Firestore, doc, getDoc, setDoc } from 'firebase/firestore';
+import { Firestore, doc, getDoc, setDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { Auth, User, onAuthStateChanged, updateProfile } from 'firebase/auth';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener'
 
@@ -83,9 +83,10 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
           const creationTime = new Date(firebaseUser.metadata.creationTime || 0).getTime();
           const lastSignInTime = new Date(firebaseUser.metadata.lastSignInTime || 0).getTime();
           const isNewUser = lastSignInTime - creationTime < 5000; // 5 seconds threshold
+          const userDocRef = doc(firestore, 'users', firebaseUser.uid);
 
           if (isNewUser) {
-            const userDocRef = doc(firestore, 'users', firebaseUser.uid);
+            const now = serverTimestamp();
             
             if (firebaseUser.isAnonymous) {
               const guestProfile = {
@@ -97,8 +98,8 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
               setDoc(userDocRef, {
                 id: firebaseUser.uid,
                 email: null,
-                createdAt: firebaseUser.metadata.creationTime || new Date().toISOString(),
-                lastLogin: firebaseUser.metadata.lastSignInTime || new Date().toISOString(),
+                createdAt: now,
+                lastLogin: now,
                 username: guestProfile.username,
                 firstName: guestProfile.firstName,
                 lastName: guestProfile.lastName,
@@ -120,8 +121,8 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
                       setDoc(userDocRef, {
                         id: firebaseUser.uid,
                         email: firebaseUser.email,
-                        createdAt: firebaseUser.metadata.creationTime || new Date().toISOString(),
-                        lastLogin: firebaseUser.metadata.lastSignInTime || new Date().toISOString(),
+                        createdAt: now,
+                        lastLogin: now,
                         username: profileData.username,
                         firstName: profileData.firstName,
                         lastName: profileData.lastName,
@@ -145,6 +146,9 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
                 }
               }
             }
+          } else { // Existing user, update last login
+            updateDoc(userDocRef, { lastLogin: serverTimestamp() })
+                .catch(e => console.error("Failed to update last login time.", e));
           }
         }
         setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null });

@@ -42,46 +42,21 @@ service cloud.firestore {
     //
     // ----------------------------------------------------------------------
 
-    /**
-     * Checks if the current request is from an authenticated user.
-     */
     function isSignedIn() {
       return request.auth != null;
     }
 
-    /**
-     * Checks if the requesting user's UID matches the provided userId.
-     * This is the primary function for establishing document ownership.
-     */
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    /**
-     * For state-changing operations (update, delete), this ensures the user
-     * is the owner AND that the document they are trying to modify
-     * actually exists.
-     */
-    function isExistingOwner(userId) {
-      return isOwner(userId) && resource != null;
-    }
-
-    /**
-     * On create, validates that the document's internal 'id' field matches
-     * the user's UID from the path, ensuring relational integrity.
-     */
-    function hasValidUserIdOnCreate(userId) {
+    function hasValidIdOnCreate(userId) {
       return request.resource.data.id == userId;
     }
 
-    /**
-     * On update, ensures the document's internal 'id' field cannot be changed.
-     * This prevents re-assigning ownership of the document.
-     */
     function isUserIdImmutable() {
       return request.resource.data.id == resource.data.id;
     }
-
 
     // ----------------------------------------------------------------------
     //
@@ -89,63 +64,49 @@ service cloud.firestore {
     //
     // ----------------------------------------------------------------------
 
-    /**
-     * @description Manages access to a user's own profile document and all related subcollections.
-     * @path /users/{userId}
-     * @allow (get, update) A signed-in user can read and update their own profile document.
-     * @allow (create) A new user can create their profile document.
-     * @deny (list, delete) No user can list all users or delete their own profile from the client.
-     */
+    // USER PROFILE
     match /users/{userId} {
       allow get: if isOwner(userId);
-      allow list: if false;
-      allow create: if isOwner(userId) && hasValidUserIdOnCreate(userId);
-      allow update: if isExistingOwner(userId) && isUserIdImmutable();
-      allow delete: if false; // Prevent client-side deletion of user profile
+      allow create: if isOwner(userId) && hasValidIdOnCreate(userId);
+      allow update: if isOwner(userId) && isUserIdImmutable();
+      allow list, delete: if false; // Users cannot list other users or delete their profile.
+    }
 
-      /**
-       * @description User's quiz history. Write-once, read-many.
-       */
-      match /quizAttempts {
-        allow list, create: if isOwner(userId);
-      }
-      match /quizAttempts/{attemptId} {
-        allow get: if isOwner(userId);
-        allow update, delete: if false;
-      }
+    // QUIZ ATTEMPTS: Allow owner to list, and create via addDoc(). Deny direct modification.
+    match /users/{userId}/quizAttempts/{attemptId} {
+      allow get: if isOwner(userId);
+      allow create, update, delete: if false;
+    }
+    match /users/{userId}/quizAttempts {
+      allow list, create: if isOwner(userId);
+    }
 
-      /**
-       * @description User's game scores. Write-once, read-many.
-       */
-      match /gameScores {
-         allow list, create: if isOwner(userId);
-      }
-      match /gameScores/{scoreId} {
-        allow get: if isOwner(userId);
-        allow update, delete: if false;
-      }
+    // GAME SCORES: Allow owner to list, and create via addDoc(). Deny direct modification.
+    match /users/{userId}/gameScores/{scoreId} {
+      allow get: if isOwner(userId);
+      allow create, update, delete: if false;
+    }
+    match /users/{userId}/gameScores {
+      allow list, create: if isOwner(userId);
+    }
 
-      /**
-       * @description User's activity feed. Write-once, read-many.
-       */
-      match /activities {
-        allow list, create: if isOwner(userId);
-      }
-      match /activities/{activityId} {
-        allow get: if isOwner(userId);
-        allow update, delete: if false;
-      }
+    // ACTIVITIES: Allow owner to list, and create via addDoc(). Deny direct modification.
+    match /users/{userId}/activities/{activityId} {
+      allow get: if isOwner(userId);
+      allow create, update, delete: if false;
+    }
+    match /users/{userId}/activities {
+      allow list, create: if isOwner(userId);
+    }
 
-      /**
-       * @description User's unlocked achievements. Read-many, write-once with specific ID.
-       */
-      match /achievements {
-          allow list: if isOwner(userId);
-      }
-      match /achievements/{achievementId} {
-        allow get, create: if isOwner(userId);
-        allow update, delete: if false;
-      }
+    // ACHIEVEMENTS: Allow owner to list, get, and create via setDoc() with a specific ID.
+    match /users/{userId}/achievements/{achievementId} {
+      allow get, create: if isOwner(userId);
+      allow update, delete: if false;
+    }
+    match /users/{userId}/achievements {
+      allow list: if isOwner(userId);
+      allow create: if false; // Creation must happen on the document path.
     }
   }
 }

@@ -6,8 +6,8 @@ export interface UserProfile {
   username: string;
   firstName: string;
   lastName: string;
-  createdAt: string | Timestamp;
-  lastLogin: string | Timestamp;
+  createdAt: Timestamp;
+  lastLogin: Timestamp;
   
   // Progress Stats
   totalQuizzes?: number;
