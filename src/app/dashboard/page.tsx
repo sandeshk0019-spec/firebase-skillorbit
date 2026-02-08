@@ -6,7 +6,7 @@ import { collection, query, orderBy, limit, doc } from 'firebase/firestore';
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Loader2, TrendingUp, History, Trophy, BrainCircuit, Gamepad2 } from 'lucide-react';
+import { Loader2, TrendingUp, History, Trophy, BrainCircuit, Gamepad2, AlertTriangle } from 'lucide-react';
 import { type UserProfile, type QuizAttempt, type Activity, type Achievement as AchievementType } from '@/types';
 import { achievements } from '@/lib/achievements';
 import { formatDistanceToNow } from 'date-fns';
@@ -63,18 +63,19 @@ export default function DashboardPage() {
     const firestore = useFirestore();
 
     const userDocRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [user, firestore]);
-    const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userDocRef);
+    const { data: userProfile, isLoading: isProfileLoading, error: profileError } = useDoc<UserProfile>(userDocRef);
 
     const quizAttemptsQuery = useMemoFirebase(() => user ? query(collection(firestore, 'users', user.uid, 'quizAttempts'), orderBy('createdAt', 'desc'), limit(10)) : null, [user, firestore]);
-    const { data: quizAttempts, isLoading: isQuizzesLoading } = useCollection<QuizAttempt>(quizAttemptsQuery);
+    const { data: quizAttempts, isLoading: isQuizzesLoading, error: quizzesError } = useCollection<QuizAttempt>(quizAttemptsQuery);
 
     const activitiesQuery = useMemoFirebase(() => user ? query(collection(firestore, 'users', user.uid, 'activities'), orderBy('createdAt', 'desc'), limit(5)) : null, [user, firestore]);
-    const { data: activities, isLoading: isActivitiesLoading } = useCollection<Activity>(activitiesQuery);
+    const { data: activities, isLoading: isActivitiesLoading, error: activitiesError } = useCollection<Activity>(activitiesQuery);
 
     const achievementsQuery = useMemoFirebase(() => user ? query(collection(firestore, 'users', user.uid, 'achievements'), orderBy('unlockedAt', 'desc')) : null, [user, firestore]);
-    const { data: unlockedAchievements, isLoading: isAchievementsLoading } = useCollection<AchievementType>(achievementsQuery);
+    const { data: unlockedAchievements, isLoading: isAchievementsLoading, error: achievementsError } = useCollection<AchievementType>(achievementsQuery);
 
     const isLoading = isAuthLoading || isProfileLoading || isQuizzesLoading || isActivitiesLoading || isAchievementsLoading;
+    const anyError = profileError || quizzesError || activitiesError || achievementsError;
     
     const overallAccuracy = useMemo(() => {
         if (!userProfile || !userProfile.totalQuestionsAnswered) return 0;
@@ -89,6 +90,29 @@ export default function DashboardPage() {
         }))
         .reverse(); // reverse to show oldest first
     }, [quizAttempts]);
+
+    if (anyError) {
+      return (
+        <div className="flex h-[calc(100vh-200px)] w-full items-center justify-center">
+            <Card className="bg-destructive/10 border-destructive max-w-lg">
+                <CardHeader>
+                    <CardTitle className="text-destructive flex items-center gap-2">
+                        <AlertTriangle /> Data Access Error
+                    </CardTitle>
+                    <CardDescription className="text-destructive/80">
+                        Could not load your dashboard data. This often happens due to Firestore security rules. Please ensure your rules allow you to read the necessary data.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                    <p className="font-semibold">Error Details:</p>
+                    <pre className="text-xs text-destructive/90 font-mono bg-background/50 p-2 rounded-md overflow-x-auto">
+                        {anyError.message}
+                    </pre>
+                </CardContent>
+            </Card>
+        </div>
+      )
+    }
 
     if (isLoading) {
         return <div className="flex h-[calc(100vh-200px)] w-full items-center justify-center"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>;
