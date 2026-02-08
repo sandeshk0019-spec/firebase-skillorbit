@@ -4,79 +4,64 @@
 
 @layer base {
   :root {
-    --background: 240 50% 4%;
+    --background: 240 10% 6%; /* Deep Navy */
     --foreground: 210 40% 98%;
-    --card: 223 60% 9%;
+    
+    --card: 220 25% 15%;
     --card-foreground: 210 40% 98%;
-    --popover: 223 90% 6%;
+
+    --popover: 240 10% 4%;
     --popover-foreground: 210 40% 98%;
-    --primary: 180 100% 50%; /* Cyan */
-    --primary-foreground: 223 90% 6%;
-    --secondary: 280 100% 65%; /* Purple */
+    
+    --primary: 200 100% 50%; /* Cyan */
+    --primary-foreground: 240 10% 6%;
+
+    --secondary: 260 100% 65%; /* Purple */
     --secondary-foreground: 210 40% 98%;
-    --muted: 223 40% 15%;
-    --muted-foreground: 210 40% 60%;
-    --accent: 330 100% 55%; /* Pink */
+
+    --muted: 220 25% 20%;
+    --muted-foreground: 210 40% 70%;
+    
+    --accent: 190 100% 50%; /* Neon Blue */
     --accent-foreground: 210 40% 98%;
+
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-    --border: 223 40% 18%;
-    --input: 223 40% 18%;
-    --ring: 180 100% 50%;
-    --radius: 0.8rem;
-    --chart-1: 180 100% 50%;
-    --chart-2: 280 100% 65%;
-    --chart-3: 330 100% 55%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
-    
-    --highlight: 55 100% 61%;
-    --highlight-foreground: 55 100% 20%;
 
-    --sidebar-background: 223 90% 4%;
-    --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 180 100% 50%;
-    --sidebar-primary-foreground: 223 90% 6%;
-    --sidebar-accent: 223 60% 12%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 223 40% 15%;
-    --sidebar-ring: 180 100% 50%;
+    --border: 210 20% 30%;
+    --input: 210 20% 25%;
+    --ring: 200 100% 50%;
+    --radius: 0.8rem;
   }
 
   .dark {
-    --background: 240 50% 4%;
+    --background: 240 10% 6%; /* Deep Navy */
     --foreground: 210 40% 98%;
-    --card: 223 60% 9%;
+    
+    --card: 220 25% 15%;
     --card-foreground: 210 40% 98%;
-    --popover: 223 90% 6%;
+
+    --popover: 240 10% 4%;
     --popover-foreground: 210 40% 98%;
-    --primary: 180 100% 50%; /* Cyan */
-    --primary-foreground: 223 90% 6%;
-    --secondary: 280 100% 65%; /* Purple */
+    
+    --primary: 200 100% 50%; /* Cyan */
+    --primary-foreground: 240 10% 6%;
+
+    --secondary: 260 100% 65%; /* Purple */
     --secondary-foreground: 210 40% 98%;
-    --muted: 223 40% 15%;
-    --muted-foreground: 210 40% 60%;
-    --accent: 330 100% 55%; /* Pink */
+
+    --muted: 220 25% 20%;
+    --muted-foreground: 210 40% 70%;
+    
+    --accent: 190 100% 50%; /* Neon Blue */
     --accent-foreground: 210 40% 98%;
+
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-    --border: 223 40% 18%;
-    --input: 223 40% 18%;
-    --ring: 180 100% 50%;
-    --chart-1: 180 100% 50%;
-    --chart-2: 280 100% 65%;
-    --chart-3: 330 100% 55%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
 
-    --sidebar-background: 223 90% 4%;
-    --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 180 100% 50%;
-    --sidebar-primary-foreground: 223 90% 6%;
-    --sidebar-accent: 223 60% 12%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 223 40% 15%;
-    --sidebar-ring: 180 100% 50%;
+    --border: 210 20% 30%;
+    --input: 210 20% 25%;
+    --ring: 200 100% 50%;
   }
 }
 
@@ -87,50 +72,191 @@
   body {
     @apply bg-background text-foreground;
   }
+}
 
-  body::before {
-    content: '';
-    position: fixed;
+@layer utilities {
+  /* Neon Pulse Animation */
+  .text-pulse {
+    animation: pulse-neon 2.5s infinite ease-in-out;
+  }
+  @keyframes pulse-neon {
+    0%, 100% {
+      text-shadow: 0 0 5px hsl(var(--primary)), 0 0 10px hsl(var(--primary)), 0 0 15px hsl(var(--primary) / 0.8);
+    }
+    50% {
+      text-shadow: 0 0 10px hsl(var(--primary)), 0 0 20px hsl(var(--primary)), 0 0 30px hsl(var(--primary) / 0.8);
+    }
+  }
+
+  /* Glitch Effect */
+  .glitch {
+    position: relative;
+    animation: glitch-skew 1s infinite linear alternate-reverse;
+  }
+  .glitch::before,
+  .glitch::after {
+    content: attr(data-text);
+    position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background-image: radial-gradient(circle at 20% 20%, hsl(var(--secondary) / 0.1), transparent 30%),
-                      radial-gradient(circle at 80% 70%, hsl(var(--primary) / 0.1), transparent 30%);
-    z-index: -1;
-    pointer-events: none;
   }
-}
+  .glitch::before {
+    left: 2px;
+    text-shadow: -1px 0 hsl(var(--secondary));
+    animation: glitch-anim-1 2s infinite linear alternate-reverse;
+  }
+  .glitch::after {
+    left: -2px;
+    text-shadow: -1px 0 hsl(var(--primary));
+    animation: glitch-anim-2 2s infinite linear alternate-reverse;
+  }
 
-@layer utilities {
-  .perspective {
+  @keyframes glitch-skew {
+    0% { transform: skew(0deg); }
+    10% { transform: skew(3deg); }
+    20% { transform: skew(0deg); }
+    70% { transform: skew(0deg); }
+    80% { transform: skew(-2deg); }
+    90% { transform: skew(0deg); }
+    100% { transform: skew(0deg); }
+  }
+
+  @keyframes glitch-anim-1 {
+    0% { clip-path: inset(10% 0 80% 0); }
+    20% { clip-path: inset(50% 0 20% 0); }
+    40% { clip-path: inset(90% 0 2% 0); }
+    60% { clip-path: inset(30% 0 65% 0); }
+    80% { clip-path: inset(70% 0 5% 0); }
+    100% { clip-path: inset(45% 0 40% 0); }
+  }
+
+  @keyframes glitch-anim-2 {
+    0% { clip-path: inset(85% 0 5% 0); }
+    20% { clip-path: inset(25% 0 70% 0); }
+    40% { clip-path: inset(60% 0 10% 0); }
+    60% { clip-path: inset(95% 0 2% 0); }
+    80% { clip-path: inset(15% 0 80% 0); }
+    100% { clip-path: inset(55% 0 30% 0); }
+  }
+
+  /* Holographic Card & Scanning Line */
+  .holographic-card {
+    position: relative;
+    background: rgba(20, 20, 40, 0.4);
+    backdrop-filter: blur(10px);
+    border: 1px solid hsl(var(--primary) / 0.2);
+    overflow: hidden;
+  }
+
+  .holographic-card::after {
+    content: '';
+    position: absolute;
+    top: -100%;
+    left: -50%;
+    width: 200%;
+    height: 100%;
+    background: linear-gradient(to right, transparent, hsl(var(--primary) / 0.15), transparent);
+    transform: skewY(45deg);
+    animation: scanline 8s infinite linear;
+  }
+
+  @keyframes scanline {
+    0% { top: -100%; }
+    100% { top: 200%; }
+  }
+
+  /* HUD Brackets */
+  .hud-brackets { position: relative; }
+  .hud-brackets::before, .hud-brackets::after {
+    content: '';
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    transition: all 0.3s ease;
+    border-color: hsl(var(--primary) / 0.4);
+  }
+  .hud-brackets::before {
+    top: 10px; left: 10px;
+    border-top-width: 2px;
+    border-left-width: 2px;
+  }
+  .hud-brackets::after {
+    bottom: 10px; right: 10px;
+    border-bottom-width: 2px;
+    border-right-width: 2px;
+  }
+  .holographic-card:hover .hud-brackets::before {
+    width: 35px;
+    height: 35px;
+    border-color: hsl(var(--primary));
+  }
+  .holographic-card:hover .hud-brackets::after {
+    width: 35px;
+    height: 35px;
+    border-color: hsl(var(--primary));
+  }
+  
+  /* 3D Orbit Animation */
+  .orbit-container {
     perspective: 1000px;
   }
-  .card-inner {
-    position: relative;
+  .orbit {
     width: 100%;
     height: 100%;
-    text-align: center;
-    transition: transform 0.6s;
+    position: relative;
     transform-style: preserve-3d;
   }
-  .is-flipped .card-inner {
-    transform: rotateY(180deg);
-  }
-  .card-front,
-  .card-back {
+  .orbit-ring {
     position: absolute;
-    width: 100%;
-    height: 100%;
-    -webkit-backface-visibility: hidden; /* Safari */
-    backface-visibility: hidden;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 1rem;
+    top: 0; left: 0; right: 0; bottom: 0;
+    margin: auto;
+    border-radius: 50%;
+    border: 2px solid;
+  }
+  .orbit-ring-1 {
+    width: 100%; height: 100%;
+    border-color: hsl(var(--primary) / 0.8);
+    animation: orbit-y 15s linear infinite;
+  }
+  .orbit-ring-2 {
+    width: 80%; height: 80%;
+    border-color: hsl(var(--secondary) / 0.8);
+    animation: orbit-x 10s linear infinite;
+  }
+  .orbit-ring-3 {
+    width: 60%; height: 60%;
+    border-color: hsl(var(--accent) / 0.8);
+    animation: orbit-z 20s linear infinite;
   }
 
-  .card-back {
-    transform: rotateY(180deg);
+  @keyframes orbit-x { from { transform: rotateX(0deg); } to { transform: rotateX(360deg); } }
+  @keyframes orbit-y { from { transform: rotateY(0deg); } to { transform: rotateY(360deg); } }
+  @keyframes orbit-z { from { transform: rotateZ(0deg); } to { transform: rotateZ(360deg); } }
+  
+  /* Page Load Animations */
+  .load-hidden {
+    opacity: 0;
+    transform: translateY(20px);
   }
+  .loaded .load-hidden {
+    opacity: 1;
+    transform: translateY(0);
+    transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+  }
+  .loaded .delay-100 { transition-delay: 100ms; }
+  .loaded .delay-200 { transition-delay: 200ms; }
+  .loaded .delay-300 { transition-delay: 300ms; }
+  .loaded .delay-400 { transition-delay: 400ms; }
+  .loaded .delay-500 { transition-delay: 500ms; }
+}
+
+#warp-speed {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
 }
