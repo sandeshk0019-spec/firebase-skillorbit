@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useRef, useEffect } from "react";
@@ -15,6 +16,14 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+
+const challengeParagraphs = [
+    "The Great Wall of China is not a single continuous wall but a system of walls, watchtowers, and fortresses built over centuries. It stretches over 13,000 miles, making it the longest man-made structure in the world.",
+    "Honey never spoils. Archaeologists have found pots of honey in ancient Egyptian tombs that are over 3,000 years old and still perfectly edible. Its low moisture content and acidic pH create an environment where bacteria cannot survive.",
+    "Octopuses have three hearts. Two hearts pump blood through the gills, while the third circulates blood to the rest of the body. Their blood is blue because it uses a copper-based protein called hemocyanin to transport oxygen.",
+    "The Eiffel Tower can be 15 cm taller during the summer. When a substance is heated, its particles move more and it expands. This phenomenon, known as thermal expansion, causes the iron structure of the tower to grow in the heat.",
+    "A day on Venus is longer than a year on Venus. It takes Venus longer to rotate once on its axis than to complete one orbit of the Sun. It has a rotation period of 243 Earth days, but its year is only about 225 Earth days long."
+];
 
 function SpeechAnalysisTab() {
   const [text, setText] = useState("");
@@ -113,9 +122,7 @@ function SpeechAnalysisTab() {
 }
 
 function ReadingChallengeTab() {
-  const challengeText =
-    "The quick brown fox jumps over the lazy dog. This sentence contains all of the letters of the alphabet. Practicing it can help improve pronunciation and reading fluency.";
-
+  const [challengeText, setChallengeText] = useState("");
   const [isListening, setIsListening] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [liveTranscript, setLiveTranscript] = useState("");
@@ -130,6 +137,11 @@ function ReadingChallengeTab() {
   const { toast } = useToast();
 
   useEffect(() => {
+    // Select a random paragraph when the component mounts
+    const randomIndex = Math.floor(Math.random() * challengeParagraphs.length);
+    setChallengeText(challengeParagraphs[randomIndex]);
+
+    // Set up Speech Recognition
     const SpeechRecognition = window.SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (SpeechRecognition) {
       setIsSpeechRecognitionSupported(true);
@@ -139,12 +151,10 @@ function ReadingChallengeTab() {
       recognition.lang = 'en-US';
 
       recognition.onresult = (event) => {
-        // Create the transcript from the event results
         const transcript = Array.from(event.results)
           .map(result => result[0])
           .map(result => result.transcript)
           .join('');
-  
         setLiveTranscript(transcript);
       };
 
@@ -187,6 +197,15 @@ function ReadingChallengeTab() {
         variant: "destructive",
         title: "No Speech Detected",
         description: "Please read the text first.",
+      });
+      return;
+    }
+    
+    if (!challengeText) {
+      toast({
+        variant: "destructive",
+        title: "Challenge Not Loaded",
+        description: "The challenge text has not loaded yet. Please wait a moment.",
       });
       return;
     }
@@ -244,8 +263,15 @@ function ReadingChallengeTab() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="p-4 border rounded-lg bg-muted/50">
-          <p className="text-lg leading-relaxed">{challengeText}</p>
+        <div className="p-4 border rounded-lg bg-muted/50 min-h-[120px]">
+          {challengeText ? (
+            <p className="text-lg leading-relaxed">{challengeText}</p>
+          ) : (
+             <div className="flex items-center justify-center h-full">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                <p className="ml-2 text-muted-foreground">Loading new challenge...</p>
+            </div>
+          )}
         </div>
 
         <div className="p-4 border rounded-lg bg-background/50 min-h-[80px]">
