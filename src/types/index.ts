@@ -14,7 +14,8 @@ export interface UserProfile {
   totalCorrectAnswers?: number;
   totalQuestionsAnswered?: number;
   gamesPlayed?: number;
-  totalStudyTime?: number; // Total study time in minutes
+  totalStudyTime?: number; // Total accumulated study time in seconds.
+  studyTimeToday?: number; // Study time for the current day in seconds, resets daily.
   currentStreak?: number;
   lastActiveDate?: string; // YYYY-MM-DD
 }

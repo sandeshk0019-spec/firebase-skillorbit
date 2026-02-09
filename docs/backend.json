@@ -58,7 +58,11 @@
         },
         "totalStudyTime": {
             "type": "number",
-            "description": "Total accumulated study time in minutes."
+            "description": "Total accumulated study time in seconds."
+        },
+        "studyTimeToday": {
+            "type": "number",
+            "description": "Study time for the current day in seconds, resets daily."
         },
         "currentStreak": {
             "type": "number",

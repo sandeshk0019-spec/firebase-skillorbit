@@ -31,8 +31,10 @@ import { Logo } from "@/components/logo"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { useAuth, useUser } from "@/firebase"
+import { useAuth, useUser, useFirestore } from "@/firebase"
 import { signOut } from "firebase/auth"
+import { doc, getDoc, runTransaction, serverTimestamp } from 'firebase/firestore'
+import { format } from 'date-fns'
 
 function AppSidebar() {
   const pathname = usePathname()
@@ -140,7 +142,93 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   const { user, isUserLoading } = useUser();
+  const firestore = useFirestore();
   const router = useRouter();
+
+  // ----- START: New Study Time Tracker Logic -----
+  const sessionStartTimeRef = React.useRef<number | null>(null);
+
+  React.useEffect(() => {
+    if (isUserLoading || !user || !firestore) {
+      return;
+    }
+
+    const userDocRef = doc(firestore, 'users', user.uid);
+    const todayStr = format(new Date(), 'yyyy-MM-dd');
+
+    const updateStudyTime = async (elapsedSeconds: number) => {
+      if (elapsedSeconds <= 0) return;
+      
+      try {
+        await runTransaction(firestore, async (transaction) => {
+          const userDoc = await transaction.get(userDocRef);
+          if (!userDoc.exists()) return;
+
+          const data = userDoc.data();
+          const lastActive = data.lastActiveDate;
+          
+          const dailyTime = lastActive === todayStr ? (data.studyTimeToday || 0) : 0;
+          const newDailyTime = dailyTime + elapsedSeconds;
+
+          const totalTime = data.totalStudyTime || 0;
+          const newTotalTime = totalTime + elapsedSeconds;
+
+          transaction.update(userDocRef, {
+            studyTimeToday: newDailyTime,
+            totalStudyTime: newTotalTime,
+            lastActiveDate: todayStr,
+            lastLogin: serverTimestamp(), // Also update last login on activity
+          });
+        });
+      } catch (e) {
+        console.error("Failed to update study time:", e);
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        // App is backgrounded or tab is switched
+        if (sessionStartTimeRef.current) {
+          const elapsed = Math.round((Date.now() - sessionStartTimeRef.current) / 1000);
+          updateStudyTime(elapsed);
+          sessionStartTimeRef.current = null; // Pause the timer
+        }
+      } else {
+        // App is foregrounded
+        sessionStartTimeRef.current = Date.now(); // Resume the timer
+      }
+    };
+    
+    // Initial setup on mount
+    sessionStartTimeRef.current = Date.now();
+    getDoc(userDocRef).then(docSnap => {
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            if (data.lastActiveDate !== todayStr) {
+                // First session of the day, reset daily time
+                runTransaction(firestore, async (transaction) => {
+                    transaction.update(userDocRef, {
+                        studyTimeToday: 0,
+                        lastActiveDate: todayStr,
+                    });
+                });
+            }
+        }
+    });
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // Cleanup on unmount
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      if (sessionStartTimeRef.current) {
+        const elapsed = Math.round((Date.now() - sessionStartTimeRef.current) / 1000);
+        updateStudyTime(elapsed); // Save final session time
+      }
+    };
+
+  }, [user, isUserLoading, firestore]);
+  // ----- END: New Study Time Tracker Logic -----
 
   React.useEffect(() => {
     if (!isUserLoading && !user) {

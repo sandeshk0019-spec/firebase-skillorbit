@@ -108,6 +108,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
                 totalQuestionsAnswered: 0,
                 gamesPlayed: 0,
                 totalStudyTime: 0,
+                studyTimeToday: 0,
                 currentStreak: 0,
                 lastActiveDate: "",
               }).then(() => {
@@ -138,6 +139,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
                         totalQuestionsAnswered: 0,
                         gamesPlayed: 0,
                         totalStudyTime: 0,
+                        studyTimeToday: 0,
                         currentStreak: 0,
                         lastActiveDate: "",
                       }).then(() => {

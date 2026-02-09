@@ -81,7 +81,6 @@ export default function ZenMatchPage() {
   const [isChecking, setIsChecking] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   const [hasSaved, setHasSaved] = useState(false);
-  const [startTime, setStartTime] = useState<number | null>(null);
 
   const { user } = useUser();
   const firestore = useFirestore();
@@ -107,7 +106,6 @@ export default function ZenMatchPage() {
     setIsChecking(false);
     setIsComplete(false);
     setHasSaved(false);
-    setStartTime(Date.now()); // Start timer when game is set up
   }, []);
 
   // Initialize and shuffle cards
@@ -183,8 +181,6 @@ export default function ZenMatchPage() {
       const saveGameResult = async () => {
         if (!user || !firestore) return;
 
-        const durationInMinutes = startTime ? Math.round((Date.now() - startTime) / 60000) : 0;
-
         try {
             const userRef = doc(firestore, "users", user.uid);
             const now = serverTimestamp();
@@ -214,10 +210,8 @@ export default function ZenMatchPage() {
                 const userDoc = await transaction.get(userRef);
                 if (!userDoc.exists()) return;
                 const currentGamesPlayed = userDoc.data().gamesPlayed || 0;
-                const oldStudyTime = userDoc.data().totalStudyTime || 0;
                 transaction.update(userRef, {
                     gamesPlayed: currentGamesPlayed + 1,
-                    totalStudyTime: oldStudyTime + durationInMinutes
                 });
             });
             
@@ -236,7 +230,7 @@ export default function ZenMatchPage() {
 
       saveGameResult();
     }
-  }, [isComplete, hasSaved, user, firestore, moves, checkAndUnlockAchievement, toast, startTime]);
+  }, [isComplete, hasSaved, user, firestore, moves, checkAndUnlockAchievement, toast]);
 
 
   const handleCardClick = (index: number) => {

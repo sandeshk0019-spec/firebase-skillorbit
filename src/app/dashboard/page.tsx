@@ -58,9 +58,9 @@ export default function DashboardPage() {
   // Calculate dynamic stats
   const tasksDone = (userProfile?.totalQuizzes || 0) + (userProfile?.gamesPlayed || 0);
 
-  const totalMinutes = userProfile?.totalStudyTime ?? 0;
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
+  const totalSeconds = userProfile?.studyTimeToday ?? 0;
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
   const studyTime = `${hours}h ${minutes}m`;
   
   const accuracy = (userProfile?.totalQuestionsAnswered ?? 0) > 0
@@ -206,7 +206,7 @@ export default function DashboardPage() {
         {/* Stats Row */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
           <StatCard icon={CheckSquare} label="Tasks Done" value={isProfileLoading ? "..." : String(tasksDone)} delay="delay-300" />
-          <StatCard icon={Clock} label="Study Time" value={isProfileLoading ? "..." : studyTime} delay="delay-400" />
+          <StatCard icon={Clock} label="Today's Study Time" value={isProfileLoading ? "..." : studyTime} delay="delay-400" />
           <StatCard icon={Percent} label="Accuracy" value={isProfileLoading ? "..." : `${accuracy}%`} delay="delay-500" />
         </div>
       </div>
