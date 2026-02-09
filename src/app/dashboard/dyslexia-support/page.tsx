@@ -119,8 +119,8 @@ export default function DyslexiaSupportPage() {
               <Webhook className="w-6 h-6 text-primary" />
             </div>
             <div>
-              <h1 className="font-headline text-2xl">Neuro-Speech Hub</h1>
-              <p className="text-muted-foreground">Tools to build confidence in reading and speaking.</p>
+              <h1 className="font-headline text-2xl">Dyslexia Support</h1>
+              <p className="text-muted-foreground">AI-powered tools to assist with reading and speech.</p>
             </div>
           </div>
       <Tabs defaultValue="speech-analysis" className="w-full">

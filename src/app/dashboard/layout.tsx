@@ -84,18 +84,18 @@ function AppSidebar() {
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild isActive={isActive('/dashboard/tutor')} tooltip="AI Tutor">
-              <Link href="/dashboard/tutor">
-                <BrainCircuit />
-                <span>AI Tutor</span>
+            <SidebarMenuButton asChild isActive={isActive('/dashboard/dyslexia-support')} tooltip="Dyslexia Support">
+              <Link href="/dashboard/dyslexia-support">
+                <Webhook />
+                <span>Dyslexia Support</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild isActive={isActive('/dashboard/dyslexia-support')} tooltip="Dyslexia Support">
-              <Link href="/dashboard/dyslexia-support">
-                <Webhook />
-                <span>Speech Tools</span>
+            <SidebarMenuButton asChild isActive={isActive('/dashboard/tutor')} tooltip="AI Tutor">
+              <Link href="/dashboard/tutor">
+                <BrainCircuit />
+                <span>AI Tutor</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
