@@ -4,15 +4,17 @@ import * as React from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from 'next/navigation'
 import {
-  BrainCircuit,
-  Home,
-  Webhook,
+  LayoutGrid,
   PanelLeft,
-  Cpu,
   Settings,
   LogOut,
   Loader2,
   Gamepad2,
+  MessageSquare,
+  Eye,
+  CheckCircle2,
+  Zap,
+  Rocket
 } from "lucide-react"
 
 import {
@@ -27,7 +29,6 @@ import {
   SidebarTrigger,
   SidebarFooter,
 } from "@/components/ui/sidebar"
-import { Logo } from "@/components/logo"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -35,10 +36,10 @@ import { useAuth, useUser, useFirestore } from "@/firebase"
 import { signOut } from "firebase/auth"
 import { doc, getDoc, runTransaction, serverTimestamp } from 'firebase/firestore'
 import { format } from 'date-fns'
+import { Progress } from "@/components/ui/progress"
 
 function AppSidebar() {
   const pathname = usePathname()
-  const { user } = useUser()
   const auth = useAuth()
 
   const handleSignOut = () => {
@@ -52,9 +53,11 @@ function AppSidebar() {
   return (
     <Sidebar>
       <SidebarHeader>
-        <div className="flex items-center gap-2">
-          <Logo />
-          <span className="text-xl font-semibold font-headline">SkillOrbit</span>
+        <div className="flex items-center gap-3">
+          <div className="bg-blue-600 p-2 rounded-md">
+            <Rocket className="w-5 h-5 text-white" />
+          </div>
+          <span className="text-xl font-bold font-headline">SO.AI</span>
         </div>
       </SidebarHeader>
       <SidebarContent>
@@ -62,16 +65,8 @@ function AppSidebar() {
           <SidebarMenuItem>
             <SidebarMenuButton asChild isActive={isActive('/dashboard')} tooltip="Dashboard">
               <Link href="/dashboard">
-                <Home />
+                <LayoutGrid />
                 <span>Dashboard</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild isActive={isActive('/dashboard/quiz')} tooltip="AI Quiz Generator">
-              <Link href="/dashboard/quiz">
-                <Cpu />
-                <span>AI Quiz</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -84,53 +79,48 @@ function AppSidebar() {
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
+            <SidebarMenuButton asChild isActive={isActive('/dashboard/tutor')} tooltip="AI Tutor">
+              <Link href="/dashboard/tutor">
+                <MessageSquare />
+                <span>AI Tutor</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
             <SidebarMenuButton asChild isActive={isActive('/dashboard/dyslexia-support')} tooltip="Dyslexia Support">
               <Link href="/dashboard/dyslexia-support">
-                <Webhook />
+                <Eye />
                 <span>Dyslexia Support</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild isActive={isActive('/dashboard/tutor')} tooltip="AI Tutor">
-              <Link href="/dashboard/tutor">
-                <BrainCircuit />
-                <span>AI Tutor</span>
+            <SidebarMenuButton asChild isActive={isActive('/dashboard/habit-ai')} tooltip="Habit AI">
+              <Link href="/dashboard/habit-ai">
+                <CheckCircle2 />
+                <span>Habit AI</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+           <SidebarMenuItem>
+            <SidebarMenuButton asChild isActive={isActive('/dashboard/ai-motivation')} tooltip="AI Motivation">
+              <Link href="/dashboard/ai-motivation">
+                <Zap />
+                <span>AI Motivation</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarContent>
       <SidebarFooter>
-        {user ? (
-          <div className="w-full">
-            <div className="flex items-center gap-2 mb-2">
-              <Avatar className="h-9 w-9 border-2 border-primary/50 animate-glow">
-                <AvatarImage src={user.photoURL || `https://picsum.photos/seed/${user.uid}/40/40`} alt={user.email || 'user'} data-ai-hint="person face" />
-                <AvatarFallback>{user.email?.[0].toUpperCase()}</AvatarFallback>
-              </Avatar>
-              <div className="flex flex-col overflow-hidden">
-                <span className="text-sm font-medium truncate">{user.displayName || user.email}</span>
-                <span className="text-xs text-sidebar-foreground/70 truncate">{user.email}</span>
-              </div>
+        <div className="rounded-lg bg-muted p-3 space-y-2 border border-yellow-500/20">
+            <div className="flex justify-between items-center">
+                <span className="text-xs font-bold uppercase text-yellow-400 tracking-wider">Motivation Fuel</span>
+                <Zap className="w-4 h-4 text-yellow-400" />
             </div>
-            <Button variant="ghost" size="sm" className="w-full justify-start" onClick={handleSignOut}>
-              <LogOut className="mr-2 h-4 w-4" />
-              <span>Sign Out</span>
-            </Button>
-          </div>
-        ) : (
-           <div className="flex items-center gap-2">
-            <Avatar className="h-9 w-9 border-2 border-primary/50 animate-glow">
-              <AvatarImage src="https://picsum.photos/seed/avatar/40/40" alt="@student" data-ai-hint="person face" />
-              <AvatarFallback>S</AvatarFallback>
-            </Avatar>
-            <div className="flex flex-col">
-              <span className="text-sm font-medium">Student</span>
-              <span className="text-xs text-sidebar-foreground/70">student@email.com</span>
-            </div>
-          </div>
-        )}
+            <p className="text-white font-semibold">READY TO BOOST</p>
+            <Progress value={80} className="h-1 bg-yellow-400/20 [&>div]:bg-yellow-400" />
+        </div>
       </SidebarFooter>
     </Sidebar>
   )
