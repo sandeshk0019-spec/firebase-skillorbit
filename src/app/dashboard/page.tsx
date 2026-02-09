@@ -101,76 +101,8 @@ export default function DashboardPage() {
     return () => clearTimeout(timer);
   }, []);
 
-  useEffect(() => {
-    // Warp Speed Background Effect
-    const canvas = document.getElementById('warp-speed') as HTMLCanvasElement;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext('2d')!;
-    let stars: { x: number; y: number; z: number; }[] = [];
-    const numStars = 800;
-    const speed = 3;
-
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-
-    for (let i = 0; i < numStars; i++) {
-      stars[i] = {
-        x: Math.random() * canvas.width - canvas.width / 2,
-        y: Math.random() * canvas.height - canvas.height / 2,
-        z: Math.random() * canvas.width
-      };
-    }
-
-    const draw = () => {
-      ctx.fillStyle = "hsl(var(--background))";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.save();
-      ctx.translate(canvas.width / 2, canvas.height / 2);
-      
-      for (let i = 0; i < numStars; i++) {
-        stars[i].z -= speed;
-        if (stars[i].z <= 0) {
-          stars[i].z = canvas.width;
-        }
-
-        const k = 128 / stars[i].z;
-        const px = stars[i].x * k;
-        const py = stars[i].y * k;
-        const size = (1 - stars[i].z / canvas.width) * 4;
-        
-        ctx.beginPath();
-        ctx.fillStyle = `rgba(200, 225, 255, ${1 - stars[i].z / canvas.width})`;
-        ctx.arc(px, py, size/2, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      ctx.restore();
-    };
-
-    let animationFrameId: number;
-    const render = () => {
-      draw();
-      animationFrameId = requestAnimationFrame(render);
-    };
-
-    render();
-
-    const handleResize = () => {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-    }
-    window.addEventListener('resize', handleResize);
-
-    return () => {
-      cancelAnimationFrame(animationFrameId);
-      window.removeEventListener('resize', handleResize);
-    };
-  }, []);
-
-
   return (
     <div className={cn('p-2 sm:p-4 md:p-6', isLoaded ? 'loaded' : '')}>
-      <canvas id="warp-speed"></canvas>
       <div className="max-w-7xl mx-auto space-y-6">
 
         {/* Header */}
