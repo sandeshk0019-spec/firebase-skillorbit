@@ -52,76 +52,80 @@ function AppSidebar() {
 
   return (
     <Sidebar>
-      <SidebarHeader>
-        <div className="flex items-center gap-3">
-          <div className="bg-blue-600 p-2 rounded-md">
-            <Rocket className="w-5 h-5 text-white" />
-          </div>
-          <span className="text-xl font-bold font-headline">SO.AI</span>
-        </div>
-      </SidebarHeader>
-      <SidebarContent>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild isActive={isActive('/dashboard')} tooltip="Dashboard">
-              <Link href="/dashboard">
-                <LayoutGrid />
-                <span>Dashboard</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild isActive={isActive('/dashboard/game-zone')} tooltip="Game Zone">
-              <Link href="/dashboard/game-zone">
-                <Gamepad2 />
-                <span>Game Zone</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild isActive={isActive('/dashboard/tutor')} tooltip="AI Tutor">
-              <Link href="/dashboard/tutor">
-                <MessageSquare />
-                <span>AI Tutor</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild isActive={isActive('/dashboard/dyslexia-support')} tooltip="Dyslexia Support">
-              <Link href="/dashboard/dyslexia-support">
-                <Eye />
-                <span>Dyslexia Support</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild isActive={isActive('/dashboard/habit-ai')} tooltip="Habit AI">
-              <Link href="/dashboard/habit-ai">
-                <CheckCircle2 />
-                <span>Habit AI</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-           <SidebarMenuItem>
-            <SidebarMenuButton asChild isActive={isActive('/dashboard/ai-motivation')} tooltip="AI Motivation">
-              <Link href="/dashboard/ai-motivation">
-                <Zap />
-                <span>AI Motivation</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarContent>
-      <SidebarFooter>
-        <div className="rounded-lg bg-muted p-3 space-y-2 border border-yellow-500/20">
-            <div className="flex justify-between items-center">
-                <span className="text-xs font-bold uppercase text-yellow-400 tracking-wider">Motivation Fuel</span>
-                <Zap className="w-4 h-4 text-yellow-400" />
+      <div className="flex h-full flex-col px-3 py-4">
+        <SidebarHeader className="p-0 mb-8">
+          <div className="flex items-center gap-3 pl-2">
+            <div className="bg-blue-600/80 p-2 rounded-lg shadow-lg shadow-blue-600/40">
+              <Rocket className="w-5 h-5 text-white" />
             </div>
-            <p className="text-white font-semibold">READY TO BOOST</p>
-            <Progress value={80} className="h-1 bg-yellow-400/20 [&>div]:bg-yellow-400" />
-        </div>
-      </SidebarFooter>
+            <span className="text-xl font-bold font-headline">SO.AI</span>
+          </div>
+        </SidebarHeader>
+
+        <SidebarContent className="p-0 flex-grow">
+          <SidebarMenu className="space-y-2">
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild isActive={isActive('/dashboard')} tooltip="Dashboard">
+                <Link href="/dashboard">
+                  <LayoutGrid />
+                  <span>Dashboard</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild isActive={isActive('/dashboard/game-zone')} tooltip="Game Zone">
+                <Link href="/dashboard/game-zone">
+                  <Gamepad2 />
+                  <span>Game Zone</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild isActive={isActive('/dashboard/tutor')} tooltip="AI Tutor">
+                <Link href="/dashboard/tutor">
+                  <MessageSquare />
+                  <span>AI Tutor</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild isActive={isActive('/dashboard/dyslexia-support')} tooltip="Dyslexia Support">
+                <Link href="/dashboard/dyslexia-support">
+                  <Eye />
+                  <span>Dyslexia Support</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild isActive={isActive('/dashboard/habit-ai')} tooltip="Habit AI">
+                <Link href="/dashboard/habit-ai">
+                  <CheckCircle2 />
+                  <span>Habit AI</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild isActive={isActive('/dashboard/ai-motivation')} tooltip="AI Motivation">
+                <Link href="/dashboard/ai-motivation">
+                  <Zap />
+                  <span>AI Motivation</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarContent>
+
+        <SidebarFooter className="p-0 mt-8">
+          <div className="rounded-xl bg-gradient-to-br from-card/50 to-muted/30 p-4 space-y-3 border border-yellow-500/30 shadow-lg">
+              <div className="flex justify-between items-center">
+                  <span className="text-sm font-bold uppercase text-yellow-400 tracking-wider">Motivation Fuel</span>
+                  <Zap className="w-5 h-5 text-yellow-400" />
+              </div>
+              <p className="text-white font-semibold text-lg">READY TO BOOST</p>
+              <Progress value={80} className="h-2 bg-yellow-400/20 [&>div]:bg-yellow-400" />
+          </div>
+        </SidebarFooter>
+      </div>
     </Sidebar>
   )
 }
