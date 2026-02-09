@@ -116,70 +116,80 @@ function ReadingChallengeTab() {
   const challengeText =
     "The quick brown fox jumps over the lazy dog. This sentence contains all of the letters of the alphabet. Practicing it can help improve pronunciation and reading fluency.";
 
-  const [isRecording, setIsRecording] = useState(false);
+  const [isListening, setIsListening] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [audioDataUri, setAudioDataUri] = useState<string | null>(null);
+  const [liveTranscript, setLiveTranscript] = useState("");
   const [feedback, setFeedback] = useState<{
     correctedText: string;
     feedback: string;
   } | null>(null);
 
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const [isSpeechRecognitionSupported, setIsSpeechRecognitionSupported] = useState(false);
 
   const { toast } = useToast();
 
-  const handleStartRecording = async () => {
-    setAudioDataUri(null);
-    setFeedback(null);
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaRecorderRef.current = new MediaRecorder(stream);
+  useEffect(() => {
+    const SpeechRecognition = window.SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      setIsSpeechRecognitionSupported(true);
+      const recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
 
-      mediaRecorderRef.current.ondataavailable = (event) => {
-        audioChunksRef.current.push(event.data);
+      recognition.onresult = (event) => {
+        let interimTranscript = '';
+        let finalTranscript = '';
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            finalTranscript += event.results[i][0].transcript;
+          } else {
+            interimTranscript += event.results[i][0].transcript;
+          }
+        }
+        setLiveTranscript(finalTranscript + " " + interimTranscript);
       };
 
-      mediaRecorderRef.current.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, {
-          type: "audio/webm",
+      recognition.onerror = (event) => {
+        console.error("Speech recognition error:", event.error);
+        toast({
+          variant: "destructive",
+          title: "Speech Recognition Error",
+          description: `An error occurred: ${event.error}. Your browser may have blocked the microphone.`,
         });
-        const reader = new FileReader();
-        reader.readAsDataURL(audioBlob);
-        reader.onloadend = () => {
-          setAudioDataUri(reader.result as string);
-        };
-        audioChunksRef.current = [];
-        // Stop all tracks to release the microphone
-        stream.getTracks().forEach((track) => track.stop());
+        setIsListening(false);
       };
 
-      mediaRecorderRef.current.start();
-      setIsRecording(true);
-    } catch (error) {
-      console.error("Error accessing microphone:", error);
-      toast({
-        variant: "destructive",
-        title: "Microphone Error",
-        description:
-          "Could not access the microphone. Please check your browser permissions.",
-      });
+      recognition.onend = () => {
+        setIsListening(false);
+      };
+      
+      recognitionRef.current = recognition;
+    } else {
+      setIsSpeechRecognitionSupported(false);
     }
-  };
+  }, [toast]);
 
-  const handleStopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
-      setIsRecording(false);
+  const handleToggleListening = () => {
+    if (!recognitionRef.current) return;
+    
+    if (isListening) {
+      recognitionRef.current.stop();
+    } else {
+      setLiveTranscript("");
+      setFeedback(null);
+      recognitionRef.current.start();
+      setIsListening(true);
     }
   };
 
   const handleGetFeedback = async () => {
-    if (!audioDataUri) {
+    if (liveTranscript.trim() === "") {
       toast({
         variant: "destructive",
-        title: "No Recording",
-        description: "Please record your speech first.",
+        title: "No Speech Detected",
+        description: "Please read the text first.",
       });
       return;
     }
@@ -189,7 +199,7 @@ function ReadingChallengeTab() {
 
     try {
       const result = await compareSpeechWithTargetText({
-        speechDataUri: audioDataUri,
+        transcript: liveTranscript,
         targetText: challengeText,
       });
       setFeedback(result);
@@ -199,20 +209,41 @@ function ReadingChallengeTab() {
         variant: "destructive",
         title: "AI Feedback Error",
         description:
-          "Failed to get feedback from the AI. This could be due to an invalid API key or a network issue. Please check your .env file and try again.",
+          "Failed to get feedback from the AI. This could be due to an invalid API key or a network issue.",
       });
     } finally {
       setIsProcessing(false);
     }
   };
 
+  if (!isSpeechRecognitionSupported) {
+    return (
+       <Card className="bg-card/50">
+         <CardHeader>
+           <CardTitle className="font-headline">Reading Challenge</CardTitle>
+           <CardDescription>
+             Read the text below aloud. Our AI will compare your speech to the text
+             and offer feedback.
+           </CardDescription>
+         </CardHeader>
+         <CardContent>
+           <div className="p-4 border rounded-lg bg-destructive/20 text-destructive-foreground">
+             <p className="font-bold">Browser Not Supported</p>
+             <p className="text-sm">
+                Your browser does not support the Web Speech API required for this feature. Please try using a recent version of Google Chrome or Microsoft Edge.
+             </p>
+           </div>
+         </CardContent>
+       </Card>
+    )
+  }
+
   return (
     <Card className="bg-card/50">
       <CardHeader>
         <CardTitle className="font-headline">Reading Challenge</CardTitle>
         <CardDescription>
-          Read the text below aloud. Our AI will compare your speech to the text
-          and offer feedback.
+          Read the text below aloud. Our AI will turn your speech into text and then offer feedback.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -220,21 +251,28 @@ function ReadingChallengeTab() {
           <p className="text-lg leading-relaxed">{challengeText}</p>
         </div>
 
+        <div className="p-4 border rounded-lg bg-background/50 min-h-[80px]">
+          <p className="text-muted-foreground text-sm mb-2">Live Transcript:</p>
+          {isListening && !liveTranscript && <p className="text-muted-foreground italic">Listening...</p>}
+          <p className="text-primary">{liveTranscript}</p>
+        </div>
+
         <div className="grid grid-cols-2 gap-4">
           <Button
-            onClick={isRecording ? handleStopRecording : handleStartRecording}
+            onClick={handleToggleListening}
             className="w-full"
+            disabled={isProcessing}
           >
-            {isRecording ? (
+            {isListening ? (
               <Square className="mr-2 h-4 w-4" />
             ) : (
               <Mic className="mr-2 h-4 w-4" />
             )}
-            {isRecording ? "Stop Recording" : "Start Recording"}
+            {isListening ? "Stop Listening" : "Start Reading Aloud"}
           </Button>
           <Button
             onClick={handleGetFeedback}
-            disabled={!audioDataUri || isProcessing || isRecording}
+            disabled={!liveTranscript || isProcessing || isListening}
             className="w-full animate-pulse-glow"
           >
             {isProcessing ? (
@@ -245,12 +283,6 @@ function ReadingChallengeTab() {
             Get AI Feedback
           </Button>
         </div>
-
-        {audioDataUri && !isProcessing && (
-          <div className="p-2 border rounded-lg bg-muted/50">
-            <audio src={audioDataUri} controls className="w-full" />
-          </div>
-        )}
 
         {feedback && (
           <div className="space-y-4 pt-4 animate-in fade-in">
