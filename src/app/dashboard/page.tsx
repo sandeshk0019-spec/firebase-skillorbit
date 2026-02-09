@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from 'react';
@@ -162,7 +163,7 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
           <StatCard icon={CheckSquare} label="Tasks Done" value={isProfileLoading ? "..." : String(tasksDone)} delay="delay-300" />
           <StatCard icon={Clock} label="Today's Study Time" value={isProfileLoading ? "..." : studyTime} delay="delay-400" />
-          <StatCard icon={Percent} label="Accuracy" value={isProfileLoading ? "..." : `${accuracy}%`} delay="delay-500" />
+          <StatCard icon={Percent} label="Average Accuracy" value={isProfileLoading ? "..." : `${accuracy}%`} delay="delay-500" />
         </div>
       </div>
     </div>
