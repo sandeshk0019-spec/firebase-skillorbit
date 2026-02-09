@@ -8,21 +8,22 @@
  */
 
 import {ai} from '@/ai/genkit';
+import {googleAI} from '@genkit-ai/google-genai';
 import {z} from 'genkit';
 
 const CompareSpeechWithTargetTextInputSchema = z.object({
   speechDataUri: z
     .string()
     .describe(
-      'The recorded speech as a data URI that must include a MIME type and use Base64 encoding. Expected format: \'data:<mimetype>;base64,<encoded_data>\'.' 
+      "The recorded speech as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
     ),
   targetText: z.string().describe('The text that the speech should match.'),
 });
 export type CompareSpeechWithTargetTextInput = z.infer<typeof CompareSpeechWithTargetTextInputSchema>;
 
 const CompareSpeechWithTargetTextOutputSchema = z.object({
-  feedback: z.string().describe('Feedback on the user\'s pronunciation, with encouraging tips.'),
-  correctedText: z.string().describe('The corrected text based on the user\'s speech.'),
+  feedback: z.string().describe("Feedback on the user's pronunciation, with encouraging tips."),
+  correctedText: z.string().describe("The corrected text based on the user's speech."),
 });
 export type CompareSpeechWithTargetTextOutput = z.infer<typeof CompareSpeechWithTargetTextOutputSchema>;
 
@@ -34,6 +35,7 @@ export async function compareSpeechWithTargetText(
 
 const prompt = ai.definePrompt({
   name: 'compareSpeechWithTargetTextPrompt',
+  model: googleAI.model('gemini-2.5-flash'),
   input: {schema: CompareSpeechWithTargetTextInputSchema},
   output: {schema: CompareSpeechWithTargetTextOutputSchema},
   prompt: `You are a helpful and encouraging tutor for students with dyslexia.
