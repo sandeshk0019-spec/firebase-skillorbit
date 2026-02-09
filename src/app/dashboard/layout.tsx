@@ -139,7 +139,6 @@ export default function DashboardLayout({
   const firestore = useFirestore();
   const router = useRouter();
 
-  // ----- START: New Study Time Tracker Logic -----
   const sessionStartTimeRef = React.useRef<number | null>(null);
 
   React.useEffect(() => {
@@ -171,7 +170,7 @@ export default function DashboardLayout({
             studyTimeToday: newDailyTime,
             totalStudyTime: newTotalTime,
             lastActiveDate: todayStr,
-            lastLogin: serverTimestamp(), // Also update last login on activity
+            lastLogin: serverTimestamp(),
           });
         });
       } catch (e) {
@@ -181,15 +180,23 @@ export default function DashboardLayout({
 
     const handleVisibilityChange = () => {
       if (document.hidden) {
-        // App is backgrounded or tab is switched
         if (sessionStartTimeRef.current) {
           const elapsed = Math.round((Date.now() - sessionStartTimeRef.current) / 1000);
           updateStudyTime(elapsed);
-          sessionStartTimeRef.current = null; // Pause the timer
+          sessionStartTimeRef.current = null;
         }
       } else {
-        // App is foregrounded
-        sessionStartTimeRef.current = Date.now(); // Resume the timer
+        sessionStartTimeRef.current = Date.now();
+      }
+    };
+
+    const periodicSave = () => {
+      if (sessionStartTimeRef.current && !document.hidden) {
+        const elapsed = Math.round((Date.now() - sessionStartTimeRef.current) / 1000);
+        if (elapsed > 0) {
+          updateStudyTime(elapsed);
+          sessionStartTimeRef.current = Date.now(); // Reset timer for next interval
+        }
       }
     };
     
@@ -199,7 +206,6 @@ export default function DashboardLayout({
         if (docSnap.exists()) {
             const data = docSnap.data();
             if (data.lastActiveDate !== todayStr) {
-                // First session of the day, reset daily time
                 runTransaction(firestore, async (transaction) => {
                     transaction.update(userDocRef, {
                         studyTimeToday: 0,
@@ -210,19 +216,20 @@ export default function DashboardLayout({
         }
     });
 
+    const intervalId = setInterval(periodicSave, 15000); // Persist every 15 seconds
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     // Cleanup on unmount
     return () => {
+      clearInterval(intervalId);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       if (sessionStartTimeRef.current) {
         const elapsed = Math.round((Date.now() - sessionStartTimeRef.current) / 1000);
-        updateStudyTime(elapsed); // Save final session time
+        updateStudyTime(elapsed);
       }
     };
 
   }, [user, isUserLoading, firestore]);
-  // ----- END: New Study Time Tracker Logic -----
 
   React.useEffect(() => {
     if (!isUserLoading && !user) {

@@ -54,37 +54,29 @@ export default function DashboardPage() {
   );
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userDocRef);
 
-  // --- START: New Live Study Time Logic ---
-  const [liveStudyTime, setLiveStudyTime] = useState(0);
+  const [liveTotalStudyTime, setLiveTotalStudyTime] = useState(0);
 
   useEffect(() => {
-    // Initialize the live timer only when the profile data is loaded.
     if (userProfile) {
-      setLiveStudyTime(userProfile.studyTimeToday || 0);
+      // Initialize with the total study time from Firestore.
+      setLiveTotalStudyTime(userProfile.totalStudyTime || 0);
 
-      // This interval updates the local state every second for a live display.
       const intervalId = setInterval(() => {
-        // We only increment the timer if the tab is currently active.
-        // The persistence logic in the layout handles saving this time to Firestore.
         if (!document.hidden) {
-          setLiveStudyTime((prevTime) => prevTime + 1);
+          setLiveTotalStudyTime((prevTime) => prevTime + 1);
         }
       }, 1000);
 
-      // Cleanup the interval when the component unmounts or the user profile re-syncs.
       return () => clearInterval(intervalId);
     }
-  }, [userProfile]); // Dependency on userProfile ensures we re-sync with Firestore data.
-  // --- END: New Live Study Time Logic ---
+  }, [userProfile]);
 
   const streak = userProfile?.currentStreak ?? 0;
-
-  // Calculate dynamic stats
   const tasksDone = (userProfile?.totalQuizzes || 0) + (userProfile?.gamesPlayed || 0);
 
-  // Format the LIVE study time from the local state for display
-  const hours = Math.floor(liveStudyTime / 3600);
-  const minutes = Math.floor((liveStudyTime % 3600) / 60);
+  // Format the LIVE total study time for display
+  const hours = Math.floor(liveTotalStudyTime / 3600);
+  const minutes = Math.floor((liveTotalStudyTime % 3600) / 60);
   const studyTime = `${hours}h ${minutes}m`;
   
   const accuracy = (userProfile?.totalQuestionsAnswered ?? 0) > 0
@@ -162,7 +154,7 @@ export default function DashboardPage() {
         {/* Stats Row */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
           <StatCard icon={CheckSquare} label="Tasks Done" value={isProfileLoading ? "..." : String(tasksDone)} delay="delay-300" />
-          <StatCard icon={Clock} label="Today's Study Time" value={isProfileLoading ? "..." : studyTime} delay="delay-400" />
+          <StatCard icon={Clock} label="Total Study Time" value={isProfileLoading ? "..." : studyTime} delay="delay-400" />
           <StatCard icon={Percent} label="Average Accuracy" value={isProfileLoading ? "..." : `${accuracy}%`} delay="delay-500" />
         </div>
       </div>
