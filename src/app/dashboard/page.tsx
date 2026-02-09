@@ -53,14 +53,37 @@ export default function DashboardPage() {
   );
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userDocRef);
 
+  // --- START: New Live Study Time Logic ---
+  const [liveStudyTime, setLiveStudyTime] = useState(0);
+
+  useEffect(() => {
+    // Initialize the live timer only when the profile data is loaded.
+    if (userProfile) {
+      setLiveStudyTime(userProfile.studyTimeToday || 0);
+
+      // This interval updates the local state every second for a live display.
+      const intervalId = setInterval(() => {
+        // We only increment the timer if the tab is currently active.
+        // The persistence logic in the layout handles saving this time to Firestore.
+        if (!document.hidden) {
+          setLiveStudyTime((prevTime) => prevTime + 1);
+        }
+      }, 1000);
+
+      // Cleanup the interval when the component unmounts or the user profile re-syncs.
+      return () => clearInterval(intervalId);
+    }
+  }, [userProfile]); // Dependency on userProfile ensures we re-sync with Firestore data.
+  // --- END: New Live Study Time Logic ---
+
   const streak = userProfile?.currentStreak ?? 0;
 
   // Calculate dynamic stats
   const tasksDone = (userProfile?.totalQuizzes || 0) + (userProfile?.gamesPlayed || 0);
 
-  const totalSeconds = userProfile?.studyTimeToday ?? 0;
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  // Format the LIVE study time from the local state for display
+  const hours = Math.floor(liveStudyTime / 3600);
+  const minutes = Math.floor((liveStudyTime % 3600) / 60);
   const studyTime = `${hours}h ${minutes}m`;
   
   const accuracy = (userProfile?.totalQuestionsAnswered ?? 0) > 0
