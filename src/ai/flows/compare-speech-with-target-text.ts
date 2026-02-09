@@ -8,7 +8,6 @@
  */
 
 import {ai} from '@/ai/genkit';
-import {googleAI} from '@genkit-ai/google-genai';
 import {z} from 'genkit';
 
 const CompareSpeechWithTargetTextInputSchema = z.object({
@@ -35,7 +34,6 @@ export async function compareSpeechWithTargetText(
 
 const prompt = ai.definePrompt({
   name: 'compareSpeechWithTargetTextPrompt',
-  model: googleAI.model('gemini-2.5-flash'),
   input: {schema: CompareSpeechWithTargetTextInputSchema},
   output: {schema: CompareSpeechWithTargetTextOutputSchema},
   prompt: `You are a helpful and encouraging tutor for students with dyslexia.
