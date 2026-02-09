@@ -18,6 +18,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
+import { useUser, useFirestore } from "@/firebase";
+import { doc, runTransaction } from 'firebase/firestore';
+import { updateUserStreak } from '@/lib/streak';
 
 const challengeParagraphs = [
     "The Great Wall of China is not a single continuous wall but a system of walls, watchtowers, and fortresses built over centuries. It stretches over 13,000 miles, making it the longest man-made structure in the world.",
@@ -138,6 +141,8 @@ function ReadingChallengeTab() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const { toast } = useToast();
+  const { user } = useUser();
+  const firestore = useFirestore();
 
   useEffect(() => {
     // Select a random paragraph when the component mounts
@@ -229,6 +234,30 @@ function ReadingChallengeTab() {
         targetText: challengeText,
       });
       setFeedback(result);
+
+      // Save stats to firestore
+      if (user && firestore && result.totalWordsInTarget > 0) {
+        const userRef = doc(firestore, "users", user.uid);
+        
+        await runTransaction(firestore, async (transaction) => {
+          const userDoc = await transaction.get(userRef);
+          if (!userDoc.exists()) return;
+
+          const data = userDoc.data();
+          const oldTotalCorrect = data.totalCorrectAnswers || 0;
+          const oldTotalAnswered = data.totalQuestionsAnswered || 0;
+          const gamesPlayed = data.gamesPlayed || 0;
+
+          transaction.update(userRef, {
+            gamesPlayed: gamesPlayed + 1, 
+            totalCorrectAnswers: oldTotalCorrect + result.correctlyReadWords,
+            totalQuestionsAnswered: oldTotalAnswered + result.totalWordsInTarget,
+          });
+        });
+        
+        await updateUserStreak(firestore, user.uid);
+      }
+
     } catch (error: any) {
       console.error("AI Feedback Error:", error);
       let description = "Failed to get feedback from the AI. Please try again later.";
