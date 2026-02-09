@@ -4,7 +4,8 @@
 import { useState, useRef, useEffect } from "react";
 import { analyzeSpeechForDyslexia } from "@/ai/flows/analyze-speech-for-dyslexia";
 import { compareSpeechWithTargetText, type CompareSpeechWithTargetTextOutput } from "@/ai/flows/compare-speech-with-target-text";
-import { Webhook, Loader2, BookOpen, Mic, Square, Send, Target, Lightbulb, Smile } from "lucide-react";
+import { generateSpeechFromText } from "@/ai/flows/generate-speech-from-text";
+import { Webhook, Loader2, BookOpen, Mic, Square, Send, Target, Lightbulb, Smile, Volume2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -131,6 +132,10 @@ function ReadingChallengeTab() {
 
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const [isSpeechRecognitionSupported, setIsSpeechRecognitionSupported] = useState(false);
+  
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const { toast } = useToast();
 
@@ -138,6 +143,7 @@ function ReadingChallengeTab() {
     // Select a random paragraph when the component mounts
     const randomIndex = Math.floor(Math.random() * challengeParagraphs.length);
     setChallengeText(challengeParagraphs[randomIndex]);
+    setAudioUrl(null); // Reset audio when text changes
 
     // Set up Speech Recognition
     const SpeechRecognition = window.SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -175,6 +181,12 @@ function ReadingChallengeTab() {
       setIsSpeechRecognitionSupported(false);
     }
   }, [toast]);
+  
+  useEffect(() => {
+    if (audioUrl && audioRef.current) {
+        audioRef.current.play().catch(e => console.error("Audio playback failed", e));
+    }
+  }, [audioUrl]);
 
   const handleToggleListening = () => {
     if (!recognitionRef.current) return;
@@ -232,6 +244,27 @@ function ReadingChallengeTab() {
       setIsProcessing(false);
     }
   };
+  
+  const handleListenToParagraph = async () => {
+    if (!challengeText || isGeneratingAudio) return;
+
+    setIsGeneratingAudio(true);
+    setAudioUrl(null);
+
+    try {
+      const result = await generateSpeechFromText({ text: challengeText });
+      setAudioUrl(result.audioDataUri);
+    } catch (error: any) {
+      console.error("Audio Generation Error:", error);
+      toast({
+        variant: "destructive",
+        title: "Audio Generation Error",
+        description: "Failed to generate audio for the paragraph. Please try again.",
+      });
+    } finally {
+      setIsGeneratingAudio(false);
+    }
+  };
 
   if (!isSpeechRecognitionSupported) {
     return (
@@ -258,12 +291,21 @@ function ReadingChallengeTab() {
   return (
     <Card className="bg-card/50">
       <CardHeader>
-        <CardTitle className="font-headline">Reading Challenge</CardTitle>
-        <CardDescription>
-          Read the text below aloud. Our AI will turn your speech into text and then offer feedback.
-        </CardDescription>
+        <div className="flex justify-between items-center">
+            <div>
+              <CardTitle className="font-headline">Reading Challenge</CardTitle>
+              <CardDescription>
+                Read the text below aloud. Our AI will turn your speech into text and then offer feedback.
+              </CardDescription>
+            </div>
+            <Button onClick={handleListenToParagraph} variant="outline" size="icon" disabled={isGeneratingAudio || !challengeText}>
+                {isGeneratingAudio ? <Loader2 className="h-5 w-5 animate-spin" /> : <Volume2 className="h-5 w-5" />}
+                <span className="sr-only">Listen to Paragraph</span>
+            </Button>
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
+        {audioUrl && <audio ref={audioRef} src={audioUrl} className="hidden" />}
         <div className="p-4 border rounded-lg bg-muted/50 min-h-[120px]">
           {challengeText ? (
             <p className="text-lg leading-relaxed">{challengeText}</p>
