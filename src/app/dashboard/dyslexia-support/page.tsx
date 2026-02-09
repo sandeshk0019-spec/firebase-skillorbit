@@ -3,8 +3,8 @@
 
 import { useState, useRef, useEffect } from "react";
 import { analyzeSpeechForDyslexia } from "@/ai/flows/analyze-speech-for-dyslexia";
-import { compareSpeechWithTargetText } from "@/ai/flows/compare-speech-with-target-text";
-import { Webhook, Loader2, BookOpen, Mic, Square, Send } from "lucide-react";
+import { compareSpeechWithTargetText, type CompareSpeechWithTargetTextOutput } from "@/ai/flows/compare-speech-with-target-text";
+import { Webhook, Loader2, BookOpen, Mic, Square, Send, Target, Lightbulb, Smile } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -16,6 +16,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import { Badge } from "@/components/ui/badge";
 
 const challengeParagraphs = [
     "The Great Wall of China is not a single continuous wall but a system of walls, watchtowers, and fortresses built over centuries. It stretches over 13,000 miles, making it the longest man-made structure in the world.",
@@ -126,10 +127,7 @@ function ReadingChallengeTab() {
   const [isListening, setIsListening] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [liveTranscript, setLiveTranscript] = useState("");
-  const [feedback, setFeedback] = useState<{
-    correctedText: string;
-    feedback: string;
-  } | null>(null);
+  const [feedback, setFeedback] = useState<CompareSpeechWithTargetTextOutput | null>(null);
 
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const [isSpeechRecognitionSupported, setIsSpeechRecognitionSupported] = useState(false);
@@ -151,11 +149,11 @@ function ReadingChallengeTab() {
       recognition.lang = 'en-US';
 
       recognition.onresult = (event) => {
-        const transcript = Array.from(event.results)
-          .map(result => result[0])
-          .map(result => result.transcript)
-          .join('');
-        setLiveTranscript(transcript);
+        let finalTranscript = '';
+        for (let i = 0; i < event.results.length; i++) {
+          finalTranscript += event.results[i][0].transcript;
+        }
+        setLiveTranscript(finalTranscript);
       };
 
       recognition.onerror = (event) => {
@@ -219,13 +217,16 @@ function ReadingChallengeTab() {
         targetText: challengeText,
       });
       setFeedback(result);
-    } catch (error) {
+    } catch (error: any) {
       console.error("AI Feedback Error:", error);
+      let description = "Failed to get feedback from the AI. Please try again later.";
+      if (error.message && error.message.includes("API key not valid")) {
+          description = "The AI service API key is not valid. Please check your .env configuration.";
+      }
       toast({
         variant: "destructive",
         title: "AI Feedback Error",
-        description:
-          "Failed to get feedback from the AI. This could be due to an invalid API key or a network issue.",
+        description: description,
       });
     } finally {
       setIsProcessing(false);
@@ -308,30 +309,64 @@ function ReadingChallengeTab() {
         </div>
 
         {feedback && (
-          <div className="space-y-4 pt-4 animate-in fade-in">
-            <Card className="bg-muted/50">
-              <CardHeader>
-                <CardTitle className="text-lg font-semibold">
-                  AI Reading Coach
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div
-                  className="prose dark:prose-invert prose-p:text-foreground/90"
-                  dangerouslySetInnerHTML={{ __html: feedback.feedback }}
-                />
-              </CardContent>
-            </Card>
-            <Card className="bg-muted/50">
-              <CardHeader>
-                <CardTitle className="text-lg font-semibold">
-                  Corrected Text
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="italic text-primary">{feedback.correctedText}</p>
-              </CardContent>
-            </Card>
+          <div className="space-y-6 pt-6 animate-in fade-in">
+              <Card className="bg-muted/30 border-primary/30">
+                  <CardHeader>
+                      <div className="flex items-center gap-3">
+                          <Target className="w-6 h-6 text-primary" />
+                          <CardTitle className="text-xl font-headline">Analysis Complete</CardTitle>
+                      </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                      <div className="flex items-center justify-between rounded-lg bg-background/50 p-4">
+                          <p className="font-semibold text-lg">Reading Accuracy</p>
+                          <p className="text-3xl font-bold text-primary">{feedback.accuracyScore}%</p>
+                      </div>
+                      
+                      <div className="rounded-lg bg-background/50 p-4">
+                          <div className="flex items-center gap-2 mb-2">
+                              <Smile className="w-5 h-5 text-green-400" />
+                              <h4 className="font-semibold">Positive Feedback</h4>
+                          </div>
+                          <p className="text-muted-foreground">{feedback.positiveFeedback}</p>
+                      </div>
+
+                      <div className="rounded-lg bg-background/50 p-4">
+                          <div className="flex items-center gap-2 mb-2">
+                              <Lightbulb className="w-5 h-5 text-yellow-400" />
+                              <h4 className="font-semibold">Improvement Tips</h4>
+                          </div>
+                          <p className="text-muted-foreground">{feedback.improvementTips}</p>
+                      </div>
+
+                  </CardContent>
+              </Card>
+
+              {feedback.wordsToPractice && feedback.wordsToPractice.length > 0 && (
+                  <Card className="bg-muted/30">
+                      <CardHeader>
+                          <CardTitle className="text-lg font-semibold">Words to Practice</CardTitle>
+                      </CardHeader>
+                      <CardContent className="flex flex-wrap gap-2">
+                          {feedback.wordsToPractice.map((word, index) => (
+                              <Badge key={index} variant="outline" className="text-lg py-1 px-3 bg-background border-destructive/50 text-destructive-foreground">
+                                  {word}
+                              </Badge>
+                          ))}
+                      </CardContent>
+                  </Card>
+              )}
+
+              <Card className="bg-muted/30">
+                  <CardHeader>
+                      <CardTitle className="text-lg font-semibold">
+                          Target Text
+                      </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                      <p className="italic text-primary">{feedback.correctedText}</p>
+                  </CardContent>
+              </Card>
           </div>
         )}
       </CardContent>
