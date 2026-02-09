@@ -139,16 +139,13 @@ function ReadingChallengeTab() {
       recognition.lang = 'en-US';
 
       recognition.onresult = (event) => {
-        let interimTranscript = '';
-        let finalTranscript = '';
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          if (event.results[i].isFinal) {
-            finalTranscript += event.results[i][0].transcript;
-          } else {
-            interimTranscript += event.results[i][0].transcript;
-          }
-        }
-        setLiveTranscript(finalTranscript + " " + interimTranscript);
+        // Create the transcript from the event results
+        const transcript = Array.from(event.results)
+          .map(result => result[0])
+          .map(result => result.transcript)
+          .join('');
+  
+        setLiveTranscript(transcript);
       };
 
       recognition.onerror = (event) => {
