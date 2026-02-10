@@ -74,32 +74,30 @@ service cloud.firestore {
     // --- SUBCOLLECTIONS ---
 
     // QUIZ ATTEMPTS
-    // Allow owner to read their own attempts.
     match /users/{userId}/quizAttempts/{attemptId} {
-      allow get: if isOwner(userId);
-      allow create, update, delete: if false;
+      allow get, create: if isOwner(userId);
+      allow update, delete: if false;
     }
-    // Allow owner to list their attempts and create new ones (addDoc).
     match /users/{userId}/quizAttempts {
-      allow list, create: if isOwner(userId);
+      allow list: if isOwner(userId);
     }
 
     // GAME SCORES
     match /users/{userId}/gameScores/{scoreId} {
-      allow get: if isOwner(userId);
-      allow create, update, delete: if false;
+      allow get, create: if isOwner(userId);
+      allow update, delete: if false;
     }
     match /users/{userId}/gameScores {
-      allow list, create: if isOwner(userId);
+      allow list: if isOwner(userId);
     }
     
     // ACTIVITIES
     match /users/{userId}/activities/{activityId} {
-      allow get: if isOwner(userId);
-      allow create, update, delete: if false;
+      allow get, create: if isOwner(userId);
+      allow update, delete: if false;
     }
     match /users/{userId}/activities {
-      allow list, create: if isOwner(userId);
+      allow list: if isOwner(userId);
     }
 
     // ACHIEVEMENTS
