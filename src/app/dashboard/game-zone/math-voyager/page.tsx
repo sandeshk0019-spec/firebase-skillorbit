@@ -1,12 +1,17 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { XCircle, Calculator } from 'lucide-react';
+import { XCircle, Calculator, Heart, RefreshCw, Trophy } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useUser, useFirestore } from '@/firebase';
+import { collection, doc, addDoc, serverTimestamp, runTransaction, getDoc, setDoc } from 'firebase/firestore';
+import { type GameScore, type Activity } from '@/types';
+import { achievements } from '@/lib/achievements';
+import { updateUserStreak } from '@/lib/streak';
+import { useToast } from "@/hooks/use-toast";
 
-// Define a type for the items for better type-safety
 interface Item {
   x: number;
   y: number;
@@ -16,6 +21,8 @@ interface Item {
   isCorrect: boolean;
 }
 
+const STARTING_LIVES = 3;
+
 export default function MathVoyagerPage() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const gameContainerRef = useRef<HTMLDivElement>(null);
@@ -23,9 +30,11 @@ export default function MathVoyagerPage() {
   const [score, setScore] = useState(0);
   const [question, setQuestion] = useState('');
   const [isShaking, setIsShaking] = useState(false);
+  const [lives, setLives] = useState(STARTING_LIVES);
+  const [isGameOver, setIsGameOver] = useState(false);
+  const [hasSaved, setHasSaved] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
 
-  // useRef is essential here to hold game state that can be mutated by the game loop
-  // without causing re-renders, but persists across re-renders caused by useState.
   const items = useRef<Item[]>([]);
   const gameSpeed = useRef(1);
   const currentAnswer = useRef(0);
@@ -40,23 +49,97 @@ export default function MathVoyagerPage() {
     isMovingLeft: false,
     isMovingRight: false,
   });
+  
+  const { user } = useUser();
+  const firestore = useFirestore();
+  const { toast } = useToast();
 
+  const checkAndUnlockAchievement = useCallback(async (achievementId: keyof typeof achievements) => {
+    if (!user || !firestore) return;
+    const achRef = doc(firestore, 'users', user.uid, 'achievements', achievementId);
+    const achDoc = await getDoc(achRef);
 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    const mount = gameContainerRef.current;
-    if (!canvas || !mount) return;
-    
-    // Encapsulate the entire game within this effect hook.
-    const ctx = canvas.getContext('2d')!;
-    canvas.width = mount.clientWidth;
-    canvas.height = 500;
-    
-    const player = playerRef.current;
-    player.x = canvas.width / 2;
-    player.y = canvas.height - 50;
+    if (!achDoc.exists()) {
+        const achData = achievements[achievementId];
+        await setDoc(achRef, {
+            userId: user.uid,
+            achievementId: achievementId,
+            unlockedAt: serverTimestamp(),
+        });
+        await addDoc(collection(firestore, 'users', user.uid, 'activities'), {
+            userId: user.uid,
+            type: 'ACHIEVEMENT_UNLOCKED',
+            description: `Unlocked: ${achData.name}`,
+            createdAt: serverTimestamp(),
+        });
 
-    const generateQuestion = () => {
+        toast({
+            title: "Achievement Unlocked!",
+            description: (
+                <div className="flex items-center gap-3">
+                    <Trophy className="w-8 h-8 text-yellow-400" />
+                    <div>
+                        <p className="font-semibold">{achData.name}</p>
+                        <p className="text-xs">{achData.description}</p>
+                    </div>
+                </div>
+            ),
+        });
+    }
+  }, [user, firestore, toast]);
+
+  const saveGameResult = useCallback(async () => {
+    if (!user || !firestore || hasSaved) return;
+
+    setHasSaved(true);
+
+    try {
+        const userRef = doc(firestore, "users", user.uid);
+        const now = serverTimestamp();
+
+        const gameScoreData: Omit<GameScore, 'id'> = {
+            userId: user.uid,
+            gameId: 'math-voyager',
+            gameName: 'Math Voyager',
+            score: score,
+            createdAt: now as any,
+        };
+        const scoreRef = await addDoc(collection(userRef, "gameScores"), gameScoreData);
+
+        const activityData: Omit<Activity, 'id'> = {
+            userId: user.uid,
+            type: 'GAME_PLAYED',
+            description: `Scored ${score} in Math Voyager.`,
+            refId: scoreRef.id,
+            createdAt: now as any,
+        };
+        await addDoc(collection(userRef, "activities"), activityData);
+
+        await runTransaction(firestore, async (transaction) => {
+            const userDoc = await transaction.get(userRef);
+            if (!userDoc.exists()) return;
+            const currentGamesPlayed = userDoc.data().gamesPlayed || 0;
+            transaction.update(userRef, {
+                gamesPlayed: currentGamesPlayed + 1,
+            });
+        });
+        
+        await updateUserStreak(firestore, user.uid);
+        if (score > 50) {
+            await checkAndUnlockAchievement('MATH_VOYAGER_ACE');
+        }
+
+    } catch (error) {
+         console.error("Error saving game results:", error);
+         toast({
+            variant: "destructive",
+            title: "Save Error",
+            description: "Could not save your game progress.",
+        });
+    }
+  }, [user, firestore, score, hasSaved, toast, checkAndUnlockAchievement]);
+
+  const generateQuestion = useCallback(() => {
       const ops = ['+', '-', '*'];
       const op = ops[Math.floor(Math.random() * ops.length)];
       let num1 = Math.floor(Math.random() * 10) + 1;
@@ -72,103 +155,87 @@ export default function MathVoyagerPage() {
 
       setQuestion(`${num1} ${op} ${num2} = ?`);
       currentAnswer.current = eval(`${num1} ${op} ${num2}`);
-    };
+  }, []);
 
-    const spawnItem = () => {
-      if(!canvas) return;
-      const radius = 25;
-      const x = Math.random() * (canvas.width - radius * 2) + radius;
-      const y = -radius;
-      const dy = 1.5 * gameSpeed.current;
+  const resetGame = useCallback(() => {
+      setScore(0);
+      setLives(STARTING_LIVES);
+      setIsGameOver(false);
+      setHasSaved(false);
+      setIsPlaying(false);
+      items.current = [];
+      gameSpeed.current = 1;
+      generateQuestion();
+      if(animationFrameId.current) {
+        cancelAnimationFrame(animationFrameId.current);
+      }
+  }, [generateQuestion]);
 
-      const hasCorrectAnswer = items.current.some(item => item.isCorrect);
+  const startGame = useCallback(() => {
+      resetGame();
+      setIsPlaying(true);
       
-      // Smart spawning: if no correct answer is on screen, force the next one to be correct.
-      // This is particularly important for the immediate respawn after a correct answer.
-      const isCorrect = !hasCorrectAnswer || Math.random() < 0.25;
-      
-      let value: number;
-      if (isCorrect) {
-        value = currentAnswer.current;
-      } else {
-        do {
-          value = currentAnswer.current + Math.floor(Math.random() * 10) - 5;
-        } while (value === currentAnswer.current);
-      }
-      
-      items.current.push({ x, y, radius, value, dy, isCorrect });
-    };
-    
-    const update = () => {
-      if(!canvas) return;
-      // Move player
-      if (player.isMovingLeft && player.x > player.width / 2) {
-        player.x -= player.dx;
-      }
-      if (player.isMovingRight && player.x < canvas.width - player.width / 2) {
-        player.x += player.dx;
-      }
-
-      // Spawn items on a timer
-      spawnTimer.current++;
-      if (spawnTimer.current % Math.max(30, 100 / gameSpeed.current) === 0) {
-        spawnItem();
-      }
-
-      // Move and check items
-      for (let i = items.current.length - 1; i >= 0; i--) {
-        const item = items.current[i];
-        if (!item) continue;
+      const gameLoop = () => {
+        animationFrameId.current = requestAnimationFrame(gameLoop);
         
-        item.y += item.dy;
+        const canvas = canvasRef.current;
+        if (!canvas) return;
 
-        // Collision with player
-        const dist = Math.hypot(player.x - item.x, player.y - item.y);
-        if (dist < player.height / 2 + item.radius) {
-          if (item.isCorrect) {
-            setScore((s) => s + 10);
-            gameSpeed.current += 0.1;
-            items.current = []; // Clear all bubbles
-            generateQuestion(); // Get a new question
-            
-            // Immediately spawn a new set of bubbles to prevent empty screen
-            for (let j = 0; j < 3; j++) {
-              spawnItem();
+        // --- UPDATE LOGIC ---
+        const player = playerRef.current;
+
+        if (player.isMovingLeft && player.x > player.width / 2) player.x -= player.dx;
+        if (player.isMovingRight && player.x < canvas.width - player.width / 2) player.x += player.dx;
+
+        spawnTimer.current++;
+        if (spawnTimer.current % Math.max(30, 100 / gameSpeed.current) === 0) {
+            const radius = 25;
+            const x = Math.random() * (canvas.width - radius * 2) + radius;
+            const dy = 1.5 * gameSpeed.current;
+            const hasCorrectAnswer = items.current.some(item => item.isCorrect);
+            const isCorrect = !hasCorrectAnswer || Math.random() < 0.25;
+            let value;
+            if (isCorrect) {
+              value = currentAnswer.current;
+            } else {
+              do {
+                value = currentAnswer.current + Math.floor(Math.random() * 10) - 5;
+              } while (value === currentAnswer.current);
             }
-
-            return; // Exit loop for this frame since items array was modified
-          } else {
-            setScore((s) => Math.max(0, s - 5));
-            setIsShaking(true);
-            setTimeout(() => setIsShaking(false), 200);
-            items.current.splice(i, 1);
-          }
-        } else if (item.y > canvas.height + item.radius) {
-          // Remove off-screen items
-          if (item.isCorrect) {
-             // If correct answer is missed, penalize and reset
-            setScore((s) => Math.max(0, s - 10));
-            items.current = [];
-            generateQuestion();
-            
-            // Immediately spawn bubbles if correct answer is missed
-            for (let j = 0; j < 3; j++) {
-              spawnItem();
-            }
-
-            return; // Exit loop
-          }
-          items.current.splice(i, 1);
+            items.current.push({ x, y: -radius, radius, value, dy, isCorrect });
         }
-      }
-    };
-    
-    const draw = () => {
-        if (!ctx) return;
+
+        for (let i = items.current.length - 1; i >= 0; i--) {
+            const item = items.current[i];
+            item.y += item.dy;
+            
+            const dist = Math.hypot(player.x - item.x, player.y - item.y);
+            if (dist < player.height / 2 + item.radius) {
+                if (item.isCorrect) {
+                    setScore(s => s + 10);
+                    gameSpeed.current += 0.1;
+                    items.current = [];
+                    generateQuestion();
+                    return;
+                } else {
+                    setLives(l => l - 1);
+                    setIsShaking(true);
+                    setTimeout(() => setIsShaking(false), 200);
+                    items.current.splice(i, 1);
+                }
+            } else if (item.y > canvas.height + item.radius) {
+                if (item.isCorrect) {
+                    setLives(l => l - 1);
+                }
+                items.current.splice(i, 1);
+            }
+        }
+        
+        // --- DRAW LOGIC ---
+        const ctx = canvas.getContext('2d')!;
         ctx.fillStyle = '#0a0a1a';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // Draw player
         ctx.fillStyle = '#3b82f6';
         ctx.beginPath();
         ctx.moveTo(player.x, player.y - player.height / 2);
@@ -177,7 +244,6 @@ export default function MathVoyagerPage() {
         ctx.closePath();
         ctx.fill();
 
-        // Draw items
         items.current.forEach(item => {
           ctx.beginPath();
           ctx.arc(item.x, item.y, item.radius, 0, Math.PI * 2);
@@ -191,87 +257,63 @@ export default function MathVoyagerPage() {
           ctx.textBaseline = 'middle';
           ctx.fillText(item.value.toString(), item.x, item.y);
         });
-    };
+      };
       
-    const gameLoop = () => {
-      if (!canvasRef.current) return;
-      update();
-      draw();
-      animationFrameId.current = requestAnimationFrame(gameLoop);
-    };
+      gameLoop();
 
-    // Event Handlers
+  }, [resetGame, generateQuestion]);
+
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const mount = gameContainerRef.current;
+    if (!canvas || !mount) return;
+    
+    canvas.width = mount.clientWidth;
+    canvas.height = 500;
+    
+    playerRef.current.x = canvas.width / 2;
+    playerRef.current.y = canvas.height - 50;
+
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowLeft') player.isMovingLeft = true;
-      if (e.key === 'ArrowRight') player.isMovingRight = true;
+      if (e.key === 'ArrowLeft') playerRef.current.isMovingLeft = true;
+      if (e.key === 'ArrowRight') playerRef.current.isMovingRight = true;
     };
     const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowLeft') player.isMovingLeft = false;
-      if (e.key === 'ArrowRight') player.isMovingRight = false;
+      if (e.key === 'ArrowLeft') playerRef.current.isMovingLeft = false;
+      if (e.key === 'ArrowRight') playerRef.current.isMovingRight = false;
     };
     
-    const handleTouchStart = (e: TouchEvent) => {
-      e.preventDefault();
-      if(!canvas) return;
-      const touchX = e.touches[0].clientX - canvas.getBoundingClientRect().left;
-      if (touchX < player.x) {
-        player.isMovingLeft = true;
-        player.isMovingRight = false;
-      } else {
-        player.isMovingRight = true;
-        player.isMovingLeft = false;
-      }
-    };
-      
-    const handleTouchMove = (e: TouchEvent) => {
-      e.preventDefault();
-      if(!canvas) return;
-      const touchX = e.touches[0].clientX - canvas.getBoundingClientRect().left;
-      if (touchX < player.x) {
-        player.isMovingLeft = true;
-        player.isMovingRight = false;
-      } else {
-        player.isMovingRight = true;
-        player.isMovingLeft = false;
-      }
-    };
-
-    const handleTouchEnd = (e: TouchEvent) => {
-      e.preventDefault();
-      player.isMovingLeft = false;
-      player.isMovingRight = false;
-    };
-
-    // Setup event listeners
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
-    canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
-    canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
-    canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
-    canvas.addEventListener('touchcancel', handleTouchEnd, { passive: false });
-
-    // Start the game
-    generateQuestion();
-    gameLoop();
       
-    // Cleanup function to run when the component unmounts
+    generateQuestion();
+      
     return () => {
-      if (animationFrameId.current) {
-        cancelAnimationFrame(animationFrameId.current);
-      }
+      if (animationFrameId.current) cancelAnimationFrame(animationFrameId.current);
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
-      canvas.removeEventListener('touchstart', handleTouchStart);
-      canvas.removeEventListener('touchmove', handleTouchMove);
-      canvas.removeEventListener('touchend', handleTouchEnd);
-      canvas.removeEventListener('touchcancel', handleTouchEnd);
     };
 
-  }, []); // The empty dependency array ensures this effect runs only once on mount.
+  }, [generateQuestion]);
+
+  useEffect(() => {
+    if (lives <= 0 && !isGameOver) {
+      setIsGameOver(true);
+      setIsPlaying(false);
+      if(animationFrameId.current) cancelAnimationFrame(animationFrameId.current);
+    }
+  }, [lives, isGameOver]);
+
+  useEffect(() => {
+    if (isGameOver && !hasSaved) {
+        saveGameResult();
+    }
+  }, [isGameOver, hasSaved, saveGameResult]);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[calc(100vh-120px)] p-4 bg-background text-foreground">
-      <div id="active-game-mount" ref={gameContainerRef} className={cn("w-full max-w-3xl", isShaking && 'animate-shake')}>
+      <div id="active-game-mount" ref={gameContainerRef} className={cn("w-full max-w-3xl relative", isShaking && 'animate-shake')}>
         <header className="flex items-center justify-between mb-0 p-4 bg-[#0a0a1a] rounded-t-lg border-b border-blue-500/50">
           <div className="flex items-center gap-4">
             <Calculator className="w-8 h-8 text-blue-500" />
@@ -279,16 +321,40 @@ export default function MathVoyagerPage() {
               <h1 className="font-headline text-2xl md:text-3xl text-white">Math Voyager</h1>
             </div>
           </div>
-          <Link href="/dashboard/game-zone">
-            <Button variant="ghost" size="icon">
-              <XCircle className="w-8 h-8 text-white/70 hover:text-white" />
-            </Button>
-          </Link>
+          <div className="flex items-center gap-4">
+             <div className="flex items-center gap-2">
+                <Heart className="w-6 h-6 text-red-500" />
+                <span className="font-mono text-xl text-red-400">{lives}</span>
+            </div>
+            <Link href="/dashboard/game-zone" onClick={resetGame}>
+              <Button variant="ghost" size="icon">
+                <XCircle className="w-8 h-8 text-white/70 hover:text-white" />
+              </Button>
+            </Link>
+          </div>
         </header>
         <div className="w-full bg-[#0a0a1a] p-4 text-center">
             <p className="font-mono text-2xl text-white font-bold tracking-widest">{question}</p>
         </div>
         <canvas ref={canvasRef} className="w-full bg-[#0a0a1a] block" />
+         {!isPlaying && (
+            <div className="absolute inset-0 top-[170px] flex items-center justify-center z-10 bg-black/30">
+               {isGameOver ? (
+                    <div className="text-center bg-black/70 backdrop-blur-sm p-8 rounded-xl animate-in fade-in-0">
+                        <h2 className="font-headline text-4xl text-red-500 mb-2">Game Over</h2>
+                        <p className="text-xl mb-4">Final Score: <span className="font-bold text-blue-400">{score}</span></p>
+                        <Button size="lg" onClick={startGame} className="bg-blue-600 hover:bg-blue-500">
+                            <RefreshCw className="mr-2 h-5 w-5" />
+                            Play Again
+                        </Button>
+                    </div>
+                ) : (
+                    <Button size="lg" onClick={startGame} className="animate-pulse-glow bg-blue-600 hover:bg-blue-500">
+                        Start Game
+                    </Button>
+                )}
+            </div>
+        )}
         <footer className="w-full bg-[#0a0a1a] p-4 rounded-b-lg border-t border-blue-500/50 text-center">
             <p className="font-mono text-2xl text-white font-bold">SCORE: <span className="text-blue-400">{score}</span></p>
         </footer>

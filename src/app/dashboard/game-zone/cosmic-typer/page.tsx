@@ -2,15 +2,22 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { XCircle, Keyboard, Rocket } from 'lucide-react';
+import { XCircle, Keyboard, Rocket, Shield, Heart, Trophy, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { useUser, useFirestore } from '@/firebase';
+import { collection, doc, addDoc, serverTimestamp, runTransaction, getDoc, setDoc } from 'firebase/firestore';
+import { type GameScore, type Activity } from '@/types';
+import { achievements } from '@/lib/achievements';
+import { updateUserStreak } from '@/lib/streak';
+import { useToast } from "@/hooks/use-toast";
 
 // Game settings
 const WORD_LIST = ["ATOM", "CELL", "GRAVITY", "FORCE", "JOULE", "DATA", "ORBIT", "LASER", "NEBULA", "QUASAR", "BINARY", "ALGORITHM"];
 const SPAWN_RATE = 120; // frames
 const BASE_SPEED = 1;
+const STARTING_LIVES = 5;
 
 interface Word {
   text: string;
@@ -36,8 +43,106 @@ export default function CosmicTyperPage() {
   const [score, setScore] = useState(0);
   const [inputValue, setInputValue] = useState('');
   const [isMatch, setIsMatch] = useState(false);
+  const [lives, setLives] = useState(STARTING_LIVES);
+  const [isGameOver, setIsGameOver] = useState(false);
+  const [hasSaved, setHasSaved] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
+  
+  const { user } = useUser();
+  const firestore = useFirestore();
+  const { toast } = useToast();
+
+  const checkAndUnlockAchievement = useCallback(async (achievementId: keyof typeof achievements) => {
+    if (!user || !firestore) return;
+    const achRef = doc(firestore, 'users', user.uid, 'achievements', achievementId);
+    const achDoc = await getDoc(achRef);
+
+    if (!achDoc.exists()) {
+        const achData = achievements[achievementId];
+        await setDoc(achRef, {
+            userId: user.uid,
+            achievementId: achievementId,
+            unlockedAt: serverTimestamp(),
+        });
+        await addDoc(collection(firestore, 'users', user.uid, 'activities'), {
+            userId: user.uid,
+            type: 'ACHIEVEMENT_UNLOCKED',
+            description: `Unlocked: ${achData.name}`,
+            createdAt: serverTimestamp(),
+        });
+
+        toast({
+            title: "Achievement Unlocked!",
+            description: (
+                <div className="flex items-center gap-3">
+                    <Trophy className="w-8 h-8 text-yellow-400" />
+                    <div>
+                        <p className="font-semibold">{achData.name}</p>
+                        <p className="text-xs">{achData.description}</p>
+                    </div>
+                </div>
+            ),
+        });
+    }
+  }, [user, firestore, toast]);
+
+  const saveGameResult = useCallback(async () => {
+    if (!user || !firestore || hasSaved) return;
+
+    setHasSaved(true);
+
+    try {
+        const userRef = doc(firestore, "users", user.uid);
+        const now = serverTimestamp();
+
+        const gameScoreData: Omit<GameScore, 'id'> = {
+            userId: user.uid,
+            gameId: 'cosmic-typer',
+            gameName: 'Cosmic Typer',
+            score: score,
+            createdAt: now as any,
+        };
+        const scoreRef = await addDoc(collection(userRef, "gameScores"), gameScoreData);
+
+        const activityData: Omit<Activity, 'id'> = {
+            userId: user.uid,
+            type: 'GAME_PLAYED',
+            description: `Scored ${score} in Cosmic Typer.`,
+            refId: scoreRef.id,
+            createdAt: now as any,
+        };
+        await addDoc(collection(userRef, "activities"), activityData);
+
+        await runTransaction(firestore, async (transaction) => {
+            const userDoc = await transaction.get(userRef);
+            if (!userDoc.exists()) return;
+            const currentGamesPlayed = userDoc.data().gamesPlayed || 0;
+            transaction.update(userRef, {
+                gamesPlayed: currentGamesPlayed + 1,
+            });
+        });
+        
+        await updateUserStreak(firestore, user.uid);
+        if (score > 100) {
+            await checkAndUnlockAchievement('COSMIC_KEYMASTER');
+        }
+
+    } catch (error) {
+         console.error("Error saving game results:", error);
+         toast({
+            variant: "destructive",
+            title: "Save Error",
+            description: "Could not save your game progress.",
+        });
+    }
+  }, [user, firestore, score, hasSaved, toast, checkAndUnlockAchievement]);
+
+  useEffect(() => {
+    if (isGameOver && !hasSaved) {
+      saveGameResult();
+    }
+  }, [isGameOver, hasSaved, saveGameResult]);
 
   // Initialize stars
   useEffect(() => {
@@ -58,7 +163,10 @@ export default function CosmicTyperPage() {
   
   const resetGame = useCallback(() => {
     setIsPlaying(false);
+    setIsGameOver(false);
+    setHasSaved(false);
     setScore(0);
+    setLives(STARTING_LIVES);
     setInputValue('');
     words.current = [];
     frameCount.current = 0;
@@ -70,7 +178,6 @@ export default function CosmicTyperPage() {
   const startGame = () => {
     resetGame();
     setIsPlaying(true);
-    setScore(0);
     inputRef.current?.focus();
     gameLoopId.current = requestAnimationFrame(gameLoop);
   };
@@ -82,7 +189,7 @@ export default function CosmicTyperPage() {
     ctx.font = '20px "Montserrat", sans-serif';
     const textWidth = ctx.measureText(text).width;
     const x = Math.random() * (canvas.width - textWidth);
-    const speed = BASE_SPEED + Math.random() * 0.5;
+    const speed = BASE_SPEED + (score / 100); // Speed increases with score
     words.current.push({ text, x, y: -30, speed });
   };
   
@@ -122,31 +229,44 @@ export default function CosmicTyperPage() {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
+    if (!isPlaying || isGameOver) {
+        if (gameLoopId.current) cancelAnimationFrame(gameLoopId.current);
+        return;
+    }
+
     frameCount.current++;
 
     if (frameCount.current % SPAWN_RATE === 0) {
       spawnWord(canvas);
     }
 
-    // Update word positions and check for misses
     const newWords: Word[] = [];
-    let scoreDelta = 0;
+    let livesLost = 0;
     for (const word of words.current) {
       word.y += word.speed;
       if (word.y > canvas.height) {
-        scoreDelta -= 5;
+        livesLost++;
       } else {
         newWords.push(word);
       }
     }
     words.current = newWords;
-    if (scoreDelta !== 0) {
-       setScore(prev => Math.max(0, prev + scoreDelta));
+    
+    if (livesLost > 0) {
+        setLives(prev => {
+            const newLives = prev - livesLost;
+            if (newLives <= 0) {
+                setIsGameOver(true);
+                setIsPlaying(false);
+                return 0;
+            }
+            return newLives;
+        });
     }
     
     draw();
     gameLoopId.current = requestAnimationFrame(gameLoop);
-  }, [draw]);
+  }, [draw, isPlaying, isGameOver]);
   
   useEffect(() => {
     return () => {
@@ -183,7 +303,11 @@ export default function CosmicTyperPage() {
               <p className="text-muted-foreground">Defend the Galaxy with Words</p>
             </div>
           </div>
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-4 md:gap-6">
+            <div className="flex items-center gap-2">
+                <Heart className="w-6 h-6 text-red-500" />
+                <span className="font-mono text-xl text-red-400">{lives}</span>
+            </div>
             <p className="font-mono text-xl">Score: <span className="text-green-400">{score}</span></p>
             <Link href="/dashboard/game-zone" onClick={resetGame}>
               <Button variant="ghost" size="icon">
@@ -201,24 +325,35 @@ export default function CosmicTyperPage() {
                 className={cn(
                     "rounded-2xl border-2 w-full border-white/20 bg-black/50 transition-all duration-200",
                     isMatch && "shadow-[0_0_20px_#10b981] border-green-400",
-                    !isPlaying && "blur-sm"
+                    (!isPlaying || isGameOver) && "blur-sm"
                 )}
             />
             {!isPlaying && (
                 <div className="absolute inset-0 flex items-center justify-center z-10">
-                    <Button size="lg" onClick={startGame} className="animate-pulse-glow bg-emerald-600 hover:bg-emerald-500">
-                        <Rocket className="mr-2 h-5 w-5" />
-                        Start Mission
-                    </Button>
+                   {isGameOver ? (
+                        <div className="text-center bg-black/70 backdrop-blur-sm p-8 rounded-xl animate-in fade-in-0">
+                            <h2 className="font-headline text-4xl text-red-500 mb-2">Game Over</h2>
+                            <p className="text-xl mb-4">Final Score: <span className="font-bold text-green-400">{score}</span></p>
+                            <Button size="lg" onClick={startGame} className="bg-emerald-600 hover:bg-emerald-500">
+                                <RefreshCw className="mr-2 h-5 w-5" />
+                                Play Again
+                            </Button>
+                        </div>
+                    ) : (
+                        <Button size="lg" onClick={startGame} className="animate-pulse-glow bg-emerald-600 hover:bg-emerald-500">
+                            <Rocket className="mr-2 h-5 w-5" />
+                            Start Mission
+                        </Button>
+                    )}
                 </div>
             )}
             <Input
                 ref={inputRef}
                 type="text"
-                placeholder="Type falling words..."
+                placeholder={isPlaying ? "Type falling words..." : "Press Start Mission to play"}
                 value={inputValue}
                 onChange={handleInputChange}
-                disabled={!isPlaying}
+                disabled={!isPlaying || isGameOver}
                 className="mt-6 w-full max-w-md text-center uppercase tracking-widest font-mono text-lg bg-black/40 border-white/20 h-12"
             />
         </main>

@@ -7,6 +7,10 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { XCircle, Flame, Snowflake, RotateCw, TestTube, Beaker, FlaskConical, Atom, Minus, Droplet } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useUser, useFirestore } from '@/firebase';
+import { collection, doc, addDoc, serverTimestamp, runTransaction } from 'firebase/firestore';
+import { type Activity } from '@/types';
+import { updateUserStreak } from '@/lib/streak';
 
 // Define types for better type-safety
 interface Particle {
@@ -68,6 +72,9 @@ export default function ChemLabSimPage() {
     const [consoleLogs, setConsoleLogs] = useState<{ message: string; level: 'info' | 'warn' | 'danger' }[]>([
         { message: '> Lab initialized. Ready for experimentation.', level: 'info' },
     ]);
+
+    const { user } = useUser();
+    const firestore = useFirestore();
     
     // Use useRef for lab state to prevent re-renders on every animation frame
     const labState = useRef<LabState>({
@@ -82,6 +89,8 @@ export default function ChemLabSimPage() {
         isExploding: false,
         explosionTimer: 0,
     });
+    const actionsInSession = useRef(0);
+    const hasSessionBeenLogged = useRef(false);
 
     const animationFrameId = useRef<number>();
     const frameCount = useRef(0);
@@ -89,6 +98,48 @@ export default function ChemLabSimPage() {
     const logToConsole = useCallback((message: string, level: 'info' | 'warn' | 'danger' = 'info') => {
         setConsoleLogs(prev => [{ message: `> ${message}`, level }, ...prev].slice(0, 50));
     }, []);
+
+    const logGameSession = useCallback(async () => {
+        if (!user || !firestore) return;
+    
+        logToConsole('Experiment session progress saved!', 'info');
+    
+        try {
+            const userRef = doc(firestore, "users", user.uid);
+            const now = serverTimestamp();
+    
+            const activityData: Omit<Activity, 'id'> = {
+                userId: user.uid,
+                type: 'GAME_PLAYED',
+                description: `Completed an experiment in the Chem Lab Sim.`,
+                createdAt: now as any,
+            };
+            await addDoc(collection(userRef, "activities"), activityData);
+    
+            await runTransaction(firestore, async (transaction) => {
+                const userDoc = await transaction.get(userRef);
+                if (!userDoc.exists()) return;
+                const currentGamesPlayed = userDoc.data().gamesPlayed || 0;
+                transaction.update(userRef, {
+                    gamesPlayed: currentGamesPlayed + 1,
+                });
+            });
+            
+            await updateUserStreak(firestore, user.uid);
+    
+        } catch (error) {
+             console.error("Error saving Chem Lab session:", error);
+        }
+    }, [user, firestore, logToConsole]);
+
+    const handleAction = useCallback(() => {
+        if (hasSessionBeenLogged.current) return;
+        actionsInSession.current++;
+        if (actionsInSession.current >= 10) {
+            hasSessionBeenLogged.current = true;
+            logGameSession();
+        }
+    }, [logGameSession]);
 
     const getPhColor = useCallback((ph: number) => {
         if (ph < 3) return { r: 255, g: 0, b: 0 }; // Strong Acid
@@ -115,6 +166,7 @@ export default function ChemLabSimPage() {
     }, []);
 
     const labAdd = useCallback((type: string) => {
+        handleAction();
         const state = labState.current;
         const chemical = [...chemicals.liquids, ...chemicals.solids, ...chemicals.indicators].find(c => c.id === type);
         logToConsole(`Added ${chemical?.name || type}.`);
@@ -262,9 +314,10 @@ export default function ChemLabSimPage() {
 
         if(!reactionOccurred) spawnParticles(10, 'bubble', 400, 400);
 
-    }, [getPhColor, spawnParticles, logToConsole]);
+    }, [getPhColor, spawnParticles, logToConsole, handleAction]);
 
     const labAction = useCallback((action: string) => {
+        handleAction();
         logToConsole(`Action: ${action}.`);
         if (action === 'heat') {
             labState.current.temp += 20;
@@ -277,10 +330,12 @@ export default function ChemLabSimPage() {
         } else if (action === 'mix') {
             spawnParticles(20, 'bubble', 400, 400);
         }
-    }, [spawnParticles, logToConsole]);
+    }, [spawnParticles, logToConsole, handleAction]);
     
     const resetLab = useCallback(() => {
         logToConsole('Lab reset.');
+        actionsInSession.current = 0;
+        hasSessionBeenLogged.current = false;
         labState.current = {
             volume: 200,
             ph: 7.0,
