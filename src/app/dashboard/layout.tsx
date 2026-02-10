@@ -264,19 +264,6 @@ export default function DashboardLayout({
     
     // Initial setup on mount
     sessionStartTimeRef.current = Date.now();
-    getDoc(userDocRef).then(docSnap => {
-        if (docSnap.exists()) {
-            const data = docSnap.data();
-            if (data.lastActiveDate !== todayStr) {
-                runTransaction(firestore, async (transaction) => {
-                    transaction.update(userDocRef, {
-                        studyTimeToday: 0,
-                        lastActiveDate: todayStr,
-                    });
-                });
-            }
-        }
-    });
 
     const intervalId = setInterval(periodicSave, 15000); // Persist every 15 seconds
     document.addEventListener('visibilitychange', handleVisibilityChange);
