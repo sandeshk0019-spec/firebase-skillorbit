@@ -83,18 +83,21 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
       async (firebaseUser) => { // Auth state determined
         if (firebaseUser) {
           const userDocRef = doc(firestore, 'users', firebaseUser.uid);
+          let operation: 'create' | 'update' | null = null;
+          let docData: any = null;
+
           try {
             const creationTime = new Date(firebaseUser.metadata.creationTime || 0).getTime();
             const lastSignInTime = new Date(firebaseUser.metadata.lastSignInTime || 0).getTime();
             const isNewUser = Math.abs(lastSignInTime - creationTime) < 5000;
     
             if (isNewUser) {
-              const now = serverTimestamp();
+              operation = 'create';
               const docSnap = await getDoc(userDocRef);
     
               if (!docSnap.exists()) {
-                let docData;
                 let displayName;
+                const now = serverTimestamp();
 
                 if (firebaseUser.isAnonymous) {
                   const guestProfile = {
@@ -150,38 +153,34 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
                 }
                 
                 if (docData) {
-                  // Non-blocking write with contextual error handling
-                  setDoc(userDocRef, docData)
-                    .catch((serverError) => {
-                      errorEmitter.emit('permission-error', new FirestorePermissionError({
-                        path: userDocRef.path,
-                        operation: 'create',
-                        requestResourceData: docData,
-                      }));
-                    });
+                  await setDoc(userDocRef, docData);
                   if (displayName) {
                      await updateProfile(firebaseUser, { displayName });
                   }
                 }
               }
             } else { // Existing user
-              const updateData = { lastLogin: serverTimestamp() };
-              // Non-blocking update with contextual error handling
-              updateDoc(userDocRef, updateData)
-                .catch((serverError) => {
-                  errorEmitter.emit('permission-error', new FirestorePermissionError({
-                    path: userDocRef.path,
-                    operation: 'update',
-                    requestResourceData: updateData,
-                  }));
-                });
+              operation = 'update';
+              docData = { lastLogin: serverTimestamp() };
+              await updateDoc(userDocRef, docData);
             }
           } catch (error: any) {
              console.error("FirebaseProvider: Error during user processing:", error);
-             setUserAuthState({ user: null, isUserLoading: false, userError: error });
-             return;
+              // If it's a permission error, emit a detailed one for better debugging.
+              if (error.code === 'permission-denied' && operation && docData) {
+                errorEmitter.emit('permission-error', new FirestorePermissionError({
+                  path: userDocRef.path,
+                  operation,
+                  requestResourceData: docData,
+                }));
+              } else {
+                // For other errors (like the internal assertion), set the state to show an error boundary.
+                setUserAuthState({ user: null, isUserLoading: false, userError: error });
+              }
+             return; // Stop execution on error
           }
         }
+        // If everything succeeded, update the user state.
         setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null });
       },
       (error) => { // Auth listener error
