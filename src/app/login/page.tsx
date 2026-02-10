@@ -83,6 +83,8 @@ export default function LoginPage() {
           title: "Sign-in Failed",
           description: description,
         });
+      })
+      .finally(() => {
         setIsLoading(false);
         setAuthAction(null);
       });
@@ -105,6 +107,8 @@ export default function LoginPage() {
                 title: "Sign-up Failed",
                 description: error.message || "Could not create account. Please try again.",
             });
+        })
+        .finally(() => {
             setIsLoading(false);
             setAuthAction(null);
         });
@@ -120,16 +124,18 @@ export default function LoginPage() {
           title: "Guest Sign-in Failed",
           description: error.message || "Could not sign in as guest. Please try again.",
         });
-        setIsLoading(false);
-        setAuthAction(null);
+      })
+      .finally(() => {
+          setIsLoading(false);
+          setAuthAction(null);
       });
   };
 
   if (isUserLoading || (!isUserLoading && user)) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center">
+      <div className="flex min-h-screen flex-col items-center justify-center bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="mt-4 text-muted-foreground">Authenticating...</p>
+        <p className="mt-4 text-muted-foreground">Synchronizing Orbit...</p>
       </div>
     );
   }
@@ -138,7 +144,7 @@ export default function LoginPage() {
     <main className="flex min-h-screen flex-col items-center justify-center p-4 bg-background text-foreground relative overflow-hidden">
       <div className="auth-bg"></div>
       <div className="z-10 w-full max-w-md animate-in fade-in-0 zoom-in-95 duration-500">
-        <Card className="bg-card/60 backdrop-blur-md border border-primary/20 shadow-2xl shadow-primary/10">
+        <Card className="bg-card/60 backdrop-blur-xl border border-primary/20 shadow-2xl shadow-primary/10">
           <CardHeader className="text-center">
             <div className="flex flex-col items-center justify-center gap-2 mb-4">
               <Logo />
@@ -150,7 +156,7 @@ export default function LoginPage() {
           </CardHeader>
           <CardContent>
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
+              <TabsList className="grid w-full grid-cols-2 bg-input/50">
                 <TabsTrigger value="sign-in"><LogIn className="w-4 h-4 mr-2"/>Sign In</TabsTrigger>
                 <TabsTrigger value="sign-up"><UserPlus className="w-4 h-4 mr-2"/>Sign Up</TabsTrigger>
               </TabsList>
@@ -184,7 +190,7 @@ export default function LoginPage() {
                       )}
                     />
                     <Button type="submit" disabled={isLoading} className="w-full animate-pulse-glow">
-                      {isLoading && authAction === 'signIn' && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      {isLoading && authAction === 'signIn' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogIn className="mr-2 h-4 w-4" />}
                       Connect
                     </Button>
                   </form>
@@ -201,7 +207,7 @@ export default function LoginPage() {
                               <FormItem>
                                   <FormLabel>First Name</FormLabel>
                                   <FormControl>
-                                  <Input placeholder="John" {...field} />
+                                  <Input placeholder="Jane" {...field} />
                                   </FormControl>
                                   <FormMessage />
                               </FormItem>
@@ -214,7 +220,7 @@ export default function LoginPage() {
                               <FormItem>
                                   <FormLabel>Last Name</FormLabel>
                                   <FormControl>
-                                  <Input placeholder="Doe" {...field} />
+                                  <Input placeholder="Voyager" {...field} />
                                   </FormControl>
                                   <FormMessage />
                               </FormItem>
@@ -228,7 +234,7 @@ export default function LoginPage() {
                           <FormItem>
                               <FormLabel>Username</FormLabel>
                               <FormControl>
-                              <Input placeholder="johndoe" {...field} />
+                              <Input placeholder="jane_voyager" {...field} />
                               </FormControl>
                               <FormMessage />
                           </FormItem>
@@ -261,7 +267,7 @@ export default function LoginPage() {
                       )}
                     />
                     <Button type="submit" disabled={isLoading} className="w-full animate-pulse-glow">
-                      {isLoading && authAction === 'signUp' && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      {isLoading && authAction === 'signUp' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UserPlus className="mr-2 h-4 w-4" />}
                       Create Account
                     </Button>
                   </form>
@@ -273,14 +279,14 @@ export default function LoginPage() {
                   <span className="w-full border-t border-border/50" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-card/60 px-2 text-muted-foreground">
-                  Or
+                  <span className="bg-card px-2 text-muted-foreground">
+                    Or
                   </span>
               </div>
             </div>
             <Button variant="outline" className="w-full" onClick={handleGuestSignIn} disabled={isLoading}>
               {isLoading && authAction === 'guest' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <User className="mr-2 h-4 w-4" />}
-              Sign in as Guest
+              Continue as Guest
             </Button>
           </CardContent>
         </Card>

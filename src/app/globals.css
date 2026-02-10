@@ -4,7 +4,7 @@
 
 @layer base {
   :root {
-    --background: 240 10% 6%; /* Deep Navy */
+    --background: 222 84% 6%; /* Deep Space Navy */
     --foreground: 210 40% 98%;
     
     --card: 220 25% 15%;
@@ -13,23 +13,23 @@
     --popover: 240 10% 4%;
     --popover-foreground: 210 40% 98%;
     
-    --primary: 200 100% 50%; /* Cyan */
-    --primary-foreground: 240 10% 6%;
+    --primary: 200 100% 50%; /* Bright Cyan */
+    --primary-foreground: 222 84% 6%;
 
-    --secondary: 260 100% 65%; /* Purple */
+    --secondary: 260 100% 70%; /* Vibrant Purple */
     --secondary-foreground: 210 40% 98%;
 
     --muted: 220 25% 20%;
     --muted-foreground: 210 40% 70%;
     
-    --accent: 190 100% 50%; /* Neon Blue */
+    --accent: 190 100% 55%; /* Neon Blue */
     --accent-foreground: 210 40% 98%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
 
     --border: 210 20% 30%;
-    --input: 210 20% 25%;
+    --input: 210 20% 12%;
     --ring: 200 100% 50%;
     --radius: 0.8rem;
 
@@ -42,7 +42,7 @@
   }
 
   .dark {
-    --background: 240 10% 6%; /* Deep Navy */
+    --background: 222 84% 6%; /* Deep Space Navy */
     --foreground: 210 40% 98%;
     
     --card: 220 25% 15%;
@@ -51,23 +51,23 @@
     --popover: 240 10% 4%;
     --popover-foreground: 210 40% 98%;
     
-    --primary: 200 100% 50%; /* Cyan */
-    --primary-foreground: 240 10% 6%;
+    --primary: 200 100% 50%; /* Bright Cyan */
+    --primary-foreground: 222 84% 6%;
 
-    --secondary: 260 100% 65%; /* Purple */
+    --secondary: 260 100% 70%; /* Vibrant Purple */
     --secondary-foreground: 210 40% 98%;
 
     --muted: 220 25% 20%;
     --muted-foreground: 210 40% 70%;
     
-    --accent: 190 100% 50%; /* Neon Blue */
+    --accent: 190 100% 55%; /* Neon Blue */
     --accent-foreground: 210 40% 98%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
 
     --border: 210 20% 30%;
-    --input: 210 20% 25%;
+    --input: 210 20% 12%;
     --ring: 200 100% 50%;
 
     --sidebar-background: 240 10% 6%;
@@ -85,6 +85,7 @@
   }
   body {
     @apply bg-background text-foreground;
+    background-color: hsl(var(--background));
   }
 }
 
@@ -270,13 +271,16 @@
     position: absolute;
     top: 50%;
     left: 50%;
-    width: 200vw;
-    height: 200vh;
+    width: 150vw;
+    height: 150vh;
+    min-width: 2000px;
+    min-height: 2000px;
     transform: translate(-50%, -50%);
-    background: radial-gradient(circle at center, hsl(var(--secondary) / 0.1), transparent 40%),
-                radial-gradient(circle at 20% 80%, hsl(var(--primary) / 0.1), transparent 40%),
-                radial-gradient(circle at 80% 30%, hsl(var(--accent) / 0.1), transparent 40%);
-    animation: orbit-bg 30s linear infinite;
+    background: 
+      radial-gradient(ellipse at 10% 20%, hsl(var(--secondary) / 0.15), transparent 35%),
+      radial-gradient(ellipse at 80% 30%, hsl(var(--accent) / 0.15), transparent 35%),
+      radial-gradient(ellipse at 30% 90%, hsl(var(--primary) / 0.15), transparent 35%);
+    animation: orbit-bg 60s linear infinite;
     z-index: 0;
   }
 
@@ -295,7 +299,31 @@
   
   @keyframes float {
     0% { transform: translateY(0px); }
-    50% { transform: translateY(-8px); }
+    50% { transform: translateY(-10px); }
     100% { transform: translateY(0px); }
+  }
+  
+  /* Zen Match card flip */
+  .perspective {
+    perspective: 1000px;
+  }
+  .card-inner {
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.6s;
+  }
+  .is-flipped .card-inner {
+    transform: rotateY(180deg);
+  }
+  .card-front,
+  .card-back {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+  }
+  .card-back {
+    transform: rotateY(180deg);
   }
 }

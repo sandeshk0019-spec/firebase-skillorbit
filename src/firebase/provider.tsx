@@ -84,7 +84,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
             if (firebaseUser) {
               const creationTime = new Date(firebaseUser.metadata.creationTime || 0).getTime();
               const lastSignInTime = new Date(firebaseUser.metadata.lastSignInTime || 0).getTime();
-              const isNewUser = lastSignInTime - creationTime < 5000;
+              const isNewUser = Math.abs(lastSignInTime - creationTime) < 5000;
               const userDocRef = doc(firestore, 'users', firebaseUser.uid);
     
               if (isNewUser) {
