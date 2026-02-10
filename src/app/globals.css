@@ -264,4 +264,38 @@
   .loaded .delay-300 { transition-delay: 300ms; }
   .loaded .delay-400 { transition-delay: 400ms; }
   .loaded .delay-500 { transition-delay: 500ms; }
+
+  /* Login Page Animations */
+  .auth-bg {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 200vw;
+    height: 200vh;
+    transform: translate(-50%, -50%);
+    background: radial-gradient(circle at center, hsl(var(--secondary) / 0.1), transparent 40%),
+                radial-gradient(circle at 20% 80%, hsl(var(--primary) / 0.1), transparent 40%),
+                radial-gradient(circle at 80% 30%, hsl(var(--accent) / 0.1), transparent 40%);
+    animation: orbit-bg 30s linear infinite;
+    z-index: 0;
+  }
+
+  @keyframes orbit-bg {
+    from {
+      transform: translate(-50%, -50%) rotate(0deg);
+    }
+    to {
+      transform: translate(-50%, -50%) rotate(360deg);
+    }
+  }
+
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+  
+  @keyframes float {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-8px); }
+    100% { transform: translateY(0px); }
+  }
 }
