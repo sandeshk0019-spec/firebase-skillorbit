@@ -1,6 +1,8 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -14,13 +16,6 @@ import {
 
 import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
   Form,
   FormControl,
   FormField,
@@ -33,6 +28,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, LogIn, UserPlus, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Logo } from "@/components/logo";
+import { PlaceHolderImages } from "@/lib/placeholder-images";
 
 const signInSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }),
@@ -55,6 +51,7 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [authAction, setAuthAction] = useState<"signIn" | "signUp" | "guest" | null>(null);
   const [activeTab, setActiveTab] = useState("sign-in");
+  const heroImage = PlaceHolderImages.find(img => img.id === 'hero');
 
   const signInForm = useForm<z.infer<typeof signInSchema>>({
     resolver: zodResolver(signInSchema),
@@ -140,19 +137,18 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center p-4">
-       <div className="flex items-center gap-2 mb-6">
-          <Logo />
-          <span className="text-2xl font-semibold font-headline">SkillOrbit</span>
-        </div>
-      <Card className="w-full max-w-md bg-card/50">
-        <CardHeader className="text-center">
-          <CardTitle className="font-headline text-2xl">Access the Matrix</CardTitle>
-          <CardDescription>
-            Sign in or create an account to begin your journey.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+    <div className="w-full lg:grid lg:min-h-screen lg:grid-cols-2 xl:min-h-screen">
+      <div className="flex items-center justify-center py-12">
+        <div className="mx-auto grid w-[350px] gap-6">
+          <div className="grid gap-2 text-center">
+            <div className="flex items-center justify-center gap-2 mb-4">
+              <Logo />
+              <h1 className="text-3xl font-bold font-headline">SkillOrbit</h1>
+            </div>
+            <p className="text-balance text-muted-foreground">
+              Enter your credentials to access the learning matrix
+            </p>
+          </div>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="sign-in"><LogIn className="w-4 h-4 mr-2"/>Sign In</TabsTrigger>
@@ -277,7 +273,7 @@ export default function LoginPage() {
                 <span className="w-full border-t border-border/50" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-card px-2 text-muted-foreground">
+                <span className="bg-background px-2 text-muted-foreground">
                 Or
                 </span>
             </div>
@@ -286,8 +282,25 @@ export default function LoginPage() {
             {isLoading && authAction === 'guest' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <User className="mr-2 h-4 w-4" />}
             Sign in as Guest
           </Button>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
+      <div className="hidden bg-muted lg:block relative">
+        {heroImage && (
+            <Image
+            src={heroImage.imageUrl}
+            alt={heroImage.description}
+            data-ai-hint={heroImage.imageHint}
+            width="1920"
+            height="1080"
+            className="h-full w-full object-cover"
+            />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent" />
+        <div className="absolute bottom-10 left-10 text-white">
+            <h2 className="text-3xl font-bold">Evolve Your Intellect</h2>
+            <p className="mt-2 text-lg max-w-lg">Forge new neural pathways with interactive quizzes, expert tutoring, and specialized cognitive tools.</p>
+        </div>
+      </div>
     </div>
   );
 }
