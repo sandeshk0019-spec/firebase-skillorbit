@@ -18,6 +18,8 @@ import { collection, doc, addDoc, serverTimestamp, runTransaction, getDoc, setDo
 import { type QuizAttempt, type Activity } from "@/types";
 import { achievements } from "@/lib/achievements";
 import { updateUserStreak } from "@/lib/streak";
+import { awardXp } from '@/lib/xp';
+import { xpValues } from '@/lib/rewards';
 
 const formSchema = z.object({
   subject: z.string().min(2, { message: "Subject must be at least 2 characters." }),
@@ -43,7 +45,7 @@ export default function QuizPage() {
     defaultValues: { subject: "", topic: "" },
   });
 
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+  const onSubmit = async (values: z.infer<typeof formSchema>>) => {
     setIsGenerating(true);
     setQuiz(null);
     setShowResults(false);
@@ -130,7 +132,11 @@ export default function QuizPage() {
             });
         });
         
-        // 4. Update Streak & Check for achievements
+        // 4. Award XP
+        const xpGained = (score * xpValues.QUIZ_CORRECT_ANSWER) + (score === quiz.length ? xpValues.QUIZ_PERFECT_BONUS : 0);
+        await awardXp(firestore, user.uid, xpGained, toast);
+
+        // 5. Update Streak & Check for achievements
         await updateUserStreak(firestore, user.uid);
         await checkAndUnlockAchievement('FIRST_QUIZ');
         if(score === quiz.length) {

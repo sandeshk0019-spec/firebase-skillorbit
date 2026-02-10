@@ -1,14 +1,16 @@
 
 "use client";
 
-import { useEffect, useState } from 'react';
-import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { doc } from 'firebase/firestore';
-import { type UserProfile } from '@/types';
+import { useEffect, useState, useMemo } from 'react';
+import { useUser, useFirestore, useDoc, useCollection, useMemoFirebase } from '@/firebase';
+import { doc, collection } from 'firebase/firestore';
+import { type UserProfile, type Achievement } from '@/types';
 import { Flame, BrainCircuit, Gamepad2, CheckSquare, Clock, Percent, Trophy } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { rewardTiers } from '@/lib/rewards';
+import { Skeleton } from '@/components/ui/skeleton';
 
 // --- Reusable Components ---
 
@@ -41,6 +43,45 @@ const StatCard = ({ icon, label, value, delay }: { icon: React.ElementType, labe
   );
 };
 
+const RewardsTracker = () => {
+  const { user, isUserLoading } = useUser();
+  const firestore = useFirestore();
+
+  const achievementsRef = useMemoFirebase(
+    () => (firestore && user ? collection(firestore, 'users', user.uid, 'achievements') : null),
+    [firestore, user]
+  );
+  const { data: unlockedAchievements, isLoading: areAchievementsLoading } = useCollection<Achievement>(achievementsRef);
+  
+  const unlockedIds = useMemo(() => new Set(unlockedAchievements?.map(a => a.achievementId)), [unlockedAchievements]);
+
+  if (isUserLoading || areAchievementsLoading) {
+    return <HolographicCard className="lg:col-span-3 load-hidden delay-600"><Skeleton className="h-40 w-full" /></HolographicCard>;
+  }
+
+  return (
+    <HolographicCard className="lg:col-span-3 load-hidden delay-600">
+        <h3 className="text-xl font-headline text-secondary mb-4 text-pulse">Reward Tiers</h3>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 text-center">
+            {rewardTiers.map(tier => {
+                const isUnlocked = unlockedIds.has(tier.id);
+                const Icon = tier.icon;
+                return (
+                    <div key={tier.id} className={cn("p-4 rounded-lg flex flex-col items-center justify-start transition-all", isUnlocked ? "bg-primary/10" : "bg-muted/30 opacity-60")}>
+                        <div className={cn("relative w-16 h-16 flex items-center justify-center rounded-full mb-3", isUnlocked ? 'bg-primary/20' : 'bg-muted/50')}>
+                             <Icon className={cn("w-8 h-8", isUnlocked ? tier.color : "text-muted-foreground")} />
+                             {isUnlocked && <div className="absolute inset-0 border-2 border-primary rounded-full animate-glow" style={{animationDuration: '3s'}}></div>}
+                        </div>
+                        <p className={cn("font-bold text-sm", isUnlocked ? 'text-primary-foreground' : 'text-muted-foreground')}>{tier.name}</p>
+                        <p className="text-xs text-muted-foreground">{tier.xpThreshold.toLocaleString()} XP</p>
+                    </div>
+                )
+            })}
+        </div>
+    </HolographicCard>
+  )
+}
+
 // --- Main Dashboard Component ---
 
 export default function DashboardPage() {
@@ -57,16 +98,13 @@ export default function DashboardPage() {
   const [liveTotalStudyTime, setLiveTotalStudyTime] = useState(0);
 
   useEffect(() => {
-    if (userProfile) {
-      // Initialize with the total study time from Firestore.
-      setLiveTotalStudyTime(userProfile.totalStudyTime || 0);
-
+    if (userProfile && userProfile.totalStudyTime !== undefined) {
+      setLiveTotalStudyTime(userProfile.totalStudyTime);
       const intervalId = setInterval(() => {
         if (!document.hidden) {
           setLiveTotalStudyTime((prevTime) => prevTime + 1);
         }
       }, 1000);
-
       return () => clearInterval(intervalId);
     }
   }, [userProfile]);
@@ -74,7 +112,6 @@ export default function DashboardPage() {
   const streak = userProfile?.currentStreak ?? 0;
   const tasksDone = (userProfile?.totalQuizzes || 0) + (userProfile?.gamesPlayed || 0);
 
-  // Format the LIVE total study time for display
   const hours = Math.floor(liveTotalStudyTime / 3600);
   const minutes = Math.floor((liveTotalStudyTime % 3600) / 60);
   const studyTime = `${hours}h ${minutes}m`;
@@ -83,13 +120,15 @@ export default function DashboardPage() {
     ? Math.round(((userProfile?.totalCorrectAnswers ?? 0) / userProfile.totalQuestionsAnswered) * 100)
     : 0;
 
-  const totalXp = (userProfile?.totalCorrectAnswers || 0) * 10 + (userProfile?.gamesPlayed || 0) * 50;
-  const xpForLevel = 1000;
-  const xpProgress = (totalXp % xpForLevel) / xpForLevel * 360;
-
+  const totalXp = userProfile?.totalXp ?? 0;
+  const currentLevelTier = [...rewardTiers].reverse().find(t => totalXp >= t.xpThreshold);
+  const nextLevelTier = rewardTiers.find(t => totalXp < t.xpThreshold);
+  const xpForCurrentLevelStart = currentLevelTier?.xpThreshold ?? 0;
+  const xpForNextLevel = nextLevelTier?.xpThreshold ?? (currentLevelTier ? (currentLevelTier.xpThreshold + 1000) : 100);
+  const progressPercentage = (totalXp - xpForCurrentLevelStart) / (xpForNextLevel - xpForCurrentLevelStart);
+  const xpProgressDegrees = Math.min(progressPercentage * 360, 360);
 
   useEffect(() => {
-    // Trigger entry animations
     const timer = setTimeout(() => setIsLoaded(true), 100);
     return () => clearTimeout(timer);
   }, []);
@@ -140,10 +179,11 @@ export default function DashboardPage() {
           <HolographicCard className="flex flex-col items-center justify-center text-center load-hidden delay-300">
              <div 
               className="relative w-40 h-40 flex items-center justify-center rounded-full p-2" 
-              style={{ background: `radial-gradient(circle, hsl(var(--secondary)/0.3) 0%, transparent 70%), conic-gradient(hsl(var(--primary)) ${xpProgress}deg, hsl(var(--muted)) 0deg)` }}
+              style={{ background: `radial-gradient(circle, hsl(var(--secondary)/0.3) 0%, transparent 70%), conic-gradient(hsl(var(--primary)) ${xpProgressDegrees}deg, hsl(var(--muted)) 0deg)` }}
             >
-              <div className="absolute inset-2 rounded-full bg-background flex items-center justify-center">
-                 <Trophy className="w-12 h-12 text-primary/70 text-pulse" />
+              <div className="absolute inset-2 rounded-full bg-background flex flex-col items-center justify-center">
+                 {currentLevelTier ? <currentLevelTier.icon className={cn("w-10 h-10", currentLevelTier.color)} /> : <Trophy className="w-12 h-12 text-primary/70 text-pulse" />}
+                 <p className="text-xs font-bold mt-1 text-muted-foreground">{currentLevelTier?.name ?? 'Voyager'}</p>
               </div>
             </div>
             <p className="text-muted-foreground mt-4 text-sm">Total XP</p>
@@ -157,6 +197,8 @@ export default function DashboardPage() {
           <StatCard icon={Clock} label="Total Study Time" value={isProfileLoading ? "..." : studyTime} delay="delay-400" />
           <StatCard icon={Percent} label="Average Accuracy" value={isProfileLoading ? "..." : `${accuracy}%`} delay="delay-500" />
         </div>
+
+        <RewardsTracker />
       </div>
     </div>
   );

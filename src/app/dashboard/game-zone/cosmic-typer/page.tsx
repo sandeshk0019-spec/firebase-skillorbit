@@ -12,6 +12,8 @@ import { type GameScore, type Activity } from '@/types';
 import { achievements } from '@/lib/achievements';
 import { updateUserStreak } from '@/lib/streak';
 import { useToast } from "@/hooks/use-toast";
+import { awardXp } from '@/lib/xp';
+import { xpValues } from '@/lib/rewards';
 
 // Game settings
 const WORD_LIST = ["ATOM", "CELL", "GRAVITY", "FORCE", "JOULE", "DATA", "ORBIT", "LASER", "NEBULA", "QUASAR", "BINARY", "ALGORITHM"];
@@ -122,6 +124,9 @@ export default function CosmicTyperPage() {
                 gamesPlayed: currentGamesPlayed + 1,
             });
         });
+        
+        const xpGained = score * xpValues.COSMIC_TYPER_MULTIPLIER;
+        await awardXp(firestore, user.uid, xpGained, toast);
         
         await updateUserStreak(firestore, user.uid);
         if (score > 100) {

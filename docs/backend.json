@@ -72,6 +72,10 @@
             "type": "string",
             "description": "The last date the user was active, in YYYY-MM-DD format.",
             "format": "date"
+        },
+        "totalXp": {
+            "type": "number",
+            "description": "The total experience points accumulated by the user."
         }
       },
       "required": [
@@ -227,6 +231,6 @@
         "definition": { "entityName": "Achievement", "schema": { "$ref": "#/backend/entities/Achievement" } }
       }
     ],
-    "reasoning": "The Firestore structure is designed to ensure authorization independence, clarity, and scalability for the SkillOrbit application.  Authorization Independence is achieved by limiting authorization to `request.auth.uid` only and storing roles in the database.  The structure promotes easy debugging through clear path-based ownership and consistent naming conventions.  The design uses structural segregation to ensure homogeneous security postures for collections.\n\nPrivate user data is stored under `/users/{userId}`, enabling simple ownership-based security rules. All user-specific progress and activity data are stored in subcollections under the user's document, which naturally inherits the same ownership-based security. This design avoids the use of `get()` calls in security rules by ensuring that all necessary authorization data is available within the document or can be inferred from the path.\n\nQAPs are addressed by ensuring each collection has a homogenous security posture. All documents within a collection have similar security needs. This simplifies security rules and avoids filtering data based on authorization within a single collection.\n"
+    "reasoning": "The Firestore structure is designed to ensure authorization independence, clarity, and scalability for the SkillOrbit application.  Authorization Independence is achieved by limiting authorization to `request.auth.uid` only and storing roles in the database.  The structure promotes easy debugging through clear path-based ownership and consistent naming conventions.  The design uses structural segregation to ensure homogeneous security postures for collections.\\n\\nPrivate user data is stored under `/users/{userId}`, enabling simple ownership-based security rules. All user-specific progress and activity data are stored in subcollections under the user's document, which naturally inherits the same ownership-based security. This design avoids the use of `get()` calls in security rules by ensuring that all necessary authorization data is available within the document or can be inferred from the path.\\n\\nQAPs are addressed by ensuring each collection has a homogenous security posture. All documents within a collection have similar security needs. This simplifies security rules and avoids filtering data based on authorization within a single collection.\\n"
   }
 }

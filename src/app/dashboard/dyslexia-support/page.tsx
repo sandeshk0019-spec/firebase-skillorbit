@@ -21,6 +21,8 @@ import { Badge } from "@/components/ui/badge";
 import { useUser, useFirestore } from "@/firebase";
 import { doc, runTransaction } from 'firebase/firestore';
 import { updateUserStreak } from '@/lib/streak';
+import { awardXp } from '@/lib/xp';
+import { xpValues } from '@/lib/rewards';
 
 const challengeParagraphs = [
     "The Great Wall of China is not a single continuous wall but a system of walls, watchtowers, and fortresses built over centuries. It stretches over 13,000 miles, making it the longest man-made structure in the world.",
@@ -255,6 +257,11 @@ function ReadingChallengeTab() {
           });
         });
         
+        const xpGained = result.accuracyScore * xpValues.READING_CHALLENGE_MULTIPLIER;
+        if (xpGained > 0) {
+            await awardXp(firestore, user.uid, xpGained, toast);
+        }
+
         await updateUserStreak(firestore, user.uid);
       }
 

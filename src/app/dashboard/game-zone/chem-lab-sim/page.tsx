@@ -11,6 +11,9 @@ import { useUser, useFirestore } from '@/firebase';
 import { collection, doc, addDoc, serverTimestamp, runTransaction } from 'firebase/firestore';
 import { type Activity } from '@/types';
 import { updateUserStreak } from '@/lib/streak';
+import { useToast } from "@/hooks/use-toast";
+import { awardXp } from '@/lib/xp';
+import { xpValues } from '@/lib/rewards';
 
 // Define types for better type-safety
 interface Particle {
@@ -75,6 +78,7 @@ export default function ChemLabSimPage() {
 
     const { user } = useUser();
     const firestore = useFirestore();
+    const { toast } = useToast();
     
     // Use useRef for lab state to prevent re-renders on every animation frame
     const labState = useRef<LabState>({
@@ -125,12 +129,13 @@ export default function ChemLabSimPage() {
                 });
             });
             
+            await awardXp(firestore, user.uid, xpValues.CHEM_LAB_SESSION, toast);
             await updateUserStreak(firestore, user.uid);
     
         } catch (error) {
              console.error("Error saving Chem Lab session:", error);
         }
-    }, [user, firestore, logToConsole]);
+    }, [user, firestore, logToConsole, toast]);
 
     const handleAction = useCallback(() => {
         if (hasSessionBeenLogged.current) return;

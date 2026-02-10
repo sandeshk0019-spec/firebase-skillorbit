@@ -13,6 +13,8 @@ import { updateUserStreak } from '@/lib/streak';
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { awardXp } from '@/lib/xp';
+import { xpValues } from '@/lib/rewards';
 
 // Card data structure
 interface CardData {
@@ -200,6 +202,10 @@ export default function ZenMatchPage() {
                 });
             });
             
+            // 4. Award XP
+            await awardXp(firestore, user.uid, xpValues.ZEN_MATCH, toast);
+            
+            // 5. Update Streak & Check Achievements
             await updateUserStreak(firestore, user.uid);
             await checkAndUnlockAchievement('ZEN_MASTER');
 

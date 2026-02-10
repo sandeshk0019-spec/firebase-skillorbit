@@ -11,6 +11,8 @@ import { type GameScore, type Activity } from '@/types';
 import { achievements } from '@/lib/achievements';
 import { updateUserStreak } from '@/lib/streak';
 import { useToast } from "@/hooks/use-toast";
+import { awardXp } from '@/lib/xp';
+import { xpValues } from '@/lib/rewards';
 
 interface Item {
   x: number;
@@ -123,6 +125,9 @@ export default function MathVoyagerPage() {
                 gamesPlayed: currentGamesPlayed + 1,
             });
         });
+        
+        const xpGained = score * xpValues.MATH_VOYAGER_MULTIPLIER;
+        await awardXp(firestore, user.uid, xpGained, toast);
         
         await updateUserStreak(firestore, user.uid);
         if (score > 50) {

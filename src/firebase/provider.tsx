@@ -120,6 +120,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
                     studyTimeToday: 0,
                     currentStreak: 0,
                     lastActiveDate: "",
+                    totalXp: 0,
                   };
                 } else {
                   const pendingProfileRaw = localStorage.getItem('pendingUserProfile');
@@ -142,6 +143,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
                         studyTimeToday: 0,
                         currentStreak: 0,
                         lastActiveDate: "",
+                        totalXp: 0,
                     };
                     localStorage.removeItem('pendingUserProfile');
                   }

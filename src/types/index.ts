@@ -18,6 +18,7 @@ export interface UserProfile {
   studyTimeToday?: number; // Study time for the current day in seconds, resets daily.
   currentStreak?: number;
   lastActiveDate?: string; // YYYY-MM-DD
+  totalXp?: number;
 }
 
 export interface QuizAttempt {
