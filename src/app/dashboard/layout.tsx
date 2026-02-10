@@ -32,14 +32,16 @@ import {
 } from "@/components/ui/sidebar"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { useAuth, useUser, useFirestore } from "@/firebase"
+import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from "@/firebase"
 import { signOut } from "firebase/auth"
 import { doc, getDoc, runTransaction, serverTimestamp } from 'firebase/firestore'
 import { format } from 'date-fns'
 import { Progress } from "@/components/ui/progress"
+import { rewardTiers } from "@/lib/rewards"
+import type { UserProfile } from '@/types';
+import { Skeleton } from "@/components/ui/skeleton"
 
-function AppSidebar() {
+function AppSidebar({ userProfile, isLoading }: { userProfile: UserProfile | null, isLoading: boolean }) {
   const pathname = usePathname()
   const auth = useAuth()
 
@@ -50,6 +52,24 @@ function AppSidebar() {
   const isActive = (path: string) => {
     return pathname === path
   }
+
+  const totalXp = userProfile?.totalXp ?? 0;
+  const nextLevelTier = rewardTiers.find(t => totalXp < t.xpThreshold);
+  const currentLevelTier = [...rewardTiers].reverse().find(t => totalXp >= t.xpThreshold);
+  const xpForCurrentLevelStart = currentLevelTier?.xpThreshold ?? 0;
+
+  let progressPercentage = 0;
+  let xpToNext = 0;
+
+  if (nextLevelTier) {
+    const xpForNextLevel = nextLevelTier.xpThreshold;
+    const currentProgress = totalXp - xpForCurrentLevelStart;
+    const totalForLevel = xpForNextLevel - xpForCurrentLevelStart;
+    progressPercentage = (currentProgress / totalForLevel) * 100;
+    xpToNext = xpForNextLevel - totalXp;
+  }
+
+  const NextRewardIcon = nextLevelTier?.icon;
 
   return (
     <Sidebar>
@@ -125,14 +145,35 @@ function AppSidebar() {
         </SidebarContent>
 
         <SidebarFooter className="p-0 mt-8">
-          <div className="rounded-xl bg-gradient-to-br from-card/50 to-muted/30 p-4 space-y-3 border border-yellow-500/30 shadow-lg">
-              <div className="flex justify-between items-center">
-                  <span className="text-sm font-bold uppercase text-yellow-400 tracking-wider">Motivation Fuel</span>
-                  <Zap className="w-5 h-5 text-yellow-400" />
-              </div>
-              <p className="text-white font-semibold text-lg">READY TO BOOST</p>
-              <Progress value={80} className="h-2 bg-yellow-400/20 [&>div]:bg-yellow-400" />
-          </div>
+            {isLoading ? (
+                <div className="rounded-xl bg-gradient-to-br from-card/50 to-muted/30 p-4 space-y-3 border border-border/20">
+                    <Skeleton className="h-4 w-2/3" />
+                    <Skeleton className="h-6 w-1/2" />
+                    <Skeleton className="h-2 w-full" />
+                </div>
+            ) : nextLevelTier && NextRewardIcon ? (
+                <div className="rounded-xl bg-gradient-to-br from-card/50 to-muted/30 p-4 space-y-3 border border-yellow-500/30 shadow-lg">
+                    <div className="flex justify-between items-center">
+                        <span className="text-sm font-bold uppercase text-yellow-400 tracking-wider">Next Reward</span>
+                         <div className="relative">
+                            <NextRewardIcon className={cn("w-7 h-7", nextLevelTier.color)} />
+                            <div className="absolute -inset-1 border border-primary/50 rounded-full animate-glow" style={{ animationDuration: '3s' }}></div>
+                        </div>
+                    </div>
+                    <p className="text-white font-semibold text-lg">{nextLevelTier.name}</p>
+                    <Progress value={progressPercentage} className="h-2 bg-yellow-400/20 [&>div]:bg-yellow-400" />
+                    <p className="text-xs text-muted-foreground text-right">{xpToNext.toLocaleString()} XP to next</p>
+                </div>
+            ) : (
+                 <div className="rounded-xl bg-gradient-to-br from-card/50 to-muted/30 p-4 space-y-3 border border-purple-500/30 shadow-lg">
+                    <div className="flex justify-between items-center">
+                        <span className="text-sm font-bold uppercase text-purple-400 tracking-wider">Max Rank</span>
+                         {currentLevelTier && <currentLevelTier.icon className={cn("w-7 h-7", currentLevelTier.color)} />}
+                    </div>
+                    <p className="text-white font-semibold text-lg">{currentLevelTier?.name}</p>
+                    <p className="text-xs text-muted-foreground">You have reached the pinnacle!</p>
+                </div>
+            )}
         </SidebarFooter>
       </div>
     </Sidebar>
@@ -147,6 +188,12 @@ export default function DashboardLayout({
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
   const router = useRouter();
+
+  const userDocRef = useMemoFirebase(
+    () => (firestore && user ? doc(firestore, 'users', user.uid) : null),
+    [firestore, user]
+  );
+  const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userDocRef);
 
   const sessionStartTimeRef = React.useRef<number | null>(null);
 
@@ -262,7 +309,7 @@ export default function DashboardLayout({
   return (
     <SidebarProvider>
       <div className="flex min-h-screen">
-        <AppSidebar />
+        <AppSidebar userProfile={userProfile} isLoading={isProfileLoading} />
         <SidebarInset className="flex-1 flex flex-col">
            <header className="flex h-14 items-center gap-4 border-b border-border/50 bg-background/80 backdrop-blur-sm px-6 sticky top-0 z-30">
             <SidebarTrigger className="md:hidden"/>
