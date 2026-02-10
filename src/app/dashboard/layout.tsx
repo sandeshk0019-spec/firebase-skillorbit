@@ -1,4 +1,5 @@
 
+
 "use client"
 
 import * as React from "react"
@@ -134,17 +135,8 @@ function AppSidebar({ userProfile, isLoading }: { userProfile: UserProfile | nul
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
-          <SidebarMenu className="space-y-2">
-            <SidebarMenuItem>
-              <SidebarMenuButton onClick={handleSignOut} tooltip="Log Out">
-                <LogOut />
-                <span>Log out</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarContent>
 
-        <SidebarFooter className="p-0 mt-8">
+          <div className="p-0 mt-8">
             {isLoading ? (
                 <div className="rounded-xl bg-gradient-to-br from-card/50 to-muted/30 p-4 space-y-3 border border-border/20">
                     <Skeleton className="h-4 w-2/3" />
@@ -174,7 +166,19 @@ function AppSidebar({ userProfile, isLoading }: { userProfile: UserProfile | nul
                     <p className="text-xs text-muted-foreground">You have reached the pinnacle!</p>
                 </div>
             )}
-        </SidebarFooter>
+          </div>
+          
+          <SidebarMenu className="space-y-2 mt-2">
+            <SidebarMenuItem>
+              <SidebarMenuButton onClick={handleSignOut} tooltip="Log Out">
+                <LogOut />
+                <span>Log out</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarContent>
+
+        <SidebarFooter className="p-0 mt-8" />
       </div>
     </Sidebar>
   )
