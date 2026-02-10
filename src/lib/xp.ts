@@ -1,5 +1,6 @@
 'use client';
 
+import * as React from 'react';
 import { doc, runTransaction, Firestore, serverTimestamp, addDoc, collection, getDoc, setDoc } from 'firebase/firestore';
 import { type RewardTier, rewardTiers } from './rewards';
 
@@ -53,14 +54,24 @@ export const awardXp = async (
           const { icon: Icon } = tier;
           toast({
             title: "Level Up!",
-            description: (
-              <div className="flex items-center gap-3">
-                <Icon className={`w-8 h-8 ${tier.color}`} />
-                <div>
-                  <p className="font-semibold">{`You've achieved the rank of ${tier.name}!`}</p>
-                  <p className="text-xs">{`XP Reached: ${tier.xpThreshold.toLocaleString()}`}</p>
-                </div>
-              </div>
+            description: React.createElement(
+              'div',
+              { className: 'flex items-center gap-3' },
+              React.createElement(Icon, { className: `w-8 h-8 ${tier.color}` }),
+              React.createElement(
+                'div',
+                null,
+                React.createElement(
+                  'p',
+                  { className: 'font-semibold' },
+                  `You've achieved the rank of ${tier.name}!`
+                ),
+                React.createElement(
+                  'p',
+                  { className: 'text-xs' },
+                  `XP Reached: ${tier.xpThreshold.toLocaleString()}`
+                )
+              )
             ),
           });
         }
