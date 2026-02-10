@@ -28,6 +28,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, LogIn, UserPlus, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Logo } from "@/components/logo";
+import { cn } from "@/lib/utils";
 
 const signInSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }),
