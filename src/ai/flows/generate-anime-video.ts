@@ -33,8 +33,8 @@ async function downloadVideoAsDataUri(video: MediaPart): Promise<string> {
     throw new Error('Video URL not found in media part.');
   }
 
-  // The URL from Veo is a temporary download link. It needs to be fetched.
-  const downloadUrl = video.media.url;
+  // The URL from Veo is a temporary download link that requires an API key.
+  const downloadUrl = `${video.media.url}&key=${process.env.GEMINI_API_KEY}`;
 
   const videoDownloadResponse = await fetch(downloadUrl);
 
