@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -233,7 +234,12 @@ export default function DashboardLayout({
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       if (sessionStartTimeRef.current) {
         const elapsed = Math.round((Date.now() - sessionStartTimeRef.current) / 1000);
-        updateStudyTime(elapsed);
+        // This fire-and-forget call can cause an unhandled promise rejection on logout,
+        // as the auth state changes during the async operation.
+        // We catch it to prevent a crash, logging it as a warning.
+        updateStudyTime(elapsed).catch(error => {
+          console.warn("Non-critical error while saving final study time on unmount:", error);
+        });
       }
     };
 
