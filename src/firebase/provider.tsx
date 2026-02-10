@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { DependencyList, createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
@@ -6,6 +5,8 @@ import { FirebaseApp } from 'firebase/app';
 import { Firestore, doc, getDoc, setDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { Auth, User, onAuthStateChanged, updateProfile } from 'firebase/auth';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener'
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 interface FirebaseProviderProps {
   children: ReactNode;
@@ -80,87 +81,106 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     const unsubscribe = onAuthStateChanged(
       auth,
       async (firebaseUser) => { // Auth state determined
-        try {
-            if (firebaseUser) {
-              const creationTime = new Date(firebaseUser.metadata.creationTime || 0).getTime();
-              const lastSignInTime = new Date(firebaseUser.metadata.lastSignInTime || 0).getTime();
-              const isNewUser = Math.abs(lastSignInTime - creationTime) < 5000;
-              const userDocRef = doc(firestore, 'users', firebaseUser.uid);
+        if (firebaseUser) {
+          const userDocRef = doc(firestore, 'users', firebaseUser.uid);
+          try {
+            const creationTime = new Date(firebaseUser.metadata.creationTime || 0).getTime();
+            const lastSignInTime = new Date(firebaseUser.metadata.lastSignInTime || 0).getTime();
+            const isNewUser = Math.abs(lastSignInTime - creationTime) < 5000;
     
-              if (isNewUser) {
-                const now = serverTimestamp();
-                const docSnap = await getDoc(userDocRef);
+            if (isNewUser) {
+              const now = serverTimestamp();
+              const docSnap = await getDoc(userDocRef);
     
-                if (!docSnap.exists()) {
-                  if (firebaseUser.isAnonymous) {
-                    const guestProfile = {
-                      displayName: 'Guest Voyager',
-                      username: `guest_${firebaseUser.uid.substring(0, 8)}`,
-                      firstName: 'Guest',
-                      lastName: 'Voyager',
+              if (!docSnap.exists()) {
+                let docData;
+                let displayName;
+
+                if (firebaseUser.isAnonymous) {
+                  const guestProfile = {
+                    displayName: 'Guest Voyager',
+                    username: `guest_${firebaseUser.uid.substring(0, 8)}`,
+                    firstName: 'Guest',
+                    lastName: 'Voyager',
+                  };
+                  displayName = guestProfile.displayName;
+                  docData = {
+                    id: firebaseUser.uid,
+                    email: null,
+                    createdAt: now,
+                    lastLogin: now,
+                    username: guestProfile.username,
+                    firstName: guestProfile.firstName,
+                    lastName: guestProfile.lastName,
+                    totalQuizzes: 0,
+                    totalCorrectAnswers: 0,
+                    totalQuestionsAnswered: 0,
+                    gamesPlayed: 0,
+                    totalStudyTime: 0,
+                    studyTimeToday: 0,
+                    currentStreak: 0,
+                    lastActiveDate: "",
+                  };
+                } else {
+                  const pendingProfileRaw = localStorage.getItem('pendingUserProfile');
+                  if (pendingProfileRaw) {
+                    const profileData = JSON.parse(pendingProfileRaw);
+                    displayName = `${profileData.firstName} ${profileData.lastName}`;
+                    docData = {
+                        id: firebaseUser.uid,
+                        email: firebaseUser.email,
+                        createdAt: now,
+                        lastLogin: now,
+                        username: profileData.username,
+                        firstName: profileData.firstName,
+                        lastName: profileData.lastName,
+                        totalQuizzes: 0,
+                        totalCorrectAnswers: 0,
+                        totalQuestionsAnswered: 0,
+                        gamesPlayed: 0,
+                        totalStudyTime: 0,
+                        studyTimeToday: 0,
+                        currentStreak: 0,
+                        lastActiveDate: "",
                     };
-                    await setDoc(userDocRef, {
-                      id: firebaseUser.uid,
-                      email: null,
-                      createdAt: now,
-                      lastLogin: now,
-                      username: guestProfile.username,
-                      firstName: guestProfile.firstName,
-                      lastName: guestProfile.lastName,
-                      totalQuizzes: 0,
-                      totalCorrectAnswers: 0,
-                      totalQuestionsAnswered: 0,
-                      gamesPlayed: 0,
-                      totalStudyTime: 0,
-                      studyTimeToday: 0,
-                      currentStreak: 0,
-                      lastActiveDate: "",
-                    });
-                    await updateProfile(firebaseUser, {
-                      displayName: guestProfile.displayName,
-                    });
-                  } else {
-                    const pendingProfileRaw = localStorage.getItem('pendingUserProfile');
-                    if (pendingProfileRaw) {
-                      try {
-                        const profileData = JSON.parse(pendingProfileRaw);
-                        await setDoc(userDocRef, {
-                          id: firebaseUser.uid,
-                          email: firebaseUser.email,
-                          createdAt: now,
-                          lastLogin: now,
-                          username: profileData.username,
-                          firstName: profileData.firstName,
-                          lastName: profileData.lastName,
-                          totalQuizzes: 0,
-                          totalCorrectAnswers: 0,
-                          totalQuestionsAnswered: 0,
-                          gamesPlayed: 0,
-                          totalStudyTime: 0,
-                          studyTimeToday: 0,
-                          currentStreak: 0,
-                          lastActiveDate: "",
-                        });
-                        await updateProfile(firebaseUser, {
-                          displayName: `${profileData.firstName} ${profileData.lastName}`,
-                        });
-                      } catch (e) {
-                        console.error("Failed to parse or use pending user profile:", e);
-                      } finally {
-                        localStorage.removeItem('pendingUserProfile');
-                      }
-                    }
+                    localStorage.removeItem('pendingUserProfile');
                   }
                 }
-              } else { // Existing user
-                await updateDoc(userDocRef, { lastLogin: serverTimestamp() });
+                
+                if (docData) {
+                  // Non-blocking write with contextual error handling
+                  setDoc(userDocRef, docData)
+                    .catch((serverError) => {
+                      errorEmitter.emit('permission-error', new FirestorePermissionError({
+                        path: userDocRef.path,
+                        operation: 'create',
+                        requestResourceData: docData,
+                      }));
+                    });
+                  if (displayName) {
+                     await updateProfile(firebaseUser, { displayName });
+                  }
+                }
               }
+            } else { // Existing user
+              const updateData = { lastLogin: serverTimestamp() };
+              // Non-blocking update with contextual error handling
+              updateDoc(userDocRef, updateData)
+                .catch((serverError) => {
+                  errorEmitter.emit('permission-error', new FirestorePermissionError({
+                    path: userDocRef.path,
+                    operation: 'update',
+                    requestResourceData: updateData,
+                  }));
+                });
             }
-            setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null });
-        } catch (error: any) {
-             console.error("FirebaseProvider: onAuthStateChanged error:", error);
+          } catch (error: any) {
+             console.error("FirebaseProvider: Error during user processing:", error);
              setUserAuthState({ user: null, isUserLoading: false, userError: error });
+             return;
+          }
         }
+        setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null });
       },
       (error) => { // Auth listener error
         console.error("FirebaseProvider: onAuthStateChanged listener setup error:", error);
