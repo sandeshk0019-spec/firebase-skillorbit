@@ -62,8 +62,8 @@ function AppSidebar() {
           </div>
         </SidebarHeader>
 
-        <SidebarContent className="p-0 flex-grow">
-          <SidebarMenu className="space-y-2">
+        <SidebarContent className="p-0 flex flex-col">
+          <SidebarMenu className="space-y-2 flex-grow">
             <SidebarMenuItem>
               <SidebarMenuButton asChild isActive={isActive('/dashboard')} tooltip="Dashboard">
                 <Link href="/dashboard">
@@ -110,6 +110,14 @@ function AppSidebar() {
                   <Zap />
                   <span>AI Motivation</span>
                 </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+          <SidebarMenu className="space-y-2">
+            <SidebarMenuItem>
+              <SidebarMenuButton onClick={handleSignOut} tooltip="Log Out">
+                <LogOut />
+                <span>Log out</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
