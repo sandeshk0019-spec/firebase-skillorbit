@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { XCircle, Brain, Trophy } from 'lucide-react';
+import { XCircle, Brain, Trophy, ChevronLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useUser, useFirestore } from '@/firebase';
@@ -11,6 +11,8 @@ import { type GameScore, type Activity } from '@/types';
 import { achievements } from '@/lib/achievements';
 import { updateUserStreak } from '@/lib/streak';
 import { useToast } from "@/hooks/use-toast";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 
 // Card data structure
 interface CardData {
@@ -31,40 +33,33 @@ interface ConceptSet {
 }
 
 const conceptSets: ConceptSet[] = [
-  {
-    theme: 'Chemical Elements',
-    pairs: [
-      { term: 'H₂O', definition: 'Water', pairId: 1 },
-      { term: 'Au', definition: 'Gold', pairId: 2 },
-      { term: 'CO₂', definition: 'Carbon Dioxide', pairId: 3 },
-      { term: 'NaCl', definition: 'Salt', pairId: 4 },
-      { term: 'O₂', definition: 'Oxygen', pairId: 5 },
-      { term: 'Fe', definition: 'Iron', pairId: 6 },
-    ],
-  },
-  {
-    theme: 'Programming Jargon',
-    pairs: [
-      { term: 'API', definition: 'Application Programming Interface', pairId: 1 },
-      { term: 'SDK', definition: 'Software Development Kit', pairId: 2 },
-      { term: 'JSON', definition: 'JavaScript Object Notation', pairId: 3 },
-      { term: 'HTML', definition: 'HyperText Markup Language', pairId: 4 },
-      { term: 'CSS', definition: 'Cascading Style Sheets', pairId: 5 },
-      { term: 'Git', definition: 'Version Control System', pairId: 6 },
-    ],
-  },
-  {
-    theme: 'Cosmic Wonders',
-    pairs: [
-      { term: 'Nebula', definition: 'Cloud of Gas and Dust', pairId: 1 },
-      { term: 'Supernova', definition: 'Exploding Star', pairId: 2 },
-      { term: 'Galaxy', definition: 'System of Stars', pairId: 3 },
-      { term: 'Black Hole', definition: 'Infinite Gravity', pairId: 4 },
-      { term: 'Comet', definition: 'Icy Solar System Body', pairId: 5 },
-      { term: 'Asteroid', definition: 'Small Solar System Body', pairId: 6 },
-    ],
-  },
+  // Science
+  { theme: 'Chemical Elements', pairs: [ { term: 'H₂O', definition: 'Water', pairId: 1 }, { term: 'Au', definition: 'Gold', pairId: 2 }, { term: 'CO₂', definition: 'Carbon Dioxide', pairId: 3 }, { term: 'NaCl', definition: 'Salt', pairId: 4 }, { term: 'O₂', definition: 'Oxygen', pairId: 5 }, { term: 'Fe', definition: 'Iron', pairId: 6 } ] },
+  { theme: 'Cosmic Wonders', pairs: [ { term: 'Nebula', definition: 'Cloud of Gas and Dust', pairId: 1 }, { term: 'Supernova', definition: 'Exploding Star', pairId: 2 }, { term: 'Galaxy', definition: 'System of Stars', pairId: 3 }, { term: 'Black Hole', definition: 'Infinite Gravity', pairId: 4 }, { term: 'Comet', definition: 'Icy Solar System Body', pairId: 5 }, { term: 'Asteroid', definition: 'Small Solar System Body', pairId: 6 } ] },
+  { theme: 'Planets', pairs: [ { term: 'Mercury', definition: 'Closest to Sun', pairId: 1 }, { term: 'Venus', definition: 'Hottest Planet', pairId: 2 }, { term: 'Earth', definition: 'Our Home', pairId: 3 }, { term: 'Mars', definition: 'The Red Planet', pairId: 4 }, { term: 'Jupiter', definition: 'Largest Planet', pairId: 5 }, { term: 'Saturn', definition: 'Has Rings', pairId: 6 } ] },
+  { theme: 'Parts of a Cell', pairs: [ { term: 'Nucleus', definition: 'The "Brain"', pairId: 1 }, { term: 'Mitochondria', definition: 'Powerhouse', pairId: 2 }, { term: 'Cell Membrane', definition: 'Outer Barrier', pairId: 3 }, { term: 'Cytoplasm', definition: 'Jelly-like Fluid', pairId: 4 }, { term: 'Ribosome', definition: 'Makes Protein', pairId: 5 }, { term: 'Vacuole', definition: 'Storage Sac', pairId: 6 } ] },
+  { theme: 'Dinosaurs', pairs: [ { term: 'T-Rex', definition: 'Tyrant Lizard King', pairId: 1 }, { term: 'Triceratops', definition: 'Three-Horned Face', pairId: 2 }, { term: 'Stegosaurus', definition: 'Plated Lizard', pairId: 3 }, { term: 'Velociraptor', definition: 'Speedy Robber', pairId: 4 }, { term: 'Brachiosaurus', definition: 'Arm Lizard', pairId: 5 }, { term: 'Pterodactyl', definition: 'Winged Finger', pairId: 6 } ] },
+  { theme: 'Ocean Life', pairs: [ { term: 'Dolphin', definition: 'Intelligent Mammal', pairId: 1 }, { term: 'Shark', definition: 'Cartilage Fish', pairId: 2 }, { term: 'Octopus', definition: 'Eight Arms', pairId: 3 }, { term: 'Jellyfish', definition: 'Gelatinous Animal', pairId: 4 }, { term: 'Whale', definition: 'Largest Mammal', pairId: 5 }, { term: 'Coral', definition: 'Marine Invertebrate', pairId: 6 } ] },
+  // Technology
+  { theme: 'Programming Jargon', pairs: [ { term: 'API', definition: 'Application Programming Interface', pairId: 1 }, { term: 'SDK', definition: 'Software Development Kit', pairId: 2 }, { term: 'JSON', definition: 'JavaScript Object Notation', pairId: 3 }, { term: 'HTML', definition: 'HyperText Markup Language', pairId: 4 }, { term: 'CSS', definition: 'Cascading Style Sheets', pairId: 5 }, { term: 'Git', definition: 'Version Control System', pairId: 6 } ] },
+  { theme: 'Computer Parts', pairs: [ { term: 'CPU', definition: 'The Brain', pairId: 1 }, { term: 'RAM', definition: 'Short-Term Memory', pairId: 2 }, { term: 'GPU', definition: 'Renders Graphics', pairId: 3 }, { term: 'SSD', definition: 'Fast Storage', pairId: 4 }, { term: 'Motherboard', definition: 'Main Circuit Board', pairId: 5 }, { term: 'PSU', definition: 'Power Supply', pairId: 6 } ] },
+  // Geography
+  { theme: 'Countries & Capitals', pairs: [ { term: 'Japan', definition: 'Tokyo', pairId: 1 }, { term: 'France', definition: 'Paris', pairId: 2 }, { term: 'Egypt', definition: 'Cairo', pairId: 3 }, { term: 'Brazil', definition: 'Brasília', pairId: 4 }, { term: 'Australia', definition: 'Canberra', pairId: 5 }, { term: 'Canada', definition: 'Ottawa', pairId: 6 } ] },
+  { theme: 'US States & Capitals', pairs: [ { term: 'California', definition: 'Sacramento', pairId: 1 }, { term: 'Texas', definition: 'Austin', pairId: 2 }, { term: 'Florida', definition: 'Tallahassee', pairId: 3 }, { term: 'New York', definition: 'Albany', pairId: 4 }, { term: 'Illinois', definition: 'Springfield', pairId: 5 }, { term: 'Colorado', definition: 'Denver', pairId: 6 } ] },
+  { theme: 'Famous Landmarks', pairs: [ { term: 'Eiffel Tower', definition: 'Paris, France', pairId: 1 }, { term: 'Great Wall', definition: 'China', pairId: 2 }, { term: 'Statue of Liberty', definition: 'New York, USA', pairId: 3 }, { term: 'Colosseum', definition: 'Rome, Italy', pairId: 4 }, { term: 'Taj Mahal', definition: 'Agra, India', pairId: 5 }, { term: 'Pyramids of Giza', definition: 'Egypt', pairId: 6 } ] },
+  // History & Arts
+  { theme: 'Greek Mythology', pairs: [ { term: 'Zeus', definition: 'King of Gods', pairId: 1 }, { term: 'Hera', definition: 'Queen of Gods', pairId: 2 }, { term: 'Poseidon', definition: 'God of the Sea', pairId: 3 }, { term: 'Hades', definition: 'God of Underworld', pairId: 4 }, { term: 'Athena', definition: 'Goddess of Wisdom', pairId: 5 }, { term: 'Apollo', definition: 'God of Music', pairId: 6 } ] },
+  { theme: 'Famous Inventors', pairs: [ { term: 'T. Edison', definition: 'Light Bulb', pairId: 1 }, { term: 'A. G. Bell', definition: 'Telephone', pairId: 2 }, { term: 'Wright Bros.', definition: 'Airplane', pairId: 3 }, { term: 'J. Gutenberg', definition: 'Printing Press', pairId: 4 }, { term: 'Marie Curie', definition: 'Radioactivity', pairId: 5 }, { term: 'Tim Berners-Lee', definition: 'World Wide Web', pairId: 6 } ] },
+  { theme: 'Musical Instruments', pairs: [ { term: 'Guitar', definition: 'String', pairId: 1 }, { term: 'Piano', definition: 'Keyboard', pairId: 2 }, { term: 'Drums', definition: 'Percussion', pairId: 3 }, { term: 'Violin', definition: 'String', pairId: 4 }, { term: 'Trumpet', definition: 'Brass', pairId: 5 }, { term: 'Flute', definition: 'Woodwind', pairId: 6 } ] },
+  { theme: 'Famous Authors', pairs: [ { term: 'Shakespeare', definition: 'Romeo and Juliet', pairId: 1 }, { term: 'J.K. Rowling', definition: 'Harry Potter', pairId: 2 }, { term: 'Tolkien', definition: 'Lord of the Rings', pairId: 3 }, { term: 'Jane Austen', definition: 'Pride and Prejudice', pairId: 4 }, { term: 'G. Orwell', definition: '1984', pairId: 5 }, { term: 'Mark Twain', definition: 'Huckleberry Finn', pairId: 6 } ] },
+  // General Knowledge / Elementary
+  { theme: 'Animals', pairs: [ { term: 'Dog', definition: 'Barks', pairId: 1 }, { term: 'Cat', definition: 'Meows', pairId: 2 }, { term: 'Cow', definition: 'Moos', pairId: 3 }, { term: 'Lion', definition: 'Roars', pairId: 4 }, { term: 'Duck', definition: 'Quacks', pairId: 5 }, { term: 'Sheep', definition: 'Baas', pairId: 6 } ] },
+  { theme: 'Shapes', pairs: [ { term: 'Circle', definition: 'No Corners', pairId: 1 }, { term: 'Square', definition: '4 Equal Sides', pairId: 2 }, { term: 'Triangle', definition: '3 Sides', pairId: 3 }, { term: 'Rectangle', definition: '4 Sides', pairId: 4 }, { term: 'Star', definition: '5 Points', pairId: 5 }, { term: 'Oval', definition: 'Egg Shape', pairId: 6 } ] },
+  { theme: 'Colors', pairs: [ { term: 'Red', definition: 'Apple', pairId: 1 }, { term: 'Blue', definition: 'Sky', pairId: 2 }, { term: 'Green', definition: 'Grass', pairId: 3 }, { term: 'Yellow', definition: 'Sun', pairId: 4 }, { term: 'Orange', definition: 'Carrot', pairId: 5 }, { term: 'Purple', definition: 'Grapes', pairId: 6 } ] },
+  { theme: 'Simple Math', pairs: [ { term: '2 + 2', definition: '4', pairId: 1 }, { term: '5 - 3', definition: '2', pairId: 2 }, { term: '3 x 3', definition: '9', pairId: 3 }, { term: '10 ÷ 2', definition: '5', pairId: 4 }, { term: '1 + 0', definition: '1', pairId: 5 }, { term: '4 + 5', definition: '9', pairId: 6 } ] },
+  { theme: 'Food Groups', pairs: [ { term: 'Apple', definition: 'Fruit', pairId: 1 }, { term: 'Broccoli', definition: 'Vegetable', pairId: 2 }, { term: 'Bread', definition: 'Grain', pairId: 3 }, { term: 'Chicken', definition: 'Protein', pairId: 4 }, { term: 'Milk', definition: 'Dairy', pairId: 5 }, { term: 'Candy', definition: 'Sweets', pairId: 6 } ] },
 ];
+
 
 // Function to shuffle array
 const shuffleArray = (array: CardData[]) => {
@@ -72,9 +67,8 @@ const shuffleArray = (array: CardData[]) => {
 };
 
 export default function ZenMatchPage() {
+  const [selectedSet, setSelectedSet] = useState<ConceptSet | null>(null);
   const [cards, setCards] = useState<CardData[]>([]);
-  const [activePairs, setActivePairs] = useState<ConceptPair[]>([]);
-  const [theme, setTheme] = useState('');
   const [flippedCards, setFlippedCards] = useState<number[]>([]);
   const [matchedPairs, setMatchedPairs] = useState<number[]>([]);
   const [moves, setMoves] = useState(0);
@@ -86,32 +80,23 @@ export default function ZenMatchPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
 
-  // Memoize the initial game setup
-  const resetGame = useMemo(() => () => {
-    const randomSetIndex = Math.floor(Math.random() * conceptSets.length);
-    const selectedSet = conceptSets[randomSetIndex];
-    setActivePairs(selectedSet.pairs);
-    setTheme(selectedSet.theme);
-
-    const gameCards: CardData[] = [];
-    selectedSet.pairs.forEach(({ term, definition, pairId }) => {
-      gameCards.push({ id: gameCards.length, content: term, pairId });
-      gameCards.push({ id: gameCards.length, content: definition, pairId });
-    });
-
-    setCards(shuffleArray(gameCards));
-    setFlippedCards([]);
-    setMatchedPairs([]);
-    setMoves(0);
-    setIsChecking(false);
-    setIsComplete(false);
-    setHasSaved(false);
-  }, []);
-
-  // Initialize and shuffle cards
   useEffect(() => {
-    resetGame();
-  }, [resetGame]);
+    if (selectedSet) {
+      const gameCards: CardData[] = [];
+      selectedSet.pairs.forEach(({ term, definition, pairId }) => {
+        gameCards.push({ id: gameCards.length, content: term, pairId });
+        gameCards.push({ id: gameCards.length, content: definition, pairId });
+      });
+
+      setCards(shuffleArray(gameCards));
+      setFlippedCards([]);
+      setMatchedPairs([]);
+      setMoves(0);
+      setIsChecking(false);
+      setIsComplete(false);
+      setHasSaved(false);
+    }
+  }, [selectedSet]);
 
   const checkAndUnlockAchievement = useCallback(async (achievementId: keyof typeof achievements) => {
     if (!user || !firestore) return;
@@ -168,10 +153,10 @@ export default function ZenMatchPage() {
   
   // Check for win condition
   useEffect(() => {
-    if (activePairs.length > 0 && matchedPairs.length === activePairs.length) {
+    if (selectedSet && matchedPairs.length === selectedSet.pairs.length) {
       setIsComplete(true);
     }
-  }, [matchedPairs, activePairs]);
+  }, [matchedPairs, selectedSet]);
 
   // Save game result on completion
   useEffect(() => {
@@ -240,18 +225,70 @@ export default function ZenMatchPage() {
     setFlippedCards((prev) => [...prev, index]);
   };
 
+  const handleThemeSelect = (themeName: string) => {
+    const set = conceptSets.find(s => s.theme === themeName);
+    if (set) {
+      setSelectedSet(set);
+    }
+  };
+
+  const resetToThemeSelection = () => {
+    setSelectedSet(null);
+  }
+
+  if (!selectedSet) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-120px)] p-4 bg-background text-foreground relative">
+        <div className="w-full max-w-md z-10">
+          <header className="flex items-center justify-end mb-6">
+            <Link href="/dashboard/game-zone">
+              <Button variant="ghost" size="icon">
+                <XCircle className="w-8 h-8" />
+              </Button>
+            </Link>
+          </header>
+          <Card className="bg-card/50 text-center animate-in fade-in-0 duration-500">
+            <CardHeader>
+              <div className='flex items-center justify-center gap-2 mb-2'>
+                <Brain className="w-8 h-8 text-yellow-500" />
+                <CardTitle className="font-headline text-3xl">Zen Match</CardTitle>
+              </div>
+              <CardDescription>Select a theme to begin your memory challenge.</CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col items-center gap-4 p-6">
+              <Select onValueChange={handleThemeSelect}>
+                <SelectTrigger className="w-[280px]">
+                  <SelectValue placeholder="Choose a concept..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {conceptSets.map((set) => (
+                    <SelectItem key={set.theme} value={set.theme}>{set.theme}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col items-center justify-center min-h-[calc(100vh-120px)] p-4 bg-background text-foreground relative overflow-hidden">
-      <div className="w-full max-w-4xl z-10">
+      <div className="w-full max-w-4xl z-10 animate-in fade-in-0 duration-500">
         <header className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-4">
             <Brain className="w-8 h-8 text-yellow-500" />
             <div>
               <h1 className="font-headline text-3xl">Zen Match</h1>
-              <p className="text-muted-foreground">Relax & Connect | Theme: <span className="text-primary font-semibold">{theme}</span></p>
+              <p className="text-muted-foreground">Relax & Connect | Theme: <span className="text-primary font-semibold">{selectedSet.theme}</span></p>
             </div>
           </div>
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-4">
+             <Button variant="outline" size="sm" onClick={resetToThemeSelection}>
+              <ChevronLeft className="w-4 h-4 mr-1" />
+              Change Theme
+            </Button>
             <p className="font-mono text-xl">Moves: {moves}</p>
             <Link href="/dashboard/game-zone">
               <Button variant="ghost" size="icon">
@@ -321,7 +358,7 @@ export default function ZenMatchPage() {
               <h2 className="font-headline text-3xl text-primary">Orbit Complete!</h2>
               <p className="text-muted-foreground mt-2 text-lg">You matched all pairs in {moves} moves.</p>
               <p className="text-white mt-1">Excellent Connection!</p>
-              <Button onClick={resetGame} className="mt-6 animate-pulse-glow">Play Again with a New Concept</Button>
+              <Button onClick={resetToThemeSelection} className="mt-6 animate-pulse-glow">Choose Another Theme</Button>
           </div>
         </div>
       )}
