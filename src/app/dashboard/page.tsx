@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useEffect, useState, useMemo } from 'react';
@@ -11,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { rewardTiers } from '@/lib/rewards';
 import { Skeleton } from '@/components/ui/skeleton';
+import { format } from 'date-fns';
 
 // --- Reusable Components ---
 
@@ -100,25 +102,31 @@ export default function DashboardPage() {
   );
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userDocRef);
 
-  const [liveTotalStudyTime, setLiveTotalStudyTime] = useState(0);
+  const [liveStudyTimeToday, setLiveStudyTimeToday] = useState(0);
 
   useEffect(() => {
-    if (userProfile && userProfile.totalStudyTime !== undefined) {
-      setLiveTotalStudyTime(userProfile.totalStudyTime);
-      const intervalId = setInterval(() => {
-        if (!document.hidden) {
-          setLiveTotalStudyTime((prevTime) => prevTime + 1);
-        }
-      }, 1000);
-      return () => clearInterval(intervalId);
+    // This effect synchronizes the local state with Firestore when it changes.
+    // The backend logic in layout.tsx ensures studyTimeToday is reset on a new day.
+    if (userProfile?.studyTimeToday !== undefined) {
+      setLiveStudyTimeToday(userProfile.studyTimeToday);
     }
   }, [userProfile]);
+
+  useEffect(() => {
+    // This effect handles the live ticking of the clock on the client side.
+    const intervalId = setInterval(() => {
+      if (!document.hidden) {
+        setLiveStudyTimeToday((prevTime) => prevTime + 1);
+      }
+    }, 1000);
+    return () => clearInterval(intervalId);
+  }, []); // Runs once on mount to start the client-side ticker.
 
   const streak = userProfile?.currentStreak ?? 0;
   const tasksDone = (userProfile?.totalQuizzes || 0) + (userProfile?.gamesPlayed || 0);
 
-  const hours = Math.floor(liveTotalStudyTime / 3600);
-  const minutes = Math.floor((liveTotalStudyTime % 3600) / 60);
+  const hours = Math.floor(liveStudyTimeToday / 3600);
+  const minutes = Math.floor((liveStudyTimeToday % 3600) / 60);
   const studyTime = `${hours}h ${minutes}m`;
   
   const accuracy = (userProfile?.totalQuestionsAnswered ?? 0) > 0
@@ -199,7 +207,7 @@ export default function DashboardPage() {
         {/* Stats Row */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
           <StatCard icon={CheckSquare} label="Tasks Done" value={isProfileLoading ? "..." : String(tasksDone)} delay="delay-300" />
-          <StatCard icon={Clock} label="Total Study Time" value={isProfileLoading ? "..." : studyTime} delay="delay-400" />
+          <StatCard icon={Clock} label="Today's Study Time" value={isProfileLoading ? "..." : studyTime} delay="delay-400" />
           <StatCard icon={Percent} label="Average Accuracy" value={isProfileLoading ? "..." : `${accuracy}%`} delay="delay-500" />
         </div>
 
@@ -208,5 +216,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-    

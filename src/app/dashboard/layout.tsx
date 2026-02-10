@@ -209,11 +209,12 @@ export default function DashboardLayout({
     }
 
     const userDocRef = doc(firestore, 'users', user.uid);
-    const todayStr = format(new Date(), 'yyyy-MM-dd');
 
     const updateStudyTime = async (elapsedSeconds: number) => {
       if (elapsedSeconds <= 0) return;
       
+      const todayStr = format(new Date(), 'yyyy-MM-dd');
+
       try {
         await runTransaction(firestore, async (transaction) => {
           const userDoc = await transaction.get(userDocRef);
