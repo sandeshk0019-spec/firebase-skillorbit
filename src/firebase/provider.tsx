@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { DependencyList, createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
@@ -78,99 +79,91 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
 
     const unsubscribe = onAuthStateChanged(
       auth,
-      (firebaseUser) => { // Auth state determined
-        if (firebaseUser) {
-          const creationTime = new Date(firebaseUser.metadata.creationTime || 0).getTime();
-          const lastSignInTime = new Date(firebaseUser.metadata.lastSignInTime || 0).getTime();
-          const isNewUser = lastSignInTime - creationTime < 5000; // 5 seconds threshold
-          const userDocRef = doc(firestore, 'users', firebaseUser.uid);
-
-          if (isNewUser) {
-            const now = serverTimestamp();
-            
-            if (firebaseUser.isAnonymous) {
-              const guestProfile = {
-                displayName: 'Guest Voyager',
-                username: `guest_${firebaseUser.uid.substring(0, 8)}`,
-                firstName: 'Guest',
-                lastName: 'Voyager',
-              };
-              setDoc(userDocRef, {
-                id: firebaseUser.uid,
-                email: null,
-                createdAt: now,
-                lastLogin: now,
-                username: guestProfile.username,
-                firstName: guestProfile.firstName,
-                lastName: guestProfile.lastName,
-                totalQuizzes: 0,
-                totalCorrectAnswers: 0,
-                totalQuestionsAnswered: 0,
-                gamesPlayed: 0,
-                totalStudyTime: 0,
-                studyTimeToday: 0,
-                currentStreak: 0,
-                lastActiveDate: "",
-              }).then(() => {
-                 updateProfile(firebaseUser, {
-                  displayName: guestProfile.displayName,
-                }).catch(e => console.error("Error updating guest auth profile", e));
-              }).catch(e => {
-                  console.error("Error creating guest user profile document:", e);
-              });
-            } else {
-              const pendingProfileRaw = localStorage.getItem('pendingUserProfile');
-              if (pendingProfileRaw) {
-                try {
-                  const profileData = JSON.parse(pendingProfileRaw);
-                  
-                  getDoc(userDocRef).then(docSnap => {
-                    if (!docSnap.exists()) {
-                      setDoc(userDocRef, {
-                        id: firebaseUser.uid,
-                        email: firebaseUser.email,
-                        createdAt: now,
-                        lastLogin: now,
-                        username: profileData.username,
-                        firstName: profileData.firstName,
-                        lastName: profileData.lastName,
-                        totalQuizzes: 0,
-                        totalCorrectAnswers: 0,
-                        totalQuestionsAnswered: 0,
-                        gamesPlayed: 0,
-                        totalStudyTime: 0,
-                        studyTimeToday: 0,
-                        currentStreak: 0,
-                        lastActiveDate: "",
-                      }).then(() => {
-                         updateProfile(firebaseUser, {
+      async (firebaseUser) => { // Auth state determined
+        try {
+            if (firebaseUser) {
+              const creationTime = new Date(firebaseUser.metadata.creationTime || 0).getTime();
+              const lastSignInTime = new Date(firebaseUser.metadata.lastSignInTime || 0).getTime();
+              const isNewUser = lastSignInTime - creationTime < 5000;
+              const userDocRef = doc(firestore, 'users', firebaseUser.uid);
+    
+              if (isNewUser) {
+                const now = serverTimestamp();
+                const docSnap = await getDoc(userDocRef);
+    
+                if (!docSnap.exists()) {
+                  if (firebaseUser.isAnonymous) {
+                    const guestProfile = {
+                      displayName: 'Guest Voyager',
+                      username: `guest_${firebaseUser.uid.substring(0, 8)}`,
+                      firstName: 'Guest',
+                      lastName: 'Voyager',
+                    };
+                    await setDoc(userDocRef, {
+                      id: firebaseUser.uid,
+                      email: null,
+                      createdAt: now,
+                      lastLogin: now,
+                      username: guestProfile.username,
+                      firstName: guestProfile.firstName,
+                      lastName: guestProfile.lastName,
+                      totalQuizzes: 0,
+                      totalCorrectAnswers: 0,
+                      totalQuestionsAnswered: 0,
+                      gamesPlayed: 0,
+                      totalStudyTime: 0,
+                      studyTimeToday: 0,
+                      currentStreak: 0,
+                      lastActiveDate: "",
+                    });
+                    await updateProfile(firebaseUser, {
+                      displayName: guestProfile.displayName,
+                    });
+                  } else {
+                    const pendingProfileRaw = localStorage.getItem('pendingUserProfile');
+                    if (pendingProfileRaw) {
+                      try {
+                        const profileData = JSON.parse(pendingProfileRaw);
+                        await setDoc(userDocRef, {
+                          id: firebaseUser.uid,
+                          email: firebaseUser.email,
+                          createdAt: now,
+                          lastLogin: now,
+                          username: profileData.username,
+                          firstName: profileData.firstName,
+                          lastName: profileData.lastName,
+                          totalQuizzes: 0,
+                          totalCorrectAnswers: 0,
+                          totalQuestionsAnswered: 0,
+                          gamesPlayed: 0,
+                          totalStudyTime: 0,
+                          studyTimeToday: 0,
+                          currentStreak: 0,
+                          lastActiveDate: "",
+                        });
+                        await updateProfile(firebaseUser, {
                           displayName: `${profileData.firstName} ${profileData.lastName}`,
-                        }).catch(e => console.error("Error updating auth profile", e));
-                      }).catch(e => {
-                          console.error("Error creating user profile document:", e);
-                      });
+                        });
+                      } catch (e) {
+                        console.error("Failed to parse or use pending user profile:", e);
+                      } finally {
+                        localStorage.removeItem('pendingUserProfile');
+                      }
                     }
-                    localStorage.removeItem('pendingUserProfile');
-                  }).catch(e => {
-                      console.error("Error checking for user profile:", e);
-                      localStorage.removeItem('pendingUserProfile');
-                  });
-
-                } catch (e) {
-                  console.error("Failed to parse pending user profile:", e);
-                  localStorage.removeItem('pendingUserProfile');
+                  }
                 }
+              } else { // Existing user
+                await updateDoc(userDocRef, { lastLogin: serverTimestamp() });
               }
             }
-          } else { // Existing user, update last login
-            updateDoc(userDocRef, { lastLogin: serverTimestamp() })
-                .catch(e => console.error("Failed to update last login time.", e));
-          }
+            setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null });
+        } catch (error: any) {
+             console.error("FirebaseProvider: onAuthStateChanged error:", error);
+             setUserAuthState({ user: null, isUserLoading: false, userError: error });
         }
-        setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null });
       },
       (error) => { // Auth listener error
-        console.error("FirebaseProvider: onAuthStateChanged error:", error);
+        console.error("FirebaseProvider: onAuthStateChanged listener setup error:", error);
         setUserAuthState({ user: null, isUserLoading: false, userError: error });
       }
     );
