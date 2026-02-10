@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -26,6 +27,7 @@ const formSchema = z.object({
   topic: z.string().min(2, { message: "Topic must be at least 2 characters." }),
 });
 
+type FormSchema = z.infer<typeof formSchema>;
 type QuizQuestion = GenerateQuizQuestionsOutput["questions"][0];
 
 export default function QuizPage() {
@@ -40,12 +42,12 @@ export default function QuizPage() {
   const { user } = useUser();
   const firestore = useFirestore();
 
-  const form = useForm<z.infer<typeof formSchema>>({
+  const form = useForm<FormSchema>({
     resolver: zodResolver(formSchema),
     defaultValues: { subject: "", topic: "" },
   });
 
-  const onSubmit = async (values: z.infer<typeof formSchema>>) => {
+  const onSubmit = async (values: FormSchema) => {
     setIsGenerating(true);
     setQuiz(null);
     setShowResults(false);
@@ -312,3 +314,5 @@ export default function QuizPage() {
     </div>
   );
 }
+
+    
