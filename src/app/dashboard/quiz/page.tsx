@@ -21,6 +21,7 @@ import { achievements } from "@/lib/achievements";
 import { updateUserStreak } from "@/lib/streak";
 import { awardXp } from '@/lib/xp';
 import { xpValues } from '@/lib/rewards';
+import { format } from "date-fns";
 
 const formSchema = z.object({
   subject: z.string().min(2, { message: "Subject must be at least 2 characters." }),
@@ -123,14 +124,20 @@ export default function QuizPage() {
             if (!userDoc.exists()) {
                 throw "User document does not exist!";
             }
-            const oldTotalQuizzes = userDoc.data().totalQuizzes || 0;
-            const oldTotalCorrect = userDoc.data().totalCorrectAnswers || 0;
-            const oldTotalAnswered = userDoc.data().totalQuestionsAnswered || 0;
+            const data = userDoc.data();
+            const todayStr = format(new Date(), 'yyyy-MM-dd');
+            
+            const oldTotalQuizzes = data.totalQuizzes || 0;
+            const oldTotalCorrect = data.totalCorrectAnswers || 0;
+            const oldTotalAnswered = data.totalQuestionsAnswered || 0;
+            const dailyTasks = data.lastActiveDate === todayStr ? (data.tasksDoneToday || 0) : 0;
 
             transaction.update(userRef, {
                 totalQuizzes: oldTotalQuizzes + 1,
                 totalCorrectAnswers: oldTotalCorrect + score,
                 totalQuestionsAnswered: oldTotalAnswered + quiz.length,
+                tasksDoneToday: dailyTasks + 1,
+                lastActiveDate: todayStr,
             });
         });
         
@@ -314,5 +321,3 @@ export default function QuizPage() {
     </div>
   );
 }
-
-    

@@ -13,6 +13,7 @@ import { updateUserStreak } from '@/lib/streak';
 import { useToast } from "@/hooks/use-toast";
 import { awardXp } from '@/lib/xp';
 import { xpValues } from '@/lib/rewards';
+import { format } from 'date-fns';
 
 interface Item {
   x: number;
@@ -120,9 +121,15 @@ export default function MathVoyagerPage() {
         await runTransaction(firestore, async (transaction) => {
             const userDoc = await transaction.get(userRef);
             if (!userDoc.exists()) return;
-            const currentGamesPlayed = userDoc.data().gamesPlayed || 0;
+            const data = userDoc.data();
+            const todayStr = format(new Date(), 'yyyy-MM-dd');
+            const currentGamesPlayed = data.gamesPlayed || 0;
+            const dailyTasks = data.lastActiveDate === todayStr ? (data.tasksDoneToday || 0) : 0;
+
             transaction.update(userRef, {
                 gamesPlayed: currentGamesPlayed + 1,
+                tasksDoneToday: dailyTasks + 1,
+                lastActiveDate: todayStr,
             });
         });
         

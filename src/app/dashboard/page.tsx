@@ -106,9 +106,14 @@ export default function DashboardPage() {
 
   useEffect(() => {
     // This effect synchronizes the local state with Firestore when it changes.
-    // The backend logic in layout.tsx ensures studyTimeToday is reset on a new day.
     if (userProfile?.studyTimeToday !== undefined) {
-      setLiveStudyTimeToday(userProfile.studyTimeToday);
+      const todayStr = format(new Date(), 'yyyy-MM-dd');
+      // Ensure the data from firestore is for today before setting it.
+      if (userProfile.lastActiveDate === todayStr) {
+        setLiveStudyTimeToday(userProfile.studyTimeToday);
+      } else {
+        setLiveStudyTimeToday(0); // Data is stale, reset to 0
+      }
     }
   }, [userProfile]);
 
@@ -123,7 +128,9 @@ export default function DashboardPage() {
   }, []); // Runs once on mount to start the client-side ticker.
 
   const streak = userProfile?.currentStreak ?? 0;
-  const tasksDone = (userProfile?.totalQuizzes || 0) + (userProfile?.gamesPlayed || 0);
+  
+  const todayStr = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
+  const tasksDoneToday = userProfile?.lastActiveDate === todayStr ? (userProfile?.tasksDoneToday || 0) : 0;
 
   const hours = Math.floor(liveStudyTimeToday / 3600);
   const minutes = Math.floor((liveStudyTimeToday % 3600) / 60);
@@ -206,7 +213,7 @@ export default function DashboardPage() {
 
         {/* Stats Row */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-          <StatCard icon={CheckSquare} label="Tasks Done" value={isProfileLoading ? "..." : String(tasksDone)} delay="delay-300" />
+          <StatCard icon={CheckSquare} label="Tasks Done Today" value={isProfileLoading ? "..." : String(tasksDoneToday)} delay="delay-300" />
           <StatCard icon={Clock} label="Today's Study Time" value={isProfileLoading ? "..." : studyTime} delay="delay-400" />
           <StatCard icon={Percent} label="Average Accuracy" value={isProfileLoading ? "..." : `${accuracy}%`} delay="delay-500" />
         </div>
