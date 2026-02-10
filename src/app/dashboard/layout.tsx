@@ -85,7 +85,7 @@ function AppSidebar({ userProfile, isLoading }: { userProfile: UserProfile | nul
         </SidebarHeader>
 
         <SidebarContent className="p-0 flex flex-col">
-          <SidebarMenu className="space-y-2 flex-grow">
+          <SidebarMenu className="space-y-2">
             <SidebarMenuItem>
               <SidebarMenuButton asChild isActive={isActive('/dashboard')} tooltip="Dashboard">
                 <Link href="/dashboard">
@@ -136,39 +136,41 @@ function AppSidebar({ userProfile, isLoading }: { userProfile: UserProfile | nul
             </SidebarMenuItem>
           </SidebarMenu>
 
-          <div className="p-0 mt-8">
-            {isLoading ? (
-                <div className="rounded-xl bg-gradient-to-br from-card/50 to-muted/30 p-4 space-y-3 border border-border/20">
-                    <Skeleton className="h-4 w-2/3" />
-                    <Skeleton className="h-6 w-1/2" />
-                    <Skeleton className="h-2 w-full" />
-                </div>
-            ) : nextLevelTier && NextRewardIcon ? (
-                <div className="rounded-xl bg-gradient-to-br from-card/50 to-muted/30 p-4 space-y-3 border border-yellow-500/30 shadow-lg">
-                    <div className="flex justify-between items-center">
-                        <span className="text-sm font-bold uppercase text-yellow-400 tracking-wider">Next Reward</span>
-                         <div className="relative">
-                            <NextRewardIcon className={cn("w-7 h-7", nextLevelTier.color)} />
-                            <div className="absolute -inset-1 border border-primary/50 rounded-full animate-glow" style={{ animationDuration: '3s' }}></div>
-                        </div>
-                    </div>
-                    <p className="text-white font-semibold text-lg">{nextLevelTier.name}</p>
-                    <Progress value={progressPercentage} className="h-2 bg-yellow-400/20 [&>div]:bg-yellow-400" />
-                    <p className="text-xs text-muted-foreground text-right">{xpToNext.toLocaleString()} XP to next</p>
-                </div>
-            ) : (
-                 <div className="rounded-xl bg-gradient-to-br from-card/50 to-muted/30 p-4 space-y-3 border border-purple-500/30 shadow-lg">
-                    <div className="flex justify-between items-center">
-                        <span className="text-sm font-bold uppercase text-purple-400 tracking-wider">Max Rank</span>
-                         {currentLevelTier && <currentLevelTier.icon className={cn("w-7 h-7", currentLevelTier.color)} />}
-                    </div>
-                    <p className="text-white font-semibold text-lg">{currentLevelTier?.name}</p>
-                    <p className="text-xs text-muted-foreground">You have reached the pinnacle!</p>
-                </div>
-            )}
+          <div className="flex-grow flex flex-col justify-center">
+            <div className="p-0">
+              {isLoading ? (
+                  <div className="rounded-xl bg-gradient-to-br from-card/50 to-muted/30 p-4 space-y-3 border border-border/20">
+                      <Skeleton className="h-4 w-2/3" />
+                      <Skeleton className="h-6 w-1/2" />
+                      <Skeleton className="h-2 w-full" />
+                  </div>
+              ) : nextLevelTier && NextRewardIcon ? (
+                  <div className="rounded-xl bg-gradient-to-br from-card/50 to-muted/30 p-4 space-y-3 border border-yellow-500/30 shadow-lg">
+                      <div className="flex justify-between items-center">
+                          <span className="text-sm font-bold uppercase text-yellow-400 tracking-wider">Next Reward</span>
+                           <div className="relative">
+                              <NextRewardIcon className={cn("w-7 h-7", nextLevelTier.color)} />
+                              <div className="absolute -inset-1 border border-primary/50 rounded-full animate-glow" style={{ animationDuration: '3s' }}></div>
+                          </div>
+                      </div>
+                      <p className="text-white font-semibold text-lg">{nextLevelTier.name}</p>
+                      <Progress value={progressPercentage} className="h-2 bg-yellow-400/20 [&>div]:bg-yellow-400" />
+                      <p className="text-xs text-muted-foreground text-right">{xpToNext.toLocaleString()} XP to next</p>
+                  </div>
+              ) : (
+                   <div className="rounded-xl bg-gradient-to-br from-card/50 to-muted/30 p-4 space-y-3 border border-purple-500/30 shadow-lg">
+                      <div className="flex justify-between items-center">
+                          <span className="text-sm font-bold uppercase text-purple-400 tracking-wider">Max Rank</span>
+                           {currentLevelTier && <currentLevelTier.icon className={cn("w-7 h-7", currentLevelTier.color)} />}
+                      </div>
+                      <p className="text-white font-semibold text-lg">{currentLevelTier?.name}</p>
+                      <p className="text-xs text-muted-foreground">You have reached the pinnacle!</p>
+                  </div>
+              )}
+            </div>
           </div>
           
-          <SidebarMenu className="space-y-2 mt-2">
+          <SidebarMenu className="space-y-2">
             <SidebarMenuItem>
               <SidebarMenuButton onClick={handleSignOut} tooltip="Log Out">
                 <LogOut />
