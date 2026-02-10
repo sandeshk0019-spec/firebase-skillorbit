@@ -5,7 +5,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useUser, useFirestore, useDoc, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, collection } from 'firebase/firestore';
 import { type UserProfile, type Achievement } from '@/types';
-import { Flame, BrainCircuit, Gamepad2, CheckSquare, Clock, Percent, Trophy } from 'lucide-react';
+import { Flame, BrainCircuit, Gamepad2, CheckSquare, Clock, Percent, Trophy, Lock, CheckCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -70,6 +70,11 @@ const RewardsTracker = () => {
                     <div key={tier.id} className={cn("p-4 rounded-lg flex flex-col items-center justify-start transition-all", isUnlocked ? "bg-primary/10" : "bg-muted/30 opacity-60")}>
                         <div className={cn("relative w-16 h-16 flex items-center justify-center rounded-full mb-3", isUnlocked ? 'bg-primary/20' : 'bg-muted/50')}>
                              <Icon className={cn("w-8 h-8", isUnlocked ? tier.color : "text-muted-foreground")} />
+                             {isUnlocked ? (
+                                <CheckCircle className="absolute -bottom-1 -right-1 w-6 h-6 text-green-400 bg-background rounded-full p-0.5" />
+                             ) : (
+                                <Lock className="absolute -bottom-1 -right-1 w-6 h-6 text-muted-foreground bg-muted p-1 rounded-full" />
+                             )}
                              {isUnlocked && <div className="absolute inset-0 border-2 border-primary rounded-full animate-glow" style={{animationDuration: '3s'}}></div>}
                         </div>
                         <p className={cn("font-bold text-sm", isUnlocked ? 'text-primary-foreground' : 'text-muted-foreground')}>{tier.name}</p>
@@ -203,3 +208,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+    
