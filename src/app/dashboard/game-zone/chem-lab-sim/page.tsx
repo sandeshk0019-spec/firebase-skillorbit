@@ -561,7 +561,7 @@ export default function ChemLabSimPage() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-120px)] w-full p-4 bg-background text-foreground animate-in fade-in duration-500">
-        <header className="flex items-center justify-between mb-4">
+        <header className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-4">
             <FlaskConical className="w-8 h-8 text-cyan-400 animate-glow" style={{animationDuration: '3s'}} />
             <h1 className="font-headline text-3xl text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-blue-500">Chem Lab Pro</h1>
@@ -572,7 +572,7 @@ export default function ChemLabSimPage() {
             </Button>
           </Link>
         </header>
-        <div className="flex flex-1 flex-col md:flex-row gap-4">
+        <div className="flex flex-1 flex-col md:flex-row gap-2">
             {/* Left Panel: Shelf */}
             <Card className="w-full md:w-1/4 bg-black/30 backdrop-blur-sm border-white/10 animate-in slide-in-from-left-5 duration-500">
                 <CardHeader><CardTitle className="font-headline text-primary">Reagent Shelf</CardTitle></CardHeader>
@@ -589,7 +589,7 @@ export default function ChemLabSimPage() {
                                                 variant="outline" 
                                                 className="flex flex-col items-center justify-center text-center p-2 transition-all hover:scale-105 hover:bg-accent/50 hover:border-primary/50" 
                                                 onClick={() => labAdd(item.id)}
-                                                style={{minHeight: '6rem'}}
+                                                style={{minHeight: '5.5rem'}}
                                             >
                                                 <item.icon className="w-6 h-6 mb-1"/>
                                                 <span className="text-xs whitespace-normal leading-tight">{item.name}</span>
@@ -618,7 +618,7 @@ export default function ChemLabSimPage() {
             </Card>
 
             {/* Right Panel: Simulation */}
-            <div className="flex-1 flex flex-col gap-4 animate-in slide-in-from-right-5 duration-500">
+            <div className="flex-1 flex flex-col gap-2 animate-in slide-in-from-right-5 duration-500">
                 <div className={cn("flex-1 bg-[#1e1e2e] rounded-lg relative overflow-hidden border border-primary/20 shadow-[inset_0_0_20px_rgba(0,0,0,0.5)]", isExploding && 'animate-shake')}>
                     <canvas ref={canvasRef} width="800" height="600" className="absolute top-0 left-0 w-full h-full" />
                 </div>
