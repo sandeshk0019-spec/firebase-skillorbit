@@ -22,6 +22,8 @@ import { updateUserStreak } from "@/lib/streak";
 import { awardXp } from '@/lib/xp';
 import { xpValues } from '@/lib/rewards';
 import { format } from "date-fns";
+import { errorEmitter } from "@/firebase/error-emitter";
+import { FirestorePermissionError } from "@/firebase/errors";
 
 const formSchema = z.object({
   subject: z.string().min(2, { message: "Subject must be at least 2 characters." }),
@@ -106,17 +108,31 @@ export default function QuizPage() {
             totalQuestions: quiz.length,
             createdAt: now as any,
         };
-        const attemptRef = await addDoc(collection(userRef, "quizAttempts"), quizAttemptData);
+        const attemptsColRef = collection(userRef, "quizAttempts");
+        const attemptRef = await addDoc(attemptsColRef, quizAttemptData).catch(error => {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+                path: attemptsColRef.path,
+                operation: 'create',
+                requestResourceData: quizAttemptData
+            }));
+        });
 
         // 2. Save Activity
         const activityData: Omit<Activity, 'id'> = {
             userId: user.uid,
             type: 'QUIZ_COMPLETED',
             description: `Scored ${score}/${quiz.length} on a quiz about ${quizAttemptData.topic}.`,
-            refId: attemptRef.id,
+            refId: attemptRef?.id,
             createdAt: now as any,
         };
-        await addDoc(collection(userRef, "activities"), activityData);
+        const activitiesColRef = collection(userRef, "activities");
+        addDoc(activitiesColRef, activityData).catch(error => {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+                path: activitiesColRef.path,
+                operation: 'create',
+                requestResourceData: activityData
+            }));
+        });
 
         // 3. Update User Profile Stats in a Transaction
         await runTransaction(firestore, async (transaction) => {
@@ -143,7 +159,7 @@ export default function QuizPage() {
         
         // 4. Award XP
         const xpGained = (score * xpValues.QUIZ_CORRECT_ANSWER) + (score === quiz.length ? xpValues.QUIZ_PERFECT_BONUS : 0);
-        await awardXp(firestore, user.uid, xpGained, toast);
+        awardXp(firestore, user.uid, xpGained, toast);
 
         // 5. Update Streak & Check for achievements
         await updateUserStreak(firestore, user.uid);
@@ -172,16 +188,32 @@ export default function QuizPage() {
 
       if (!achDoc.exists()) {
           const achData = achievements[achievementId];
-          await setDoc(achRef, {
+          const achievementData = {
               userId: user.uid,
               achievementId: achievementId,
               unlockedAt: serverTimestamp(),
+          };
+          setDoc(achRef, achievementData).catch(error => {
+              errorEmitter.emit('permission-error', new FirestorePermissionError({
+                  path: achRef.path,
+                  operation: 'create',
+                  requestResourceData: achievementData
+              }));
           });
-          await addDoc(collection(firestore, 'users', user.uid, 'activities'), {
+          
+          const activityData = {
               userId: user.uid,
-              type: 'ACHIEVEMENT_UNLOCKED',
+              type: 'ACHIEVEMENT_UNLOCKED' as const,
               description: `Unlocked: ${achData.name}`,
               createdAt: serverTimestamp(),
+          };
+          const activitiesColRef = collection(firestore, 'users', user.uid, 'activities');
+          addDoc(activitiesColRef, activityData).catch(error => {
+              errorEmitter.emit('permission-error', new FirestorePermissionError({
+                  path: activitiesColRef.path,
+                  operation: 'create',
+                  requestResourceData: activityData
+              }));
           });
 
           toast({

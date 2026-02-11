@@ -3,6 +3,8 @@
 import * as React from 'react';
 import { doc, runTransaction, Firestore, serverTimestamp, addDoc, collection, getDoc, setDoc } from 'firebase/firestore';
 import { type RewardTier, rewardTiers } from './rewards';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 // This function will be called from various game components after a game/task is completed.
 export const awardXp = async (
@@ -36,18 +38,35 @@ export const awardXp = async (
         const achDoc = await getDoc(achRef);
 
         if (!achDoc.exists()) {
-          // Unlock the achievement
-          await setDoc(achRef, {
+          // Unlock the achievement (non-blocking)
+          const achievementData = {
             userId: userId,
             achievementId: tier.id,
             unlockedAt: serverTimestamp(),
+          };
+          setDoc(achRef, achievementData).catch(error => {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+              path: achRef.path,
+              operation: 'create',
+              requestResourceData: achievementData,
+            }));
           });
-          await addDoc(collection(firestore, 'users', userId, 'activities'), {
+          
+          // Log the activity (non-blocking)
+          const activityData = {
             userId: userId,
-            type: 'ACHIEVEMENT_UNLOCKED',
+            type: 'ACHIEVEMENT_UNLOCKED' as const,
             description: `Reached Level ${tier.level}: ${tier.name}`,
             createdAt: serverTimestamp(),
             refId: tier.id,
+          };
+          const activitiesColRef = collection(firestore, 'users', userId, 'activities');
+          addDoc(activitiesColRef, activityData).catch(error => {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+              path: activitiesColRef.path,
+              operation: 'create',
+              requestResourceData: activityData,
+            }));
           });
 
           // Show a toast notification for the new reward

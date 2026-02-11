@@ -16,6 +16,8 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { awardXp } from '@/lib/xp';
 import { xpValues } from '@/lib/rewards';
 import { format } from 'date-fns';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 // Card data structure
 interface CardData {
@@ -108,16 +110,32 @@ export default function ZenMatchPage() {
 
     if (!achDoc.exists()) {
         const achData = achievements[achievementId];
-        await setDoc(achRef, {
+        const achievementData = {
             userId: user.uid,
             achievementId: achievementId,
             unlockedAt: serverTimestamp(),
+        };
+        setDoc(achRef, achievementData).catch(error => {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+                path: achRef.path,
+                operation: 'create',
+                requestResourceData: achievementData
+            }));
         });
-        await addDoc(collection(firestore, 'users', user.uid, 'activities'), {
+
+        const activityData = {
             userId: user.uid,
-            type: 'ACHIEVEMENT_UNLOCKED',
+            type: 'ACHIEVEMENT_UNLOCKED' as const,
             description: `Unlocked: ${achData.name}`,
             createdAt: serverTimestamp(),
+        };
+        const activitiesColRef = collection(firestore, 'users', user.uid, 'activities');
+        addDoc(activitiesColRef, activityData).catch(error => {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+                path: activitiesColRef.path,
+                operation: 'create',
+                requestResourceData: activityData
+            }));
         });
 
         toast({
@@ -181,17 +199,31 @@ export default function ZenMatchPage() {
                 score: moves,
                 createdAt: now as any,
             };
-            const scoreRef = await addDoc(collection(userRef, "gameScores"), gameScoreData);
+            const scoresColRef = collection(userRef, "gameScores");
+            const scoreRef = await addDoc(scoresColRef, gameScoreData).catch(error => {
+                errorEmitter.emit('permission-error', new FirestorePermissionError({
+                    path: scoresColRef.path,
+                    operation: 'create',
+                    requestResourceData: gameScoreData
+                }));
+            });
 
             // 2. Save Activity
             const activityData: Omit<Activity, 'id'> = {
                 userId: user.uid,
                 type: 'GAME_PLAYED',
                 description: `Completed a game of Zen Match in ${moves} moves.`,
-                refId: scoreRef.id,
+                refId: scoreRef?.id,
                 createdAt: now as any,
             };
-            await addDoc(collection(userRef, "activities"), activityData);
+            const activitiesColRef = collection(userRef, "activities");
+            addDoc(activitiesColRef, activityData).catch(error => {
+                errorEmitter.emit('permission-error', new FirestorePermissionError({
+                    path: activitiesColRef.path,
+                    operation: 'create',
+                    requestResourceData: activityData
+                }));
+            });
 
             // 3. Update User Profile Stats in a Transaction
             await runTransaction(firestore, async (transaction) => {
@@ -210,7 +242,7 @@ export default function ZenMatchPage() {
             });
             
             // 4. Award XP
-            await awardXp(firestore, user.uid, xpValues.ZEN_MATCH, toast);
+            awardXp(firestore, user.uid, xpValues.ZEN_MATCH, toast);
             
             // 5. Update Streak & Check Achievements
             await updateUserStreak(firestore, user.uid);
@@ -354,7 +386,7 @@ export default function ZenMatchPage() {
                     </div>
                   </div>
                   <div className={cn(
-                    "card-back bg-black/40 backdrop-blur-md border border-white/20 rounded-2xl p-2 text-center flex items-center justify-center text-lg sm:text-xl font-bold",
+                    "card-back bg-black/40 backdrop-blur-md border border-white/20 rounded-2xl p-2 text-center flex items-center justify-center text-base sm:text-lg font-bold",
                     isMatched && 'bg-primary/20 border-primary animate-glow'
                   )}>
                     {card.content}

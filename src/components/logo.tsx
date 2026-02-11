@@ -1,3 +1,4 @@
+'use client';
 export function Logo() {
   return (
     <div className="animate-float">

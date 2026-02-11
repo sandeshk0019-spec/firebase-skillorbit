@@ -15,6 +15,8 @@ import { useToast } from "@/hooks/use-toast";
 import { awardXp } from '@/lib/xp';
 import { xpValues } from '@/lib/rewards';
 import { format } from 'date-fns';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 // Define types for better type-safety
 interface Particle {
@@ -36,7 +38,6 @@ interface LabState {
   particles: Particle[];
   precipitate: number;
   isBoiling: boolean;
-  isExploding: boolean;
   explosionTimer: number;
 }
 
@@ -76,6 +77,7 @@ export default function ChemLabSimPage() {
     const [consoleLogs, setConsoleLogs] = useState<{ message: string; level: 'info' | 'warn' | 'danger' }[]>([
         { message: '> Lab initialized. Ready for experimentation.', level: 'info' },
     ]);
+    const [isExploding, setIsExploding] = useState(false);
 
     const { user } = useUser();
     const firestore = useFirestore();
@@ -91,7 +93,6 @@ export default function ChemLabSimPage() {
         particles: [],
         precipitate: 0,
         isBoiling: false,
-        isExploding: false,
         explosionTimer: 0,
     });
     const actionsInSession = useRef(0);
@@ -119,7 +120,14 @@ export default function ChemLabSimPage() {
                 description: `Completed an experiment in the Chem Lab Sim.`,
                 createdAt: now as any,
             };
-            await addDoc(collection(userRef, "activities"), activityData);
+            const activitiesColRef = collection(userRef, "activities");
+            addDoc(activitiesColRef, activityData).catch(error => {
+                errorEmitter.emit('permission-error', new FirestorePermissionError({
+                    path: activitiesColRef.path,
+                    operation: 'create',
+                    requestResourceData: activityData
+                }));
+            });
     
             await runTransaction(firestore, async (transaction) => {
                 const userDoc = await transaction.get(userRef);
@@ -230,8 +238,8 @@ export default function ChemLabSimPage() {
             case 'potassium':
                 if (state.composition.includes('water')) {
                     logToConsole(`DANGER: ${type} reacts violently with water!`, 'danger');
-                    state.isExploding = true;
                     state.explosionTimer = 50; // duration of shake
+                    setIsExploding(true);
                     state.temp += 50;
                     spawnParticles(100, 'fire', 400, 350);
                     spawnParticles(50, 'smoke', 400, 350);
@@ -357,7 +365,6 @@ export default function ChemLabSimPage() {
             particles: [],
             precipitate: 0,
             isBoiling: false,
-            isExploding: false,
             explosionTimer: 0,
         };
     }, [logToConsole]);
@@ -382,8 +389,9 @@ export default function ChemLabSimPage() {
 
             if(state.explosionTimer > 0) {
                 state.explosionTimer--;
-            } else {
-                state.isExploding = false;
+                if (state.explosionTimer === 0) {
+                    setIsExploding(false);
+                }
             }
 
             // Update particles
@@ -401,7 +409,7 @@ export default function ChemLabSimPage() {
             // Draw Logic
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
-            if (state.isExploding) {
+            if (isExploding) {
                 ctx.save();
                 const dx = (Math.random() - 0.5) * 20;
                 const dy = (Math.random() - 0.5) * 20;
@@ -499,7 +507,7 @@ export default function ChemLabSimPage() {
                 ctx.shadowBlur = 0; // reset shadow
             });
 
-            if (state.isExploding) {
+            if (isExploding) {
                 ctx.restore();
             }
 
@@ -526,7 +534,7 @@ export default function ChemLabSimPage() {
             }
         };
 
-    }, [labAdd, spawnParticles, getPhColor, resetLab, labAction]); // Only re-run if these functions change (they are memoized)
+    }, [labAdd, spawnParticles, getPhColor, resetLab, labAction, isExploding]); // Only re-run if these functions change (they are memoized)
 
   return (
     <div className="flex flex-col h-[calc(100vh-120px)] w-full p-4 bg-background text-foreground animate-in fade-in duration-500">
@@ -588,7 +596,7 @@ export default function ChemLabSimPage() {
 
             {/* Right Panel: Simulation */}
             <div className="flex-1 flex flex-col gap-4 animate-in slide-in-from-right-5 duration-500">
-                <div className={cn("flex-1 bg-[#1e1e2e] rounded-lg relative overflow-hidden border border-primary/20 shadow-[inset_0_0_20px_rgba(0,0,0,0.5)]", labState.current.isExploding && 'animate-shake')}>
+                <div className={cn("flex-1 bg-[#1e1e2e] rounded-lg relative overflow-hidden border border-primary/20 shadow-[inset_0_0_20px_rgba(0,0,0,0.5)]", isExploding && 'animate-shake')}>
                     <canvas ref={canvasRef} width="800" height="600" className="absolute top-0 left-0 w-full h-full" />
                 </div>
                 <Card className="h-1/4 bg-black/60 backdrop-blur-sm border-white/10">

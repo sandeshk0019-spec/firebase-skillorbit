@@ -15,6 +15,8 @@ import { useToast } from "@/hooks/use-toast";
 import { awardXp } from '@/lib/xp';
 import { xpValues } from '@/lib/rewards';
 import { format } from 'date-fns';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 // Game settings
 const WORD_LIST = ["ATOM", "CELL", "GRAVITY", "FORCE", "JOULE", "DATA", "ORBIT", "LASER", "NEBULA", "QUASAR", "BINARY", "ALGORITHM"];
@@ -63,16 +65,32 @@ export default function CosmicTyperPage() {
 
     if (!achDoc.exists()) {
         const achData = achievements[achievementId];
-        await setDoc(achRef, {
+        const achievementData = {
             userId: user.uid,
             achievementId: achievementId,
             unlockedAt: serverTimestamp(),
+        };
+        setDoc(achRef, achievementData).catch(error => {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+                path: achRef.path,
+                operation: 'create',
+                requestResourceData: achievementData
+            }));
         });
-        await addDoc(collection(firestore, 'users', user.uid, 'activities'), {
+
+        const activityData = {
             userId: user.uid,
-            type: 'ACHIEVEMENT_UNLOCKED',
+            type: 'ACHIEVEMENT_UNLOCKED' as const,
             description: `Unlocked: ${achData.name}`,
             createdAt: serverTimestamp(),
+        };
+        const activitiesColRef = collection(firestore, 'users', user.uid, 'activities');
+        addDoc(activitiesColRef, activityData).catch(error => {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+                path: activitiesColRef.path,
+                operation: 'create',
+                requestResourceData: activityData
+            }));
         });
 
         toast({
@@ -106,16 +124,31 @@ export default function CosmicTyperPage() {
             score: score,
             createdAt: now as any,
         };
-        const scoreRef = await addDoc(collection(userRef, "gameScores"), gameScoreData);
+        
+        const scoresColRef = collection(userRef, "gameScores");
+        const scoreRef = await addDoc(scoresColRef, gameScoreData).catch(error => {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+                path: scoresColRef.path,
+                operation: 'create',
+                requestResourceData: gameScoreData
+            }));
+        });
 
         const activityData: Omit<Activity, 'id'> = {
             userId: user.uid,
             type: 'GAME_PLAYED',
             description: `Scored ${score} in Cosmic Typer.`,
-            refId: scoreRef.id,
+            refId: scoreRef?.id,
             createdAt: now as any,
         };
-        await addDoc(collection(userRef, "activities"), activityData);
+        const activitiesColRef = collection(userRef, "activities");
+        addDoc(activitiesColRef, activityData).catch(error => {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+                path: activitiesColRef.path,
+                operation: 'create',
+                requestResourceData: activityData
+            }));
+        });
 
         await runTransaction(firestore, async (transaction) => {
             const userDoc = await transaction.get(userRef);
@@ -133,7 +166,7 @@ export default function CosmicTyperPage() {
         });
         
         const xpGained = score * xpValues.COSMIC_TYPER_MULTIPLIER;
-        await awardXp(firestore, user.uid, xpGained, toast);
+        awardXp(firestore, user.uid, xpGained, toast);
         
         await updateUserStreak(firestore, user.uid);
         if (score > 100) {
