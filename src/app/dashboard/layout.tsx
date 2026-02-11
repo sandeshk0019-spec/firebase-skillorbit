@@ -118,14 +118,6 @@ function AppSidebar({ userProfile, isLoading }: { userProfile: UserProfile | nul
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={isActive('/dashboard/settings')} tooltip="Settings & Guide">
-                <Link href="/dashboard/settings">
-                  <Settings />
-                  <span>Settings & Guide</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
           </SidebarMenu>
 
           <div className="flex-grow flex flex-col justify-center">
