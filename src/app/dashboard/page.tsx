@@ -160,7 +160,7 @@ export default function DashboardPage() {
 
         {/* Header */}
         <header className="flex justify-between items-center load-hidden delay-100">
-          <h1 className="text-2xl md:text-3xl font-headline" data-text="SKILLORBIT.AI">SKILLORBIT.AI</h1>
+          <h1 className="text-2xl md:text-3xl font-headline">SKILLORBIT.AI</h1>
           <div className="holographic-card rounded-full px-4 py-2 flex items-center gap-2">
             <Flame className="w-5 h-5 text-amber-400" />
             <span className="font-bold">Streak:</span>
@@ -172,11 +172,11 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
           {/* Hero Card */}
-          <HolographicCard className="lg:col-span-2 flex flex-col md:flex-row items-center justify-between gap-6 load-hidden delay-200 overflow-visible">
+          <HolographicCard className="lg:col-span-2 flex flex-col md:flex-row items-center justify-between gap-6 load-hidden delay-200">
             <div className="space-y-4">
               <h2 className="text-3xl font-headline text-secondary">Personalized Orbit Active</h2>
               <p className="text-muted-foreground max-w-md">
-                Welcome back, {user?.displayName || 'Voyager'}. Your learning matrix is synchronized. Engage with AI-driven tasks or enter the Game Zone.
+                Welcome back, {userProfile?.username || 'Voyager'}. Your learning matrix is synchronized. Engage with AI-driven tasks or enter the Game Zone.
               </p>
               <div className="flex gap-4 pt-4">
                 <Button variant="outline" className="border-accent text-accent hover:bg-accent hover:text-background" asChild>
