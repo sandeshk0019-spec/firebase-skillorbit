@@ -213,43 +213,87 @@
     border-color: hsl(var(--primary));
   }
   
-  /* 3D Orbit Animation */
-  .orbit-container {
+  /* New 3D Orbit Animation */
+  .new-orbit-container {
     perspective: 1000px;
   }
-  .orbit {
+  .new-orbit-inner {
     width: 100%;
     height: 100%;
     position: relative;
     transform-style: preserve-3d;
+    animation: orbit-rotate-perspective 45s linear infinite;
   }
-  .orbit-ring {
+  .central-core {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 1.5rem;
+    height: 1.5rem;
+    background-color: hsl(var(--primary));
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 15px hsl(var(--primary)), 0 0 25px hsl(var(--primary));
+  }
+  .orbit-path {
     position: absolute;
     top: 0; left: 0; right: 0; bottom: 0;
     margin: auto;
     border-radius: 50%;
-    border: 2px solid;
+    border: 1px solid hsl(var(--primary) / 0.2);
+    transform-style: preserve-3d;
   }
-  .orbit-ring-1 {
+  .orbit-planet {
+    position: absolute;
+    top: -5px;
+    left: calc(50% - 5px);
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: hsl(var(--primary));
+    box-shadow: 0 0 8px hsl(var(--primary));
+  }
+  .orbit-path.one {
     width: 100%; height: 100%;
-    border-color: hsl(var(--primary) / 0.8);
-    animation: orbit-y 15s linear infinite;
+    animation: orbit-spin-one 10s linear infinite;
   }
-  .orbit-ring-2 {
-    width: 80%; height: 80%;
-    border-color: hsl(var(--secondary) / 0.8);
-    animation: orbit-x 10s linear infinite;
+  .orbit-path.one .orbit-planet {
+    background-color: hsl(var(--secondary));
+    box-shadow: 0 0 8px hsl(var(--secondary));
   }
-  .orbit-ring-3 {
-    width: 60%; height: 60%;
-    border-color: hsl(var(--accent) / 0.8);
-    animation: orbit-z 20s linear infinite;
+  .orbit-path.two {
+    width: 75%; height: 75%;
+    animation: orbit-spin-two 12s linear infinite reverse;
+  }
+  .orbit-path.two .orbit-planet {
+    background-color: hsl(var(--accent));
+    box-shadow: 0 0 8px hsl(var(--accent));
+  }
+  .orbit-path.three {
+    width: 50%; height: 50%;
+    animation: orbit-spin-three 8s linear infinite;
   }
 
-  @keyframes orbit-x { from { transform: rotateX(0deg); } to { transform: rotateX(360deg); } }
-  @keyframes orbit-y { from { transform: rotateY(0deg); } to { transform: rotateY(360deg); } }
-  @keyframes orbit-z { from { transform: rotateZ(0deg); } to { transform: rotateZ(360deg); } }
-  
+  @keyframes orbit-rotate-perspective {
+    from { transform: rotateY(0deg) rotateX(20deg); }
+    to   { transform: rotateY(360deg) rotateX(20deg); }
+  }
+
+  @keyframes orbit-spin-one {
+    from { transform: rotateZ(0deg) rotateX(75deg); }
+    to   { transform: rotateZ(360deg) rotateX(75deg); }
+  }
+
+  @keyframes orbit-spin-two {
+    from { transform: rotateZ(0deg) rotateX(75deg) rotateY(60deg); }
+    to   { transform: rotateZ(360deg) rotateX(75deg) rotateY(60deg); }
+  }
+
+  @keyframes orbit-spin-three {
+    from { transform: rotateZ(0deg) rotateX(75deg) rotateY(-60deg); }
+    to   { transform: rotateZ(360deg) rotateX(75deg) rotateY(-60deg); }
+  }
+
   /* Page Load Animations */
   .load-hidden {
     opacity: 0;

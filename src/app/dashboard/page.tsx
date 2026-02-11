@@ -17,14 +17,22 @@ import { format } from 'date-fns';
 // --- Reusable Components ---
 
 const OrbitAnimation = () => (
-  <div className="orbit-container w-40 h-40">
-    <div className="orbit">
-      <div className="orbit-ring orbit-ring-1"></div>
-      <div className="orbit-ring orbit-ring-2"></div>
-      <div className="orbit-ring orbit-ring-3"></div>
+  <div className="new-orbit-container w-48 h-48">
+    <div className="new-orbit-inner">
+      <div className="central-core" />
+      <div className="orbit-path one">
+        <div className="orbit-planet" />
+      </div>
+      <div className="orbit-path two">
+        <div className="orbit-planet" />
+      </div>
+      <div className="orbit-path three">
+        <div className="orbit-planet" />
+      </div>
     </div>
   </div>
 );
+
 
 const HolographicCard = ({ children, className }: { children: React.ReactNode; className?: string }) => (
   <div className={cn("holographic-card rounded-2xl p-6 hud-brackets", className)}>
