@@ -119,18 +119,10 @@ function AppSidebar({ userProfile, isLoading }: { userProfile: UserProfile | nul
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={isActive('/dashboard/habit-ai')} tooltip="Habit AI">
-                <Link href="/dashboard/habit-ai">
-                  <CheckCircle2 />
-                  <span>Habit AI</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={isActive('/dashboard/ai-motivation')} tooltip="AI Motivation">
-                <Link href="/dashboard/ai-motivation">
-                  <Zap />
-                  <span>AI Motivation</span>
+              <SidebarMenuButton asChild isActive={isActive('/dashboard/settings')} tooltip="Settings & Guide">
+                <Link href="/dashboard/settings">
+                  <Settings />
+                  <span>Settings & Guide</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -310,9 +302,11 @@ export default function DashboardLayout({
                 {/* Title could be dynamic based on page */}
               </h1>
             </div>
-            <Button variant="ghost" size="icon">
-              <Settings className="h-5 w-5" />
-              <span className="sr-only">Settings</span>
+            <Button variant="ghost" size="icon" asChild>
+              <Link href="/dashboard/settings">
+                <Settings className="h-5 w-5" />
+                <span className="sr-only">Settings</span>
+              </Link>
             </Button>
           </header>
           <main className="flex-1 p-4 md:p-6 lg:p-8">
