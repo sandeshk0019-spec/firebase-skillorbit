@@ -737,7 +737,7 @@ export default function ChemLabSimPage() {
                             onChange={(e) => {
                                 const value = e.target.value === '' ? 0 : parseFloat(e.target.value);
                                 if (!isNaN(value)) {
-                                    setDialogValue(Math.max(0, value));
+                                    setDialogValue(value);
                                 }
                             }}
                             min="0"
@@ -748,8 +748,8 @@ export default function ChemLabSimPage() {
                     <Slider
                         value={[dialogValue]}
                         onValueChange={(value) => setDialogValue(value[0])}
-                        max={dialogState?.isTool ? 200 : undefined}
-                        min={0}
+                        max={dialogState?.max}
+                        min="0"
                         step={dialogState?.step}
                     />
                 </div>
@@ -770,10 +770,10 @@ export default function ChemLabSimPage() {
                     <AlertDialogDescription>
                         You are about to add {warningDialogState?.chemical.name} ({warningDialogState?.chemical.formula}), which is a {warningDialogState?.chemical.description.toLowerCase()}.
                         This can cause a violent reaction, especially with water. Are you sure you want to proceed?
-                        <div className="mt-4 p-3 bg-yellow-900/50 border border-yellow-700/50 rounded-lg text-sm">
-                            <p className="font-bold text-yellow-300">Safety Tip:</p>
-                            <p className="text-yellow-400/90">In a real lab, always add reactive metals to a large volume of solvent in small pieces and wear safety goggles.</p>
-                        </div>
+                        <span className="block mt-4 p-3 bg-yellow-900/50 border border-yellow-700/50 rounded-lg text-sm">
+                            <span className="block font-bold text-yellow-300">Safety Tip:</span>
+                            <span className="block text-yellow-400/90">In a real lab, always add reactive metals to a large volume of solvent in small pieces and wear safety goggles.</span>
+                        </span>
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
