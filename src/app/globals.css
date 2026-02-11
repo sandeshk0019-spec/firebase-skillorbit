@@ -96,6 +96,7 @@
     background: rgba(20, 20, 40, 0.4);
     backdrop-filter: blur(10px);
     border: 1px solid hsl(var(--primary) / 0.2);
+    border-radius: 1rem; /* explicit radius */
   }
 
   .holographic-card::after {
@@ -110,6 +111,7 @@
     animation: scanline 8s infinite linear;
     border-radius: inherit;
     pointer-events: none;
+    z-index: 1; /* ensure it's above the content */
   }
 
   @keyframes scanline {
@@ -126,6 +128,7 @@
     height: 20px;
     transition: all 0.3s ease;
     border-color: hsl(var(--primary) / 0.4);
+    z-index: 2;
   }
   .hud-brackets::before {
     top: 10px; left: 10px;
@@ -242,6 +245,7 @@
   .loaded .delay-300 { transition-delay: 300ms; }
   .loaded .delay-400 { transition-delay: 400ms; }
   .loaded .delay-500 { transition-delay: 500ms; }
+  .loaded .delay-600 { transition-delay: 600ms; }
 
   /* Login Page Animations */
   .auth-bg {
