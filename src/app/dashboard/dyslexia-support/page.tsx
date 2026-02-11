@@ -1,7 +1,8 @@
 
+
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { analyzeSpeechForDyslexia } from "@/ai/flows/analyze-speech-for-dyslexia";
 import { compareSpeechWithTargetText, type CompareSpeechWithTargetTextOutput } from "@/ai/flows/compare-speech-with-target-text";
 import { generateSpeechFromText } from "@/ai/flows/generate-speech-from-text";
@@ -20,9 +21,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { useUser, useFirestore } from "@/firebase";
 import { doc, runTransaction } from 'firebase/firestore';
-import { updateUserStreak } from '@/lib/streak';
-import { awardXp } from '@/lib/xp';
 import { xpValues } from '@/lib/rewards';
+import { format, differenceInCalendarDays } from 'date-fns';
 
 const challengeParagraphs = [
     "The Great Wall of China is not a single continuous wall but a system of walls, watchtowers, and fortresses built over centuries. It stretches over 13,000 miles, making it the longest man-made structure in the world.",
@@ -210,20 +210,11 @@ function ReadingChallengeTab() {
 
   const handleGetFeedback = async () => {
     if (liveTranscript.trim() === "") {
-      toast({
-        variant: "destructive",
-        title: "No Speech Detected",
-        description: "Please read the text first.",
-      });
+      toast({ variant: "destructive", title: "No Speech Detected", description: "Please read the text first." });
       return;
     }
-    
     if (!challengeText) {
-      toast({
-        variant: "destructive",
-        title: "Challenge Not Loaded",
-        description: "The challenge text has not loaded yet. Please wait a moment.",
-      });
+      toast({ variant: "destructive", title: "Challenge Not Loaded", description: "Please wait a moment." });
       return;
     }
 
@@ -237,35 +228,53 @@ function ReadingChallengeTab() {
       });
       setFeedback(result);
 
-      // Save stats to firestore
       if (user && firestore && result.totalWordsInTarget > 0) {
         const userRef = doc(firestore, "users", user.uid);
+        const xpGained = Math.round(result.accuracyScore * xpValues.READING_CHALLENGE_MULTIPLIER);
         
         runTransaction(firestore, async (transaction) => {
           const userDoc = await transaction.get(userRef);
-          if (!userDoc.exists()) return;
+          if (!userDoc.exists()) throw "User document does not exist!";
 
-          const data = userDoc.data();
+          const userData = userDoc.data();
           
-          const oldTotalCorrect = data.totalCorrectAnswers || 0;
-          const oldTotalAnswered = data.totalQuestionsAnswered || 0;
-          const gamesPlayed = data.gamesPlayed || 0;
+          // Stats
+          const oldTotalCorrect = userData.totalCorrectAnswers || 0;
+          const oldTotalAnswered = userData.totalQuestionsAnswered || 0;
+          const gamesPlayed = userData.gamesPlayed || 0;
+          const currentXp = userData.totalXp || 0;
+          
+          // Streak
+          const currentStreak: number = userData.currentStreak || 0;
+          const lastActiveDateStr: string = userData.lastActiveDate || '';
+          const tasksDoneToday: number = userData.tasksDoneToday || 0;
+          const today = new Date();
+          const todayStr = format(today, 'yyyy-MM-dd');
+          let newStreak = currentStreak;
+          let newTasksDoneToday = tasksDoneToday;
+
+          if (lastActiveDateStr === todayStr) {
+            newTasksDoneToday += 1;
+          } else {
+            const lastActiveDate = lastActiveDateStr ? new Date(lastActiveDateStr) : new Date(0);
+            const daysDifference = differenceInCalendarDays(today, lastActiveDate);
+            newStreak = daysDifference === 1 ? currentStreak + 1 : 1;
+            newTasksDoneToday = 1;
+          }
 
           transaction.update(userRef, {
             gamesPlayed: gamesPlayed + 1,
             totalCorrectAnswers: oldTotalCorrect + result.correctlyReadWords,
             totalQuestionsAnswered: oldTotalAnswered + result.totalWordsInTarget,
+            totalXp: currentXp + xpGained,
+            currentStreak: newStreak,
+            lastActiveDate: todayStr,
+            tasksDoneToday: newTasksDoneToday,
           });
         }).catch(error => {
             console.error("Dyslexia support stats transaction failed:", error);
+            toast({ variant: "destructive", title: "Save Error", description: "Could not save your progress." });
         });
-        
-        const xpGained = result.accuracyScore * xpValues.READING_CHALLENGE_MULTIPLIER;
-        if (xpGained > 0) {
-            awardXp(firestore, user.uid, xpGained, toast);
-        }
-
-        updateUserStreak(firestore, user.uid);
       }
 
     } catch (error: any) {
@@ -274,11 +283,7 @@ function ReadingChallengeTab() {
       if (error.message && error.message.includes("API key not valid")) {
           description = "The AI service API key is not valid. Please check your .env configuration.";
       }
-      toast({
-        variant: "destructive",
-        title: "AI Feedback Error",
-        description: description,
-      });
+      toast({ variant: "destructive", title: "AI Feedback Error", description: description });
     } finally {
       setIsProcessing(false);
     }

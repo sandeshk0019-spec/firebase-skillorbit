@@ -247,26 +247,14 @@ export default function DashboardLayout({
         sessionStartTimeRef.current = Date.now();
       }
     };
-
-    const periodicSave = () => {
-      if (sessionStartTimeRef.current && !document.hidden) {
-        const elapsed = Math.round((Date.now() - sessionStartTimeRef.current) / 1000);
-        if (elapsed > 0) {
-          updateStudyTime(elapsed);
-          sessionStartTimeRef.current = Date.now(); // Reset timer for next interval
-        }
-      }
-    };
     
     // Initial setup on mount
     sessionStartTimeRef.current = Date.now();
 
-    const intervalId = setInterval(periodicSave, 15000); // Persist every 15 seconds
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     // Cleanup on unmount
     return () => {
-      clearInterval(intervalId);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       if (sessionStartTimeRef.current) {
         const elapsed = Math.round((Date.now() - sessionStartTimeRef.current) / 1000);

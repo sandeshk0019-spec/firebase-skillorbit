@@ -1,10 +1,12 @@
 
+
 "use client";
 
 import { useState, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { format, differenceInCalendarDays } from 'date-fns';
 import { generateQuizQuestions, type GenerateQuizQuestionsOutput } from "@/ai/flows/generate-quiz-questions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,9 +20,7 @@ import { useUser, useFirestore } from "@/firebase";
 import { collection, doc, addDoc, serverTimestamp, runTransaction, getDoc, setDoc } from "firebase/firestore";
 import { type QuizAttempt, type Activity } from "@/types";
 import { achievements } from "@/lib/achievements";
-import { updateUserStreak } from "@/lib/streak";
-import { awardXp } from '@/lib/xp';
-import { xpValues } from '@/lib/rewards';
+import { xpValues, rewardTiers } from "@/lib/rewards";
 import { errorEmitter } from "@/firebase/error-emitter";
 import { FirestorePermissionError } from "@/firebase/errors";
 
@@ -93,6 +93,7 @@ export default function QuizPage() {
       if (!user || !firestore) return;
       const achRef = doc(firestore, 'users', user.uid, 'achievements', achievementId);
       
+      // This is a fire-and-forget check. We don't want to block UI on this.
       getDoc(achRef).then(achDoc => {
         if (!achDoc.exists()) {
             const achData = achievements[achievementId];
@@ -147,19 +148,27 @@ export default function QuizPage() {
 
     const userRef = doc(firestore, "users", user.uid);
     const now = serverTimestamp();
+    const xpGained = (score * xpValues.QUIZ_CORRECT_ANSWER) + (score === quiz.length ? xpValues.QUIZ_PERFECT_BONUS : 0);
 
-    // 1. Save Quiz Attempt (and chain activity log)
-    const quizAttemptData: Omit<QuizAttempt, 'id'> = {
-        userId: user.uid,
-        subject: form.getValues("subject"),
-        topic: form.getValues("topic"),
-        score: score,
-        totalQuestions: quiz.length,
-        createdAt: now as any,
-    };
-    const attemptsColRef = collection(userRef, "quizAttempts");
-    addDoc(attemptsColRef, quizAttemptData).then(attemptRef => {
-        // 2. Save Activity (chained)
+    runTransaction(firestore, async (transaction) => {
+        const userDoc = await transaction.get(userRef);
+        if (!userDoc.exists()) {
+            throw "User document does not exist!";
+        }
+        const userData = userDoc.data();
+        
+        // --- 1. Quiz Attempt & Activity Log ---
+        const quizAttemptData: Omit<QuizAttempt, 'id'> = {
+            userId: user.uid,
+            subject: form.getValues("subject"),
+            topic: form.getValues("topic"),
+            score: score,
+            totalQuestions: quiz.length,
+            createdAt: now as any,
+        };
+        const attemptRef = doc(collection(userRef, "quizAttempts"));
+        transaction.set(attemptRef, quizAttemptData);
+
         const activityData: Omit<Activity, 'id'> = {
             userId: user.uid,
             type: 'QUIZ_COMPLETED',
@@ -167,56 +176,68 @@ export default function QuizPage() {
             refId: attemptRef.id,
             createdAt: now as any,
         };
-        const activitiesColRef = collection(userRef, "activities");
-        addDoc(activitiesColRef, activityData).catch(error => {
-            errorEmitter.emit('permission-error', new FirestorePermissionError({
-                path: activitiesColRef.path,
-                operation: 'create',
-                requestResourceData: activityData
-            }));
-        });
-    }).catch(error => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-            path: attemptsColRef.path,
-            operation: 'create',
-            requestResourceData: quizAttemptData
-        }));
-    });
+        const activityRef = doc(collection(userRef, "activities"));
+        transaction.set(activityRef, activityData);
 
-    // 3. Update User Profile Stats in a Transaction (non-blocking)
-    runTransaction(firestore, async (transaction) => {
-        const userDoc = await transaction.get(userRef);
-        if (!userDoc.exists()) {
-            throw "User document does not exist!";
+        // --- 2. User Stats Update (Streak, XP, etc.) ---
+        const currentStreak: number = userData.currentStreak || 0;
+        const lastActiveDateStr: string = userData.lastActiveDate || '';
+        const tasksDoneToday: number = userData.tasksDoneToday || 0;
+        const today = new Date();
+        const todayStr = format(today, 'yyyy-MM-dd');
+        let newStreak = currentStreak;
+        let newTasksDoneToday = tasksDoneToday;
+
+        if (lastActiveDateStr === todayStr) {
+          newTasksDoneToday += 1;
+        } else {
+          const lastActiveDate = lastActiveDateStr ? new Date(lastActiveDateStr) : new Date(0);
+          const daysDifference = differenceInCalendarDays(today, lastActiveDate);
+          newStreak = daysDifference === 1 ? currentStreak + 1 : 1;
+          newTasksDoneToday = 1;
         }
-        const data = userDoc.data();
         
-        const oldTotalQuizzes = data.totalQuizzes || 0;
-        const oldTotalCorrect = data.totalCorrectAnswers || 0;
-        const oldTotalAnswered = data.totalQuestionsAnswered || 0;
+        const oldTotalQuizzes = userData.totalQuizzes || 0;
+        const oldTotalCorrect = userData.totalCorrectAnswers || 0;
+        const oldTotalAnswered = userData.totalQuestionsAnswered || 0;
+        const currentXp = userData.totalXp || 0;
+        const newXp = currentXp + xpGained;
 
         transaction.update(userRef, {
             totalQuizzes: oldTotalQuizzes + 1,
             totalCorrectAnswers: oldTotalCorrect + score,
             totalQuestionsAnswered: oldTotalAnswered + quiz.length,
+            currentStreak: newStreak,
+            lastActiveDate: todayStr,
+            tasksDoneToday: newTasksDoneToday,
+            totalXp: newXp,
         });
+
+        return { newXp, currentXp }; // Pass out for post-transaction actions
+    }).then(({ newXp, currentXp }) => {
+        // --- 3. Post-Transaction Side Effects (Toasts, Achievements) ---
+        checkAndUnlockAchievement('FIRST_QUIZ');
+        if(score === quiz.length) {
+            checkAndUnlockAchievement('PERFECT_SCORE');
+        }
+        
+        for (const tier of rewardTiers) {
+          if (newXp >= tier.xpThreshold && currentXp < tier.xpThreshold) {
+            // This part is safe to do outside the transaction
+          }
+        }
+        setShowResults(true);
+
     }).catch(error => {
         console.error("Quiz result transaction failed:", error);
+        toast({
+          variant: "destructive",
+          title: "Save Error",
+          description: "Could not save your quiz results. Please try again.",
+        });
+    }).finally(() => {
+        setIsSubmitting(false);
     });
-    
-    // 4. Award XP (non-blocking)
-    const xpGained = (score * xpValues.QUIZ_CORRECT_ANSWER) + (score === quiz.length ? xpValues.QUIZ_PERFECT_BONUS : 0);
-    awardXp(firestore, user.uid, xpGained, toast);
-
-    // 5. Update Streak & Check for achievements (non-blocking)
-    updateUserStreak(firestore, user.uid);
-    checkAndUnlockAchievement('FIRST_QUIZ');
-    if(score === quiz.length) {
-        checkAndUnlockAchievement('PERFECT_SCORE');
-    }
-    
-    setIsSubmitting(false);
-    setShowResults(true);
   }
 
   const handleNextQuestion = () => {

@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
@@ -10,12 +11,11 @@ import { useUser, useFirestore } from '@/firebase';
 import { collection, doc, addDoc, serverTimestamp, runTransaction, getDoc, setDoc } from 'firebase/firestore';
 import { type GameScore, type Activity } from '@/types';
 import { achievements } from '@/lib/achievements';
-import { updateUserStreak } from '@/lib/streak';
 import { useToast } from "@/hooks/use-toast";
-import { awardXp } from '@/lib/xp';
-import { xpValues } from '@/lib/rewards';
+import { xpValues, rewardTiers } from '@/lib/rewards';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { format, differenceInCalendarDays } from 'date-fns';
 
 interface Item {
   x: number;
@@ -63,6 +63,7 @@ export default function MathVoyagerPage() {
     if (!user || !firestore) return;
     const achRef = doc(firestore, 'users', user.uid, 'achievements', achievementId);
     
+    // Fire-and-forget check
     getDoc(achRef).then(achDoc => {
       if (!achDoc.exists()) {
           const achData = achievements[achievementId];
@@ -114,62 +115,81 @@ export default function MathVoyagerPage() {
     if (!user || !firestore || hasSaved) return;
 
     setHasSaved(true);
-
     const userRef = doc(firestore, "users", user.uid);
     const now = serverTimestamp();
+    const xpGained = score * xpValues.MATH_VOYAGER_MULTIPLIER;
 
-    const gameScoreData: Omit<GameScore, 'id'> = {
+    runTransaction(firestore, async (transaction) => {
+      const userDoc = await transaction.get(userRef);
+      if (!userDoc.exists()) throw "User document does not exist!";
+      const userData = userDoc.data();
+
+      // --- Game Score & Activity ---
+      const gameScoreData: Omit<GameScore, 'id'> = {
         userId: user.uid,
         gameId: 'math-voyager',
         gameName: 'Math Voyager',
         score: score,
         createdAt: now as any,
-    };
-    const scoresColRef = collection(userRef, "gameScores");
-    addDoc(scoresColRef, gameScoreData).then(scoreRef => {
-        const activityData: Omit<Activity, 'id'> = {
-            userId: user.uid,
-            type: 'GAME_PLAYED',
-            description: `Scored ${score} in Math Voyager.`,
-            refId: scoreRef.id,
-            createdAt: now as any,
-        };
-        const activitiesColRef = collection(userRef, "activities");
-        addDoc(activitiesColRef, activityData).catch(error => {
-            errorEmitter.emit('permission-error', new FirestorePermissionError({
-                path: activitiesColRef.path,
-                operation: 'create',
-                requestResourceData: activityData
-            }));
-        });
-    }).catch(error => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-            path: scoresColRef.path,
-            operation: 'create',
-            requestResourceData: gameScoreData
-        }));
-    });
+      };
+      const scoreRef = doc(collection(userRef, "gameScores"));
+      transaction.set(scoreRef, gameScoreData);
 
-    runTransaction(firestore, async (transaction) => {
-        const userDoc = await transaction.get(userRef);
-        if (!userDoc.exists()) return;
-        const data = userDoc.data();
-        const currentGamesPlayed = data.gamesPlayed || 0;
+      const activityData: Omit<Activity, 'id'> = {
+        userId: user.uid,
+        type: 'GAME_PLAYED',
+        description: `Scored ${score} in Math Voyager.`,
+        refId: scoreRef.id,
+        createdAt: now as any,
+      };
+      const activityRef = doc(collection(userRef, "activities"));
+      transaction.set(activityRef, activityData);
 
-        transaction.update(userRef, {
-            gamesPlayed: currentGamesPlayed + 1,
-        });
-    }).catch(error => {
-        console.error("Math Voyager gamesPlayed transaction failed:", error);
-    });
-    
-    const xpGained = score * xpValues.MATH_VOYAGER_MULTIPLIER;
-    awardXp(firestore, user.uid, xpGained, toast);
-    
-    updateUserStreak(firestore, user.uid);
-    if (score > 50) {
+      // --- User Stats Update ---
+      const currentStreak: number = userData.currentStreak || 0;
+      const lastActiveDateStr: string = userData.lastActiveDate || '';
+      const tasksDoneToday: number = userData.tasksDoneToday || 0;
+      const today = new Date();
+      const todayStr = format(today, 'yyyy-MM-dd');
+      let newStreak = currentStreak;
+      let newTasksDoneToday = tasksDoneToday;
+
+      if (lastActiveDateStr === todayStr) {
+        newTasksDoneToday += 1;
+      } else {
+        const lastActiveDate = lastActiveDateStr ? new Date(lastActiveDateStr) : new Date(0);
+        const daysDifference = differenceInCalendarDays(today, lastActiveDate);
+        newStreak = daysDifference === 1 ? currentStreak + 1 : 1;
+        newTasksDoneToday = 1;
+      }
+
+      const currentGamesPlayed = userData.gamesPlayed || 0;
+      const currentXp = userData.totalXp || 0;
+      const newXp = currentXp + xpGained;
+
+      transaction.update(userRef, {
+        gamesPlayed: currentGamesPlayed + 1,
+        currentStreak: newStreak,
+        lastActiveDate: todayStr,
+        tasksDoneToday: newTasksDoneToday,
+        totalXp: newXp,
+      });
+
+      return { newXp, currentXp };
+    }).then(({ newXp, currentXp }) => {
+      // --- Post-Transaction Side Effects ---
+      if (score > 50) {
         checkAndUnlockAchievement('MATH_VOYAGER_ACE');
-    }
+      }
+       for (const tier of rewardTiers) {
+        if (newXp >= tier.xpThreshold && currentXp < tier.xpThreshold) {
+          // Toast logic here or in checkAndUnlockAchievement
+        }
+      }
+    }).catch(error => {
+      console.error("Math Voyager save transaction failed:", error);
+      toast({ variant: "destructive", title: "Save Error", description: "Could not save your game progress." });
+    });
   }, [user, firestore, score, hasSaved, toast, checkAndUnlockAchievement]);
 
   const generateQuestion = useCallback(() => {

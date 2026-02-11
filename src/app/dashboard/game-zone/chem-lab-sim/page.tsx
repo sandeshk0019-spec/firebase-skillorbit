@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
@@ -11,12 +12,11 @@ import { cn } from '@/lib/utils';
 import { useUser, useFirestore } from '@/firebase';
 import { collection, doc, addDoc, serverTimestamp, runTransaction } from 'firebase/firestore';
 import { type Activity } from '@/types';
-import { updateUserStreak } from '@/lib/streak';
 import { useToast } from "@/hooks/use-toast";
-import { awardXp } from '@/lib/xp';
 import { xpValues } from '@/lib/rewards';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { format, differenceInCalendarDays } from 'date-fns';
 
 // Define types for better type-safety
 interface Particle {
@@ -110,44 +110,58 @@ export default function ChemLabSimPage() {
     
         logToConsole('Experiment session progress saved!', 'info');
     
-        try {
-            const userRef = doc(firestore, "users", user.uid);
-            const now = serverTimestamp();
-    
+        const userRef = doc(firestore, "users", user.uid);
+        const now = serverTimestamp();
+        const xpGained = xpValues.CHEM_LAB_SESSION;
+
+        runTransaction(firestore, async (transaction) => {
+            const userDoc = await transaction.get(userRef);
+            if (!userDoc.exists()) throw "User document does not exist!";
+            const userData = userDoc.data();
+
+            // Activity Log
             const activityData: Omit<Activity, 'id'> = {
                 userId: user.uid,
                 type: 'GAME_PLAYED',
                 description: `Completed an experiment in the Chem Lab Sim.`,
                 createdAt: now as any,
             };
-            const activitiesColRef = collection(userRef, "activities");
-            addDoc(activitiesColRef, activityData).catch(error => {
-                errorEmitter.emit('permission-error', new FirestorePermissionError({
-                    path: activitiesColRef.path,
-                    operation: 'create',
-                    requestResourceData: activityData
-                }));
-            });
-    
-            runTransaction(firestore, async (transaction) => {
-                const userDoc = await transaction.get(userRef);
-                if (!userDoc.exists()) return;
-                const data = userDoc.data();
-                const currentGamesPlayed = data.gamesPlayed || 0;
+            const activityRef = doc(collection(userRef, "activities"));
+            transaction.set(activityRef, activityData);
 
-                transaction.update(userRef, {
-                    gamesPlayed: currentGamesPlayed + 1,
-                });
-            }).catch(error => {
-                console.error("Chem Lab Sim gamesPlayed transaction failed:", error);
-            });
+            // User Stats Update
+            const currentStreak: number = userData.currentStreak || 0;
+            const lastActiveDateStr: string = userData.lastActiveDate || '';
+            const tasksDoneToday: number = userData.tasksDoneToday || 0;
+            const today = new Date();
+            const todayStr = format(today, 'yyyy-MM-dd');
+            let newStreak = currentStreak;
+            let newTasksDoneToday = tasksDoneToday;
+
+            if (lastActiveDateStr === todayStr) {
+                newTasksDoneToday += 1;
+            } else {
+                const lastActiveDate = lastActiveDateStr ? new Date(lastActiveDateStr) : new Date(0);
+                const daysDifference = differenceInCalendarDays(today, lastActiveDate);
+                newStreak = daysDifference === 1 ? currentStreak + 1 : 1;
+                newTasksDoneToday = 1;
+            }
             
-            await awardXp(firestore, user.uid, xpValues.CHEM_LAB_SESSION, toast);
-            updateUserStreak(firestore, user.uid);
-    
-        } catch (error) {
-             console.error("Error saving Chem Lab session:", error);
-        }
+            const currentGamesPlayed = userData.gamesPlayed || 0;
+            const currentXp = userData.totalXp || 0;
+            const newXp = currentXp + xpGained;
+
+            transaction.update(userRef, {
+                gamesPlayed: currentGamesPlayed + 1,
+                currentStreak: newStreak,
+                lastActiveDate: todayStr,
+                tasksDoneToday: newTasksDoneToday,
+                totalXp: newXp,
+            });
+        }).catch(error => {
+            console.error("Chem Lab Sim session transaction failed:", error);
+            toast({ variant: "destructive", title: "Save Error", description: "Failed to save session data." });
+        });
     }, [user, firestore, logToConsole, toast]);
 
     const handleAction = useCallback(() => {
@@ -620,5 +634,3 @@ export default function ChemLabSimPage() {
     </div>
   );
 }
-
-    

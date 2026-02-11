@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -10,14 +11,13 @@ import { useUser, useFirestore } from '@/firebase';
 import { collection, doc, addDoc, serverTimestamp, runTransaction, getDoc, setDoc } from 'firebase/firestore';
 import { type GameScore, type Activity } from '@/types';
 import { achievements } from '@/lib/achievements';
-import { updateUserStreak } from '@/lib/streak';
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { awardXp } from '@/lib/xp';
-import { xpValues } from '@/lib/rewards';
+import { xpValues, rewardTiers } from '@/lib/rewards';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { format, differenceInCalendarDays } from 'date-fns';
 
 // Card data structure
 interface CardData {
@@ -107,6 +107,7 @@ export default function ZenMatchPage() {
     if (!user || !firestore) return;
     const achRef = doc(firestore, 'users', user.uid, 'achievements', achievementId);
     
+    // This is a fire-and-forget check. We don't want to block UI on this.
     getDoc(achRef).then(achDoc => {
         if (!achDoc.exists()) {
             const achData = achievements[achievementId];
@@ -154,6 +155,103 @@ export default function ZenMatchPage() {
     }).catch(error => console.error("Error checking achievement:", error));
   }, [user, firestore, toast]);
 
+  const saveGameResult = useCallback(() => {
+    if (!user || !firestore || hasSaved) return;
+
+    setHasSaved(true);
+    const userRef = doc(firestore, "users", user.uid);
+    const now = serverTimestamp();
+    const xpGained = xpValues.ZEN_MATCH;
+
+    runTransaction(firestore, async (transaction) => {
+      const userDoc = await transaction.get(userRef);
+      if (!userDoc.exists()) {
+        throw "User document does not exist!";
+      }
+      const userData = userDoc.data();
+
+      // --- 1. Game Score & Activity Log ---
+      const gameScoreData: Omit<GameScore, 'id'> = {
+        userId: user.uid,
+        gameId: 'zen-match',
+        gameName: 'Zen Match',
+        score: moves,
+        createdAt: now as any,
+      };
+      const scoreRef = doc(collection(userRef, "gameScores"));
+      transaction.set(scoreRef, gameScoreData);
+
+      const activityData: Omit<Activity, 'id'> = {
+        userId: user.uid,
+        type: 'GAME_PLAYED',
+        description: `Completed a game of Zen Match in ${moves} moves.`,
+        refId: scoreRef.id,
+        createdAt: now as any,
+      };
+      const activityRef = doc(collection(userRef, "activities"));
+      transaction.set(activityRef, activityData);
+
+      // --- 2. User Stats Update (Streak, XP, etc.) ---
+      const currentStreak: number = userData.currentStreak || 0;
+      const lastActiveDateStr: string = userData.lastActiveDate || '';
+      const tasksDoneToday: number = userData.tasksDoneToday || 0;
+      const today = new Date();
+      const todayStr = format(today, 'yyyy-MM-dd');
+      let newStreak = currentStreak;
+      let newTasksDoneToday = tasksDoneToday;
+
+      if (lastActiveDateStr === todayStr) {
+        newTasksDoneToday += 1;
+      } else {
+        const lastActiveDate = lastActiveDateStr ? new Date(lastActiveDateStr) : new Date(0);
+        const daysDifference = differenceInCalendarDays(today, lastActiveDate);
+        newStreak = daysDifference === 1 ? currentStreak + 1 : 1;
+        newTasksDoneToday = 1;
+      }
+
+      const currentGamesPlayed = userData.gamesPlayed || 0;
+      const currentXp = userData.totalXp || 0;
+      const newXp = currentXp + xpGained;
+
+      transaction.update(userRef, {
+        gamesPlayed: currentGamesPlayed + 1,
+        currentStreak: newStreak,
+        lastActiveDate: todayStr,
+        tasksDoneToday: newTasksDoneToday,
+        totalXp: newXp,
+      });
+
+      return { newXp, currentXp };
+    }).then(({ newXp, currentXp }) => {
+      // --- 3. Post-Transaction Side Effects ---
+      checkAndUnlockAchievement('ZEN_MASTER');
+      
+      for (const tier of rewardTiers) {
+        if (newXp >= tier.xpThreshold && currentXp < tier.xpThreshold) {
+          const { icon: Icon } = tier;
+          toast({
+            title: "Level Up!",
+            description: React.createElement('div', { className: 'flex items-center gap-3' },
+              React.createElement(Icon, { className: `w-8 h-8 ${tier.color}` }),
+              React.createElement('div', null,
+                React.createElement('p', { className: 'font-semibold' }, `You've achieved the rank of ${tier.name}!`),
+                React.createElement('p', { className: 'text-xs' }, `XP Reached: ${tier.xpThreshold.toLocaleString()}`)
+              )
+            ),
+          });
+        }
+      }
+    }).catch(error => {
+      console.error("Zen Match save transaction failed:", error);
+      toast({
+        variant: "destructive",
+        title: "Save Error",
+        description: "Could not save your game progress. Please try again.",
+      });
+    });
+  }, [user, firestore, hasSaved, moves, checkAndUnlockAchievement, toast]);
+
+
   // Check for match
   useEffect(() => {
     if (flippedCards.length === 2) {
@@ -175,81 +273,17 @@ export default function ZenMatchPage() {
   
   // Check for win condition
   useEffect(() => {
-    if (selectedSet && matchedPairs.length === selectedSet.pairs.length) {
+    if (selectedSet && cards.length > 0 && matchedPairs.length === selectedSet.pairs.length) {
       setIsComplete(true);
     }
-  }, [matchedPairs, selectedSet]);
+  }, [matchedPairs, selectedSet, cards]);
 
   // Save game result on completion
   useEffect(() => {
     if (isComplete && !hasSaved) {
-      setHasSaved(true);
-      
-      const saveGameResult = () => {
-        if (!user || !firestore) return;
-
-        const userRef = doc(firestore, "users", user.uid);
-        const now = serverTimestamp();
-
-        // 1. Save Game Score
-        const gameScoreData: Omit<GameScore, 'id'> = {
-            userId: user.uid,
-            gameId: 'zen-match',
-            gameName: 'Zen Match',
-            score: moves,
-            createdAt: now as any,
-        };
-        const scoresColRef = collection(userRef, "gameScores");
-        addDoc(scoresColRef, gameScoreData).then(scoreRef => {
-            // 2. Save Activity (chained)
-            const activityData: Omit<Activity, 'id'> = {
-                userId: user.uid,
-                type: 'GAME_PLAYED',
-                description: `Completed a game of Zen Match in ${moves} moves.`,
-                refId: scoreRef.id,
-                createdAt: now as any,
-            };
-            const activitiesColRef = collection(userRef, "activities");
-            addDoc(activitiesColRef, activityData).catch(error => {
-                errorEmitter.emit('permission-error', new FirestorePermissionError({
-                    path: activitiesColRef.path,
-                    operation: 'create',
-                    requestResourceData: activityData
-                }));
-            });
-        }).catch(error => {
-            errorEmitter.emit('permission-error', new FirestorePermissionError({
-                path: scoresColRef.path,
-                operation: 'create',
-                requestResourceData: gameScoreData
-            }));
-        });
-
-        // 3. Update User Profile Stats in a Transaction (non-blocking)
-        runTransaction(firestore, async (transaction) => {
-            const userDoc = await transaction.get(userRef);
-            if (!userDoc.exists()) return;
-            const data = userDoc.data();
-            const currentGamesPlayed = data.gamesPlayed || 0;
-
-            transaction.update(userRef, {
-                gamesPlayed: currentGamesPlayed + 1,
-            });
-        }).catch(error => {
-            console.error("Zen Match gamesPlayed transaction failed:", error);
-        });
-        
-        // 4. Award XP (non-blocking)
-        awardXp(firestore, user.uid, xpValues.ZEN_MATCH, toast);
-        
-        // 5. Update Streak & Check Achievements (non-blocking)
-        updateUserStreak(firestore, user.uid);
-        checkAndUnlockAchievement('ZEN_MASTER');
-      };
-
       saveGameResult();
     }
-  }, [isComplete, hasSaved, user, firestore, moves, checkAndUnlockAchievement, toast, selectedSet]);
+  }, [isComplete, hasSaved, saveGameResult]);
 
 
   const handleCardClick = (index: number) => {
