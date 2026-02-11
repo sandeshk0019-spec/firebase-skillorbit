@@ -5,7 +5,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { XCircle, Flame, Snowflake, RotateCw, TestTube, Beaker, FlaskConical, Atom, Minus, Droplet, Trash2, SlidersHorizontal } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -17,6 +17,8 @@ import { xpValues } from '@/lib/rewards';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { format, differenceInCalendarDays } from 'date-fns';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Slider } from '@/components/ui/slider';
 
 // Define types for better type-safety
 interface Particle {
@@ -120,6 +122,18 @@ export default function ChemLabSimPage() {
     const { user } = useUser();
     const firestore = useFirestore();
     const { toast } = useToast();
+
+    // Dialog state
+    const [dialogState, setDialogState] = useState<{
+        open: boolean;
+        isTool: boolean;
+        id: string;
+        name: string;
+        unit: string;
+        max: number;
+        step: number;
+    } | null>(null);
+    const [sliderValue, setSliderValue] = useState(0);
     
     // Use useRef for lab state to prevent re-renders on every animation frame
     const labState = useRef<LabState>({
@@ -246,43 +260,46 @@ export default function ChemLabSimPage() {
         }
     }, []);
 
-    const labAdd = useCallback((type: string) => {
+    const labAdd = useCallback((type: string, amount: number) => {
         handleAction();
         const state = labState.current;
         const chemical = chemicals.find(c => c.id === type);
-        logToConsole(`Added ${chemical?.name || type}.`);
+        logToConsole(`Added ${amount}ml of ${chemical?.name || type}.`);
 
-        state.volume = Math.min(450, state.volume + 50);
-        state.composition.push(type);
+        state.volume = Math.min(450, state.volume + amount);
+        if (!state.composition.includes(type)) {
+          state.composition.push(type);
+        }
 
         let reactionOccurred = false;
+        const amountRatio = amount / 25; // Base amount for reaction scaling
 
         // Chemical Reactions
         switch(type) {
             case 'acid':
-                state.ph = Math.max(0, state.ph - 3);
+                state.ph = Math.max(0, state.ph - (1.5 * amountRatio));
                 if (!state.composition.includes('Cl-')) state.composition.push('Cl-');
                 if (state.composition.includes('magnesium')) {
                     logToConsole('Reaction: Magnesium + Acid -> Bubbles (H₂)', 'warn');
-                    spawnParticles(30, 'bubble', 400, 400);
+                    spawnParticles(Math.round(30 * amountRatio), 'bubble', 400, 400);
                     reactionOccurred = true;
                 }
                 if (state.composition.includes('silver_nitrate')) {
                     logToConsole('Reaction: Silver Nitrate + Chloride -> White precipitate (AgCl)', 'warn');
-                    state.precipitate = Math.min(100, state.precipitate + 40);
+                    state.precipitate = Math.min(100, state.precipitate + (20 * amountRatio));
                     reactionOccurred = true;
                 }
                 break;
             case 'base':
-                state.ph = Math.min(14, state.ph + 3);
+                state.ph = Math.min(14, state.ph + (1.5 * amountRatio));
                 if (state.composition.includes('copper_sulfate')) {
                     logToConsole('Reaction: Copper Sulfate + Base -> Blue precipitate (Cu(OH)₂)', 'warn');
-                    state.precipitate = Math.min(100, state.precipitate + 30);
+                    state.precipitate = Math.min(100, state.precipitate + (15 * amountRatio));
                     reactionOccurred = true;
                 }
                 break;
             case 'water':
-                state.ph += (7 - state.ph) * 0.3; // Neutralize towards 7
+                state.ph += (7 - state.ph) * (0.3 * amountRatio); // Neutralize towards 7
                 if (state.composition.length === 1) { // If it's the only thing
                     state.color = { r: 173, g: 216, b: 230, a: 0.5 };
                 }
@@ -293,16 +310,16 @@ export default function ChemLabSimPage() {
                     logToConsole(`DANGER: ${type} reacts violently with water!`, 'danger');
                     state.explosionTimer = 50; // duration of shake
                     setIsExploding(true);
-                    state.temp += 50;
-                    spawnParticles(100, 'fire', 400, 350);
-                    spawnParticles(50, 'smoke', 400, 350);
+                    state.temp += 50 * amountRatio;
+                    spawnParticles(Math.round(100 * amountRatio), 'fire', 400, 350);
+                    spawnParticles(Math.round(50 * amountRatio), 'smoke', 400, 350);
                     reactionOccurred = true;
                 }
                 break;
             case 'magnesium':
                  if (state.composition.includes('acid')) {
                     logToConsole('Reaction: Magnesium + Acid -> Bubbles (H₂)', 'warn');
-                    spawnParticles(30, 'bubble', 400, 400);
+                    spawnParticles(Math.round(30 * amountRatio), 'bubble', 400, 400);
                     reactionOccurred = true;
                 }
                 break;
@@ -312,14 +329,14 @@ export default function ChemLabSimPage() {
                 }
                 if (state.composition.includes('base')) {
                     logToConsole('Reaction: Copper Sulfate + Base -> Blue precipitate (Cu(OH)₂)', 'warn');
-                    state.precipitate = Math.min(100, state.precipitate + 30);
+                    state.precipitate = Math.min(100, state.precipitate + (15 * amountRatio));
                     reactionOccurred = true;
                 }
                 break;
             case 'silver_nitrate':
-                 if (state.composition.includes('Cl-')) {
+                 if (state.composition.includes('Cl-') || state.composition.includes('acid')) {
                     logToConsole('Reaction: Silver Nitrate + Chloride -> White precipitate (AgCl)', 'warn');
-                    state.precipitate = Math.min(100, state.precipitate + 40);
+                    state.precipitate = Math.min(100, state.precipitate + (20 * amountRatio));
                     reactionOccurred = true;
                 }
                 break;
@@ -339,21 +356,40 @@ export default function ChemLabSimPage() {
             }
         }
 
-        if(!reactionOccurred) spawnParticles(10, 'bubble', 400, 400);
+        if(!reactionOccurred) spawnParticles(Math.round(10 * amountRatio), 'bubble', 400, 400);
 
     }, [getPhColor, spawnParticles, logToConsole, handleAction]);
 
-    const labAction = useCallback((action: string) => {
+    const labAction = useCallback((action: string, amount?: number) => {
         handleAction();
-        logToConsole(`Action: ${action}.`);
         if (action === 'heat') {
-            labState.current.temp += 20;
+            const heatAmount = amount || 20;
+            logToConsole(`Action: ${action} by ${heatAmount}°C.`);
+            labState.current.temp += heatAmount;
         } else if (action === 'cool') {
-            labState.current.temp = Math.max(0, labState.current.temp - 20);
+            const coolAmount = amount || 20;
+            logToConsole(`Action: ${action} by ${coolAmount}°C.`);
+            labState.current.temp = Math.max(0, labState.current.temp - coolAmount);
         } else if (action === 'mix') {
+            logToConsole(`Action: ${action}.`);
             spawnParticles(20, 'bubble', 400, 400);
         }
     }, [spawnParticles, logToConsole, handleAction]);
+
+    const openDialog = (isTool: boolean, id: string, name: string, unit: string, max: number, step: number) => {
+        setSliderValue(max / 2); // Default to half
+        setDialogState({ open: true, isTool, id, name, unit, max, step });
+    };
+
+    const handleConfirm = () => {
+        if (!dialogState) return;
+        if (dialogState.isTool) {
+            labAction(dialogState.id, sliderValue);
+        } else {
+            labAdd(dialogState.id, sliderValue);
+        }
+        setDialogState(null);
+    };
     
     const resetLab = useCallback(() => {
         logToConsole('Lab reset.');
@@ -568,12 +604,19 @@ export default function ChemLabSimPage() {
                                             "relative text-left p-3 rounded-lg transition-all border border-white/10 bg-black/20 hover:bg-white/5 hover:border-white/20 disabled:opacity-50 disabled:cursor-not-allowed",
                                             item.disabled && "line-through"
                                         )}
-                                        onClick={() => labAdd(item.id)}
+                                        onClick={() => openDialog(false, item.id, item.name, 'ml', 50, 5)}
                                         disabled={item.disabled}
                                     >
                                         <div className="flex justify-between items-center mb-1">
                                             <p className="font-semibold text-sm text-white/90 truncate pr-2">{item.name}</p>
-                                            <span className="text-xs font-mono bg-primary/20 text-primary-foreground py-0.5 px-1.5 rounded">
+                                            <span className={cn("text-xs font-mono py-0.5 px-1.5 rounded",
+                                                item.description.includes('ACID') && 'bg-orange-500/80 text-white',
+                                                item.description.includes('BASE') && 'bg-blue-500/80 text-white',
+                                                item.description.includes('METAL') && 'bg-gray-500/80 text-white',
+                                                item.description.includes('SOLVENT') && 'bg-green-500/80 text-white',
+                                                item.description.includes('INDICATOR') && 'bg-purple-500/80 text-white',
+                                                'bg-primary/20 text-primary-foreground'
+                                            )}>
                                                 {item.formula}
                                             </span>
                                         </div>
@@ -592,7 +635,7 @@ export default function ChemLabSimPage() {
                 <div className={cn("flex-1 bg-[#1e1e2e] rounded-lg relative overflow-hidden border border-primary/20 shadow-[inset_0_0_20px_rgba(0,0,0,0.5)]", isExploding && 'animate-shake')}>
                     <canvas ref={canvasRef} width="800" height="600" className="absolute top-0 left-0 w-full h-full" />
                 </div>
-                <Card className="bg-black/30 backdrop-blur-sm border-white/10">
+                 <Card className="bg-black/30 backdrop-blur-sm border-white/10">
                    <CardHeader>
                         <CardTitle className="font-headline text-lg text-primary tracking-widest flex items-center gap-2">
                            <SlidersHorizontal className="w-5 h-5"/> LAB CONTROLS
@@ -601,7 +644,16 @@ export default function ChemLabSimPage() {
                     <CardContent>
                          <div className="grid grid-cols-4 gap-3">
                             {tools.map(tool => (
-                                <Button key={tool.id} variant="secondary" className={cn("h-16 w-full flex flex-col gap-1 text-xs transition-transform hover:scale-105", tool.color)} onClick={() => labAction(tool.id)}>
+                                <Button
+                                    key={tool.id}
+                                    variant="secondary"
+                                    className={cn("h-16 w-full flex flex-col gap-1 text-xs transition-transform hover:scale-105", tool.color)}
+                                    onClick={() =>
+                                        tool.id === 'mix'
+                                            ? labAction(tool.id)
+                                            : openDialog(true, tool.id, tool.name, '°C', 50, 5)
+                                    }
+                                >
                                     <tool.icon className="w-5 h-5"/>
                                     {tool.name}
                                 </Button>
@@ -638,6 +690,32 @@ export default function ChemLabSimPage() {
                 </Link>
              </div>
         </div>
+        <Dialog open={!!dialogState?.open} onOpenChange={(isOpen) => !isOpen && setDialogState(null)}>
+            <DialogContent className="bg-background/80 backdrop-blur-lg border-primary/50">
+                <DialogHeader>
+                    <DialogTitle className="font-headline text-primary">Set Amount for {dialogState?.name}</DialogTitle>
+                    <DialogDescription>
+                        Use the slider to set the amount to {dialogState?.isTool ? 'apply' : 'add'}.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="py-4">
+                    <div className="flex justify-between items-center mb-2 text-foreground">
+                        <span>Amount</span>
+                        <span className="font-bold text-lg">{sliderValue} {dialogState?.unit}</span>
+                    </div>
+                    <Slider
+                        value={[sliderValue]}
+                        onValueChange={(value) => setSliderValue(value[0])}
+                        max={dialogState?.max}
+                        step={dialogState?.step}
+                    />
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => setDialogState(null)}>Cancel</Button>
+                    <Button onClick={handleConfirm}>Confirm</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     </div>
   );
 }
