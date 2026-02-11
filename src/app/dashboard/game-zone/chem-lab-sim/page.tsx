@@ -19,6 +19,8 @@ import { FirestorePermissionError } from '@/firebase/errors';
 import { format, differenceInCalendarDays } from 'date-fns';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Slider } from '@/components/ui/slider';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 // Define types for better type-safety
 interface Particle {
@@ -133,7 +135,7 @@ export default function ChemLabSimPage() {
         max: number;
         step: number;
     } | null>(null);
-    const [sliderValue, setSliderValue] = useState(0);
+    const [dialogValue, setDialogValue] = useState(0);
     
     // Use useRef for lab state to prevent re-renders on every animation frame
     const labState = useRef<LabState>({
@@ -377,16 +379,16 @@ export default function ChemLabSimPage() {
     }, [spawnParticles, logToConsole, handleAction]);
 
     const openDialog = (isTool: boolean, id: string, name: string, unit: string, max: number, step: number) => {
-        setSliderValue(max / 2); // Default to half
+        setDialogValue(isTool ? 20 : 25);
         setDialogState({ open: true, isTool, id, name, unit, max, step });
     };
 
     const handleConfirm = () => {
         if (!dialogState) return;
         if (dialogState.isTool) {
-            labAction(dialogState.id, sliderValue);
+            labAction(dialogState.id, dialogValue);
         } else {
-            labAdd(dialogState.id, sliderValue);
+            labAdd(dialogState.id, dialogValue);
         }
         setDialogState(null);
     };
@@ -604,7 +606,7 @@ export default function ChemLabSimPage() {
                                             "relative text-left p-3 rounded-lg transition-all border border-white/10 bg-black/20 hover:bg-white/5 hover:border-white/20 disabled:opacity-50 disabled:cursor-not-allowed",
                                             item.disabled && "line-through"
                                         )}
-                                        onClick={() => openDialog(false, item.id, item.name, 'ml', 50, 5)}
+                                        onClick={() => openDialog(false, item.id, item.name, 'ml', 50, 0.1)}
                                         disabled={item.disabled}
                                     >
                                         <div className="flex justify-between items-center mb-1">
@@ -651,7 +653,7 @@ export default function ChemLabSimPage() {
                                     onClick={() =>
                                         tool.id === 'mix'
                                             ? labAction(tool.id)
-                                            : openDialog(true, tool.id, tool.name, '°C', 50, 5)
+                                            : openDialog(true, tool.id, tool.name, '°C', 50, 1)
                                     }
                                 >
                                     <tool.icon className="w-5 h-5"/>
@@ -695,17 +697,32 @@ export default function ChemLabSimPage() {
                 <DialogHeader>
                     <DialogTitle className="font-headline text-primary">Set Amount for {dialogState?.name}</DialogTitle>
                     <DialogDescription>
-                        Use the slider to set the amount to {dialogState?.isTool ? 'apply' : 'add'}.
+                        Use the slider or input for a precise amount to {dialogState?.isTool ? 'apply' : 'add'}.
                     </DialogDescription>
                 </DialogHeader>
-                <div className="py-4">
-                    <div className="flex justify-between items-center mb-2 text-foreground">
-                        <span>Amount</span>
-                        <span className="font-bold text-lg">{sliderValue} {dialogState?.unit}</span>
+                <div className="py-4 space-y-4">
+                    <div className="grid grid-cols-3 items-center gap-4">
+                        <Label htmlFor="amount-input" className="text-right">
+                           Amount ({dialogState?.unit})
+                        </Label>
+                        <Input
+                            id="amount-input"
+                            type="number"
+                            value={dialogValue}
+                            onChange={(e) => {
+                                const value = e.target.value === '' ? 0 : parseFloat(e.target.value);
+                                if (!isNaN(value) && dialogState) {
+                                    setDialogValue(Math.max(0, Math.min(dialogState.max, value)));
+                                }
+                            }}
+                            max={dialogState?.max}
+                            step={dialogState?.step}
+                            className="col-span-2"
+                        />
                     </div>
                     <Slider
-                        value={[sliderValue]}
-                        onValueChange={(value) => setSliderValue(value[0])}
+                        value={[dialogValue]}
+                        onValueChange={(value) => setDialogValue(value[0])}
                         max={dialogState?.max}
                         step={dialogState?.step}
                     />
