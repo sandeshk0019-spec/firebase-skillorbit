@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { XCircle, Flame, Snowflake, RotateCw, TestTube, Beaker, FlaskConical, Atom, Minus, Droplet, Trash2, SlidersHorizontal } from 'lucide-react';
+import { XCircle, Flame, Snowflake, RotateCw, TestTube, Beaker, FlaskConical, Atom, Minus, Droplet, Trash2, SlidersHorizontal, TriangleAlert } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUser, useFirestore } from '@/firebase';
 import { collection, doc, addDoc, serverTimestamp, runTransaction } from 'firebase/firestore';
@@ -18,6 +18,16 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { format, differenceInCalendarDays } from 'date-fns';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Slider } from '@/components/ui/slider';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -136,6 +146,11 @@ export default function ChemLabSimPage() {
         step: number;
     } | null>(null);
     const [dialogValue, setDialogValue] = useState(0);
+
+    const [warningDialogState, setWarningDialogState] = useState<{
+      open: boolean;
+      chemical: typeof chemicals[0];
+    } | null>(null);
     
     // Use useRef for lab state to prevent re-renders on every animation frame
     const labState = useRef<LabState>({
@@ -308,6 +323,8 @@ export default function ChemLabSimPage() {
                 break;
             case 'sodium':
             case 'potassium':
+            case 'lithium':
+            case 'calcium':
                 if (state.composition.includes('water')) {
                     logToConsole(`DANGER: ${type} reacts violently with water!`, 'danger');
                     state.explosionTimer = 50; // duration of shake
@@ -381,6 +398,15 @@ export default function ChemLabSimPage() {
     const openDialog = (isTool: boolean, id: string, name: string, unit: string, max: number, step: number) => {
         setDialogValue(isTool ? 20 : 25);
         setDialogState({ open: true, isTool, id, name, unit, max, step });
+    };
+
+    const handleChemicalClick = (chemical: (typeof chemicals)[0]) => {
+        const isReactive = chemical.description.includes('REACTIVE');
+        if (isReactive) {
+            setWarningDialogState({ open: true, chemical });
+        } else {
+            openDialog(false, chemical.id, chemical.name, 'ml', 100, 0.1);
+        }
     };
 
     const handleConfirm = () => {
@@ -606,7 +632,7 @@ export default function ChemLabSimPage() {
                                             "relative text-left p-3 rounded-lg transition-all border border-white/10 bg-black/20 hover:bg-white/5 hover:border-white/20 disabled:opacity-50 disabled:cursor-not-allowed",
                                             item.disabled && "line-through"
                                         )}
-                                        onClick={() => openDialog(false, item.id, item.name, 'ml', 100, 0.1)}
+                                        onClick={() => handleChemicalClick(item)}
                                         disabled={item.disabled}
                                     >
                                         <div className="flex justify-between items-center mb-1">
@@ -723,7 +749,7 @@ export default function ChemLabSimPage() {
                     <Slider
                         value={[dialogValue]}
                         onValueChange={(value) => setDialogValue(value[0])}
-                        max={dialogState?.max}
+                        max={dialogState?.isTool ? 200 : undefined}
                         min={0}
                         step={dialogState?.step}
                     />
@@ -734,8 +760,37 @@ export default function ChemLabSimPage() {
                 </DialogFooter>
             </DialogContent>
         </Dialog>
+
+        <AlertDialog open={!!warningDialogState?.open} onOpenChange={(isOpen) => !isOpen && setWarningDialogState(null)}>
+            <AlertDialogContent className="bg-background/80 backdrop-blur-lg border-yellow-500/50">
+                <AlertDialogHeader>
+                    <AlertDialogTitle className="flex items-center gap-2 font-headline text-yellow-400">
+                        <TriangleAlert className="w-6 h-6"/>
+                        Warning: Reactive Chemical
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                        You are about to add {warningDialogState?.chemical.name} ({warningDialogState?.chemical.formula}), which is a {warningDialogState?.chemical.description.toLowerCase()}.
+                        This can cause a violent reaction, especially with water. Are you sure you want to proceed?
+                        <div className="mt-4 p-3 bg-yellow-900/50 border border-yellow-700/50 rounded-lg text-sm">
+                            <p className="font-bold text-yellow-300">Safety Tip:</p>
+                            <p className="text-yellow-400/90">In a real lab, always add reactive metals to a large volume of solvent in small pieces and wear safety goggles.</p>
+                        </div>
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <Button variant="outline" onClick={() => setWarningDialogState(null)}>Cancel</Button>
+                    <AlertDialogAction 
+                        className="bg-yellow-500 hover:bg-yellow-600 text-black"
+                        onClick={() => {
+                        if (warningDialogState) {
+                          const chem = warningDialogState.chemical;
+                          openDialog(false, chem.id, chem.name, 'ml', 100, 0.1);
+                          setWarningDialogState(null);
+                        }
+                    }}>Proceed</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
     </div>
   );
 }
-
-    
