@@ -1,3 +1,4 @@
+
 /**
  * This ruleset enforces a strict user-ownership security model for the SkillOrbit
  * application. It is designed for rapid prototyping, focusing on robust
@@ -75,29 +76,20 @@ service cloud.firestore {
 
     // QUIZ ATTEMPTS
     match /users/{userId}/quizAttempts/{attemptId} {
-      allow get: if isOwner(userId);
+      allow get, list, create: if isOwner(userId);
       allow update, delete: if false;
-    }
-    match /users/{userId}/quizAttempts {
-      allow list, create: if isOwner(userId);
     }
 
     // GAME SCORES
     match /users/{userId}/gameScores/{scoreId} {
-      allow get: if isOwner(userId);
+      allow get, list, create: if isOwner(userId);
       allow update, delete: if false;
-    }
-    match /users/{userId}/gameScores {
-      allow list, create: if isOwner(userId);
     }
     
     // ACTIVITIES
     match /users/{userId}/activities/{activityId} {
-      allow get: if isOwner(userId);
+      allow get, list, create: if isOwner(userId);
       allow update, delete: if false;
-    }
-    match /users/{userId}/activities {
-      allow list, create: if isOwner(userId);
     }
 
     // ACHIEVEMENTS
