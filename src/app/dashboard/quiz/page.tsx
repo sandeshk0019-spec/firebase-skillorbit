@@ -21,7 +21,6 @@ import { achievements } from "@/lib/achievements";
 import { updateUserStreak } from "@/lib/streak";
 import { awardXp } from '@/lib/xp';
 import { xpValues } from '@/lib/rewards';
-import { format } from "date-fns";
 import { errorEmitter } from "@/firebase/error-emitter";
 import { FirestorePermissionError } from "@/firebase/errors";
 
@@ -141,19 +140,15 @@ export default function QuizPage() {
                 throw "User document does not exist!";
             }
             const data = userDoc.data();
-            const todayStr = format(new Date(), 'yyyy-MM-dd');
             
             const oldTotalQuizzes = data.totalQuizzes || 0;
             const oldTotalCorrect = data.totalCorrectAnswers || 0;
             const oldTotalAnswered = data.totalQuestionsAnswered || 0;
-            const dailyTasks = data.lastActiveDate === todayStr ? (data.tasksDoneToday || 0) : 0;
 
             transaction.update(userRef, {
                 totalQuizzes: oldTotalQuizzes + 1,
                 totalCorrectAnswers: oldTotalCorrect + score,
                 totalQuestionsAnswered: oldTotalAnswered + quiz.length,
-                tasksDoneToday: dailyTasks + 1,
-                lastActiveDate: todayStr,
             });
         });
         

@@ -15,7 +15,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { awardXp } from '@/lib/xp';
 import { xpValues } from '@/lib/rewards';
-import { format } from 'date-fns';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
@@ -230,14 +229,10 @@ export default function ZenMatchPage() {
                 const userDoc = await transaction.get(userRef);
                 if (!userDoc.exists()) return;
                 const data = userDoc.data();
-                const todayStr = format(new Date(), 'yyyy-MM-dd');
                 const currentGamesPlayed = data.gamesPlayed || 0;
-                const dailyTasks = data.lastActiveDate === todayStr ? (data.tasksDoneToday || 0) : 0;
 
                 transaction.update(userRef, {
                     gamesPlayed: currentGamesPlayed + 1,
-                    tasksDoneToday: dailyTasks + 1,
-                    lastActiveDate: todayStr,
                 });
             });
             

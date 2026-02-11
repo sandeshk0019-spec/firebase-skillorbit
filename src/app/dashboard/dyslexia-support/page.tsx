@@ -23,7 +23,6 @@ import { doc, runTransaction } from 'firebase/firestore';
 import { updateUserStreak } from '@/lib/streak';
 import { awardXp } from '@/lib/xp';
 import { xpValues } from '@/lib/rewards';
-import { format } from "date-fns";
 
 const challengeParagraphs = [
     "The Great Wall of China is not a single continuous wall but a system of walls, watchtowers, and fortresses built over centuries. It stretches over 13,000 miles, making it the longest man-made structure in the world.",
@@ -247,17 +246,13 @@ function ReadingChallengeTab() {
           if (!userDoc.exists()) return;
 
           const data = userDoc.data();
-          const todayStr = format(new Date(), 'yyyy-MM-dd');
           
           const oldTotalCorrect = data.totalCorrectAnswers || 0;
           const oldTotalAnswered = data.totalQuestionsAnswered || 0;
           const gamesPlayed = data.gamesPlayed || 0;
-          const dailyTasks = data.lastActiveDate === todayStr ? (data.tasksDoneToday || 0) : 0;
 
           transaction.update(userRef, {
             gamesPlayed: gamesPlayed + 1,
-            tasksDoneToday: dailyTasks + 1,
-            lastActiveDate: todayStr,
             totalCorrectAnswers: oldTotalCorrect + result.correctlyReadWords,
             totalQuestionsAnswered: oldTotalAnswered + result.totalWordsInTarget,
           });
