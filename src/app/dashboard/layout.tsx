@@ -13,7 +13,8 @@ import {
   Gamepad2,
   MessageSquare,
   Eye,
-  Rocket
+  Rocket,
+  Sparkles
 } from "lucide-react"
 
 import {
@@ -32,7 +33,7 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from "@/firebase"
 import { signOut } from "firebase/auth"
-import { doc, getDoc, runTransaction, serverTimestamp } from 'firebase/firestore'
+import { doc, runTransaction, serverTimestamp } from 'firebase/firestore'
 import { format } from 'date-fns'
 import { Progress } from "@/components/ui/progress"
 import { rewardTiers } from "@/lib/rewards"
@@ -112,6 +113,14 @@ function AppSidebar({ userProfile, isLoading }: { userProfile: UserProfile | nul
                 <Link href="/dashboard/dyslexia-support">
                   <Eye />
                   <span>Dyslexia Support</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild isActive={isActive('/dashboard/ai-motivation')} tooltip="AI Motivation">
+                <Link href="/dashboard/ai-motivation">
+                  <Sparkles />
+                  <span>AI Motivation</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
