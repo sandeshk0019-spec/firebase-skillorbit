@@ -7,15 +7,12 @@ import Link from "next/link"
 import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutGrid,
-  PanelLeft,
   Settings,
   LogOut,
   Loader2,
   Gamepad2,
   MessageSquare,
   Eye,
-  CheckCircle2,
-  Zap,
   Rocket
 } from "lucide-react"
 
