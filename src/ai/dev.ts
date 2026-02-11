@@ -7,4 +7,3 @@ import '@/ai/flows/analyze-speech-for-dyslexia.ts';
 import '@/ai/flows/generate-quiz-questions.ts';
 import '@/ai/flows/generate-anime-video.ts';
 import '@/ai/flows/generate-speech-from-text.ts';
-import '@/ai/flows/generate-motivational-speech.ts';
