@@ -57,7 +57,7 @@ const SidebarProvider = React.forwardRef<
 >(
   (
     {
-      defaultOpen = true,
+      defaultOpen: defaultOpenProp,
       open: openProp,
       onOpenChange: setOpenProp,
       className,
@@ -67,6 +67,7 @@ const SidebarProvider = React.forwardRef<
     },
     ref
   ) => {
+    const defaultOpen = defaultOpenProp ?? true;
     const isMobile = useIsMobile()
     const [openMobile, setOpenMobile] = React.useState(false)
 
@@ -166,15 +167,18 @@ const Sidebar = React.forwardRef<
 >(
   (
     {
-      side = "left",
-      variant = "sidebar",
-      collapsible = "offcanvas",
+      side: sideProp,
+      variant: variantProp,
+      collapsible: collapsibleProp,
       className,
       children,
       ...props
     },
     ref
   ) => {
+    const side = sideProp ?? "left";
+    const variant = variantProp ?? "sidebar";
+    const collapsible = collapsibleProp ?? "offcanvas";
     const { isMobile, state, openMobile, setOpenMobile } = useSidebar()
 
     if (collapsible === "none") {
@@ -431,7 +435,8 @@ SidebarGroup.displayName = "SidebarGroup"
 const SidebarGroupLabel = React.forwardRef<
   HTMLDivElement,
   React.ComponentProps<"div"> & { asChild?: boolean }
->(({ className, asChild = false, ...props }, ref) => {
+>(({ className, asChild: asChildProp, ...props }, ref) => {
+  const asChild = asChildProp ?? false;
   const Comp = asChild ? Slot : "div"
 
   return (
@@ -452,7 +457,8 @@ SidebarGroupLabel.displayName = "SidebarGroupLabel"
 const SidebarGroupAction = React.forwardRef<
   HTMLButtonElement,
   React.ComponentProps<"button"> & { asChild?: boolean }
->(({ className, asChild = false, ...props }, ref) => {
+>(({ className, asChild: asChildProp, ...props }, ref) => {
+  const asChild = asChildProp ?? false;
   const Comp = asChild ? Slot : "button"
 
   return (
@@ -543,16 +549,20 @@ const SidebarMenuButton = React.forwardRef<
 >(
   (
     {
-      asChild = false,
-      isActive = false,
-      variant = "default",
-      size = "default",
+      asChild: asChildProp,
+      isActive: isActiveProp,
+      variant: variantProp,
+      size: sizeProp,
       tooltip,
       className,
       ...props
     },
     ref
   ) => {
+    const asChild = asChildProp ?? false;
+    const isActive = isActiveProp ?? false;
+    const variant = variantProp ?? "default";
+    const size = sizeProp ?? "default";
     const Comp = asChild ? Slot : "button"
     const { isMobile, state } = useSidebar()
 
@@ -598,7 +608,9 @@ const SidebarMenuAction = React.forwardRef<
     asChild?: boolean
     showOnHover?: boolean
   }
->(({ className, asChild = false, showOnHover = false, ...props }, ref) => {
+>(({ className, asChild: asChildProp, showOnHover: showOnHoverProp, ...props }, ref) => {
+  const asChild = asChildProp ?? false;
+  const showOnHover = showOnHoverProp ?? false;
   const Comp = asChild ? Slot : "button"
 
   return (
@@ -649,7 +661,8 @@ const SidebarMenuSkeleton = React.forwardRef<
   React.ComponentProps<"div"> & {
     showIcon?: boolean
   }
->(({ className, showIcon = false, ...props }, ref) => {
+>(({ className, showIcon, ...props }, ref) => {
+  const showIconProp = showIcon ?? false;
   // Random width between 50 to 90%.
   const width = React.useMemo(() => {
     return `${Math.floor(Math.random() * 40) + 50}%`
@@ -662,7 +675,7 @@ const SidebarMenuSkeleton = React.forwardRef<
       className={cn("rounded-md h-8 flex gap-2 px-2 items-center", className)}
       {...props}
     >
-      {showIcon && (
+      {showIconProp && (
         <Skeleton
           className="size-4 rounded-md"
           data-sidebar="menu-skeleton-icon"
@@ -712,7 +725,9 @@ const SidebarMenuSubButton = React.forwardRef<
     size?: "sm" | "md"
     isActive?: boolean
   }
->(({ asChild = false, size = "md", isActive, className, ...props }, ref) => {
+>(({ asChild: asChildProp, size: sizeProp, isActive, className, ...props }, ref) => {
+  const asChild = asChildProp ?? false;
+  const size = sizeProp ?? "md";
   const Comp = asChild ? Slot : "a"
 
   return (

@@ -48,7 +48,7 @@ const Carousel = React.forwardRef<
 >(
   (
     {
-      orientation = "horizontal",
+      orientation,
       opts,
       setApi,
       plugins,
@@ -58,10 +58,11 @@ const Carousel = React.forwardRef<
     },
     ref
   ) => {
+    const orientationProp = orientation ?? "horizontal";
     const [carouselRef, api] = useEmblaCarousel(
       {
         ...opts,
-        axis: orientation === "horizontal" ? "x" : "y",
+        axis: orientationProp === "horizontal" ? "x" : "y",
       },
       plugins
     )
@@ -127,7 +128,7 @@ const Carousel = React.forwardRef<
           api: api,
           opts,
           orientation:
-            orientation || (opts?.axis === "y" ? "vertical" : "horizontal"),
+            orientationProp || (opts?.axis === "y" ? "vertical" : "horizontal"),
           scrollPrev,
           scrollNext,
           canScrollPrev,
@@ -197,14 +198,16 @@ CarouselItem.displayName = "CarouselItem"
 const CarouselPrevious = React.forwardRef<
   HTMLButtonElement,
   React.ComponentProps<typeof Button>
->(({ className, variant = "outline", size = "icon", ...props }, ref) => {
+>(({ className, variant, size, ...props }, ref) => {
   const { orientation, scrollPrev, canScrollPrev } = useCarousel()
+  const variantProp = variant ?? "outline";
+  const sizeProp = size ?? "icon";
 
   return (
     <Button
       ref={ref}
-      variant={variant}
-      size={size}
+      variant={variantProp}
+      size={sizeProp}
       className={cn(
         "absolute  h-8 w-8 rounded-full",
         orientation === "horizontal"
@@ -226,14 +229,16 @@ CarouselPrevious.displayName = "CarouselPrevious"
 const CarouselNext = React.forwardRef<
   HTMLButtonElement,
   React.ComponentProps<typeof Button>
->(({ className, variant = "outline", size = "icon", ...props }, ref) => {
+>(({ className, variant, size, ...props }, ref) => {
   const { orientation, scrollNext, canScrollNext } = useCarousel()
+  const variantProp = variant ?? "outline";
+  const sizeProp = size ?? "icon";
 
   return (
     <Button
       ref={ref}
-      variant={variant}
-      size={size}
+      variant={variantProp}
+      size={sizeProp}
       className={cn(
         "absolute h-8 w-8 rounded-full",
         orientation === "horizontal"
