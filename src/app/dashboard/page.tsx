@@ -47,7 +47,7 @@ const StatCard = ({ icon, label, value, delay }: { icon: React.ElementType, labe
       <div className="flex flex-col items-center text-center">
         <Icon className="w-8 h-8 text-primary mb-3" />
         <p className="text-muted-foreground text-sm">{label}</p>
-        <p className="text-2xl font-bold font-headline text-pulse">{value}</p>
+        <p className="text-2xl font-bold font-headline">{value}</p>
       </div>
     </HolographicCard>
   );
@@ -71,7 +71,7 @@ const RewardsTracker = () => {
 
   return (
     <HolographicCard className="lg:col-span-3 load-hidden delay-600">
-        <h3 className="text-xl font-headline text-secondary mb-4 text-pulse">Reward Tiers</h3>
+        <h3 className="text-xl font-headline text-secondary mb-4">Reward Tiers</h3>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 text-center">
             {rewardTiers.map(tier => {
                 const isUnlocked = unlockedIds.has(tier.id);
@@ -160,11 +160,11 @@ export default function DashboardPage() {
 
         {/* Header */}
         <header className="flex justify-between items-center load-hidden delay-100">
-          <h1 className="glitch text-2xl md:text-3xl font-headline" data-text="SKILLORBIT.AI">SKILLORBIT.AI</h1>
+          <h1 className="text-2xl md:text-3xl font-headline" data-text="SKILLORBIT.AI">SKILLORBIT.AI</h1>
           <div className="holographic-card rounded-full px-4 py-2 flex items-center gap-2">
             <Flame className="w-5 h-5 text-amber-400" />
             <span className="font-bold">Streak:</span>
-            <span className="font-mono text-lg text-amber-300 text-pulse">{isProfileLoading ? '...' : streak}</span>
+            <span className="font-mono text-lg text-amber-300">{isProfileLoading ? '...' : streak}</span>
           </div>
         </header>
 
@@ -172,9 +172,9 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
           {/* Hero Card */}
-          <HolographicCard className="lg:col-span-2 flex flex-col md:flex-row items-center justify-between gap-6 load-hidden delay-200">
+          <HolographicCard className="lg:col-span-2 flex flex-col md:flex-row items-center justify-between gap-6 load-hidden delay-200 overflow-visible">
             <div className="space-y-4">
-              <h2 className="text-3xl font-headline text-secondary text-pulse">Personalized Orbit Active</h2>
+              <h2 className="text-3xl font-headline text-secondary">Personalized Orbit Active</h2>
               <p className="text-muted-foreground max-w-md">
                 Welcome back, {user?.displayName || 'Voyager'}. Your learning matrix is synchronized. Engage with AI-driven tasks or enter the Game Zone.
               </p>
@@ -203,12 +203,12 @@ export default function DashboardPage() {
               style={{ background: `radial-gradient(circle, hsl(var(--secondary)/0.3) 0%, transparent 70%), conic-gradient(hsl(var(--primary)) ${xpProgressDegrees}deg, hsl(var(--muted)) 0deg)` }}
             >
               <div className="absolute inset-2 rounded-full bg-background flex flex-col items-center justify-center">
-                 {currentLevelTier ? <currentLevelTier.icon className={cn("w-10 h-10", currentLevelTier.color)} /> : <Trophy className="w-12 h-12 text-primary/70 text-pulse" />}
+                 {currentLevelTier ? <currentLevelTier.icon className={cn("w-10 h-10", currentLevelTier.color)} /> : <Trophy className="w-12 h-12 text-primary/70" />}
                  <p className="text-xs font-bold mt-1 text-muted-foreground">{currentLevelTier?.name ?? 'Voyager'}</p>
               </div>
             </div>
             <p className="text-muted-foreground mt-4 text-sm">Total XP</p>
-            <p className="text-3xl font-bold font-headline text-pulse">{isProfileLoading ? '...' : totalXp.toLocaleString()}</p>
+            <p className="text-3xl font-bold font-headline">{isProfileLoading ? '...' : totalXp.toLocaleString()}</p>
           </HolographicCard>
         </div>
 
@@ -224,4 +224,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
