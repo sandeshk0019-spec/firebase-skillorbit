@@ -7,6 +7,7 @@ import { Auth, User, onAuthStateChanged, updateProfile } from 'firebase/auth';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener'
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { UserProfile } from '@/types';
 
 interface FirebaseProviderProps {
   children: ReactNode;
@@ -99,7 +100,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
           if (isNewUser && (!docSnap || !docSnap.exists())) {
               let displayName;
               const now = serverTimestamp();
-              let docData: any = null;
+              let docData: Omit<UserProfile, 'createdAt' | 'lastLogin'> & { createdAt: any, lastLogin: any } | null = null;
 
               if (firebaseUser.isAnonymous) {
                 const guestProfile = {

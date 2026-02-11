@@ -164,7 +164,7 @@ export default function QuizPage() {
             topic: form.getValues("topic"),
             score: score,
             totalQuestions: quiz.length,
-            createdAt: now as any,
+            createdAt: now,
         };
         const attemptRef = doc(collection(userRef, "quizAttempts"));
         transaction.set(attemptRef, quizAttemptData);
@@ -174,7 +174,7 @@ export default function QuizPage() {
             type: 'QUIZ_COMPLETED',
             description: `Scored ${score}/${quiz.length} on a quiz about ${quizAttemptData.topic}.`,
             refId: attemptRef.id,
-            createdAt: now as any,
+            createdAt: now,
         };
         const activityRef = doc(collection(userRef, "activities"));
         transaction.set(activityRef, activityData);

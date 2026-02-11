@@ -130,7 +130,7 @@ export default function MathVoyagerPage() {
         gameId: 'math-voyager',
         gameName: 'Math Voyager',
         score: score,
-        createdAt: now as any,
+        createdAt: now,
       };
       const scoreRef = doc(collection(userRef, "gameScores"));
       transaction.set(scoreRef, gameScoreData);
@@ -140,7 +140,7 @@ export default function MathVoyagerPage() {
         type: 'GAME_PLAYED',
         description: `Scored ${score} in Math Voyager.`,
         refId: scoreRef.id,
-        createdAt: now as any,
+        createdAt: now,
       };
       const activityRef = doc(collection(userRef, "activities"));
       transaction.set(activityRef, activityData);

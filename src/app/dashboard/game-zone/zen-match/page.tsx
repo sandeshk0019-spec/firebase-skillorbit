@@ -2,12 +2,12 @@
 
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { XCircle, Brain, Trophy, ChevronLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { useUser, useFirestore } from '@/firebase';
+import { useUser, useFirestore } from "@/firebase";
 import { collection, doc, addDoc, serverTimestamp, runTransaction, getDoc, setDoc } from 'firebase/firestore';
 import { type GameScore, type Activity } from '@/types';
 import { achievements } from '@/lib/achievements';
@@ -18,6 +18,7 @@ import { xpValues, rewardTiers } from '@/lib/rewards';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { format, differenceInCalendarDays } from 'date-fns';
+import React from 'react';
 
 // Card data structure
 interface CardData {
@@ -176,7 +177,7 @@ export default function ZenMatchPage() {
         gameId: 'zen-match',
         gameName: 'Zen Match',
         score: moves,
-        createdAt: now as any,
+        createdAt: now,
       };
       const scoreRef = doc(collection(userRef, "gameScores"));
       transaction.set(scoreRef, gameScoreData);
@@ -186,7 +187,7 @@ export default function ZenMatchPage() {
         type: 'GAME_PLAYED',
         description: `Completed a game of Zen Match in ${moves} moves.`,
         refId: scoreRef.id,
-        createdAt: now as any,
+        createdAt: now,
       };
       const activityRef = doc(collection(userRef, "activities"));
       transaction.set(activityRef, activityData);

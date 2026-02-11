@@ -133,7 +133,7 @@ export default function CosmicTyperPage() {
         gameId: 'cosmic-typer',
         gameName: 'Cosmic Typer',
         score: score,
-        createdAt: now as any,
+        createdAt: now,
       };
       const scoreRef = doc(collection(userRef, "gameScores"));
       transaction.set(scoreRef, gameScoreData);
@@ -143,7 +143,7 @@ export default function CosmicTyperPage() {
         type: 'GAME_PLAYED',
         description: `Scored ${score} in Cosmic Typer.`,
         refId: scoreRef.id,
-        createdAt: now as any,
+        createdAt: now,
       };
       const activityRef = doc(collection(userRef, "activities"));
       transaction.set(activityRef, activityData);

@@ -1,4 +1,4 @@
-import type { Timestamp } from "firebase/firestore";
+import type { Timestamp, FieldValue } from "firebase/firestore";
 
 export interface UserProfile {
   id: string;
@@ -6,8 +6,8 @@ export interface UserProfile {
   username: string;
   firstName: string;
   lastName: string;
-  createdAt: Timestamp;
-  lastLogin: Timestamp;
+  createdAt: FieldValue | Timestamp;
+  lastLogin: FieldValue | Timestamp;
   
   // Progress Stats
   totalQuizzes?: number;
@@ -29,16 +29,16 @@ export interface QuizAttempt {
   topic: string;
   score: number;
   totalQuestions: number;
-  createdAt: Timestamp;
+  createdAt: FieldValue | Timestamp;
 }
 
 export interface GameScore {
   id?: string;
   userId: string;
-  gameId: 'zen-match' | 'cosmic-typer' | 'math-voyager';
+  gameId: 'zen-match' | 'cosmic-typer' | 'math-voyager' | 'chem-lab-sim';
   gameName: string;
   score: number;
-  createdAt: Timestamp;
+  createdAt: FieldValue | Timestamp;
 }
 
 export interface Activity {
@@ -46,7 +46,7 @@ export interface Activity {
   userId: string;
   type: 'QUIZ_COMPLETED' | 'GAME_PLAYED' | 'ACHIEVEMENT_UNLOCKED';
   description: string;
-  createdAt: Timestamp;
+  createdAt: FieldValue | Timestamp;
   refId?: string; // e.g., quizAttemptId or gameScoreId
 }
 
@@ -54,5 +54,5 @@ export interface Achievement {
   id?: string;
   userId: string;
   achievementId: string; // key from achievements.ts
-  unlockedAt: Timestamp;
+  unlockedAt: FieldValue | Timestamp;
 }

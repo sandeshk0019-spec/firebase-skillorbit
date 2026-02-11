@@ -11,7 +11,7 @@ import { XCircle, Flame, Snowflake, RotateCw, TestTube, Beaker, FlaskConical, At
 import { cn } from '@/lib/utils';
 import { useUser, useFirestore } from '@/firebase';
 import { collection, doc, addDoc, serverTimestamp, runTransaction } from 'firebase/firestore';
-import { type Activity } from '@/types';
+import { type Activity, type GameScore } from '@/types';
 import { useToast } from "@/hooks/use-toast";
 import { xpValues } from '@/lib/rewards';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -106,8 +106,9 @@ export default function ChemLabSimPage() {
     }, []);
 
     const logGameSession = useCallback(async () => {
-        if (!user || !firestore) return;
-    
+        if (!user || !firestore || hasSessionBeenLogged.current) return;
+        
+        hasSessionBeenLogged.current = true;
         logToConsole('Experiment session progress saved!', 'info');
     
         const userRef = doc(firestore, "users", user.uid);
@@ -119,12 +120,23 @@ export default function ChemLabSimPage() {
             if (!userDoc.exists()) throw "User document does not exist!";
             const userData = userDoc.data();
 
-            // Activity Log
+            // --- Game Score & Activity ---
+            const gameScoreData: Omit<GameScore, 'id'> = {
+                userId: user.uid,
+                gameId: 'chem-lab-sim',
+                gameName: 'Chem Lab Sim',
+                score: actionsInSession.current, // Use actions as score
+                createdAt: now,
+            };
+            const scoreRef = doc(collection(userRef, "gameScores"));
+            transaction.set(scoreRef, gameScoreData);
+
             const activityData: Omit<Activity, 'id'> = {
                 userId: user.uid,
                 type: 'GAME_PLAYED',
                 description: `Completed an experiment in the Chem Lab Sim.`,
-                createdAt: now as any,
+                refId: scoreRef.id,
+                createdAt: now,
             };
             const activityRef = doc(collection(userRef, "activities"));
             transaction.set(activityRef, activityData);
@@ -168,7 +180,6 @@ export default function ChemLabSimPage() {
         if (hasSessionBeenLogged.current) return;
         actionsInSession.current++;
         if (actionsInSession.current >= 10) {
-            hasSessionBeenLogged.current = true;
             logGameSession();
         }
     }, [logGameSession]);
