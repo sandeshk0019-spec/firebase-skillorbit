@@ -118,9 +118,9 @@ const ChartTooltipContent = React.forwardRef<
       active,
       payload,
       className,
-      indicator = "dot",
-      hideLabel = false,
-      hideIndicator = false,
+      indicator: indicatorProp,
+      hideLabel: hideLabelProp,
+      hideIndicator: hideIndicatorProp,
       label,
       labelFormatter,
       labelClassName,
@@ -132,6 +132,9 @@ const ChartTooltipContent = React.forwardRef<
     ref
   ) => {
     const { config } = useChart()
+    const indicator = indicatorProp ?? "dot"
+    const hideLabel = hideLabelProp ?? false
+    const hideIndicator = hideIndicatorProp ?? false
 
     const tooltipLabel = React.useMemo(() => {
       if (hideLabel || !payload?.length) {
@@ -267,10 +270,12 @@ const ChartLegendContent = React.forwardRef<
     }
 >(
   (
-    { className, hideIcon = false, payload, verticalAlign = "bottom", nameKey },
+    { className, hideIcon: hideIconProp, payload, verticalAlign: verticalAlignProp, nameKey },
     ref
   ) => {
     const { config } = useChart()
+    const hideIcon = hideIconProp ?? false
+    const verticalAlign = verticalAlignProp ?? "bottom"
 
     if (!payload?.length) {
       return null
