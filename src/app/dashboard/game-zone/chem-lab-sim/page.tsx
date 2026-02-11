@@ -14,8 +14,6 @@ import { collection, doc, addDoc, serverTimestamp, runTransaction } from 'fireba
 import { type Activity, type GameScore } from '@/types';
 import { useToast } from "@/hooks/use-toast";
 import { xpValues } from '@/lib/rewards';
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
 import { format, differenceInCalendarDays } from 'date-fns';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
@@ -238,9 +236,9 @@ export default function ChemLabSimPage() {
                 totalXp: newXp,
             });
         }).catch(error => {
-            toast({ variant: "destructive", title: "Save Error", description: "Failed to save session data." });
+            // This is not a user-facing error. Do not toast.
         });
-    }, [user, firestore, logToConsole, toast]);
+    }, [user, firestore, logToConsole]);
 
     const handleAction = useCallback(() => {
         if (hasSessionBeenLogged.current) return;
@@ -746,7 +744,7 @@ export default function ChemLabSimPage() {
                     <Slider
                         value={[dialogValue]}
                         onValueChange={(value) => setDialogValue(value[0])}
-                        max={dialogState?.max}
+                        max={dialogState?.isTool ? 200 : undefined}
                         min={dialogState?.isTool ? -200 : 0}
                         step={dialogState?.step}
                     />
@@ -782,7 +780,10 @@ export default function ChemLabSimPage() {
                         if (warningDialogState) {
                           const chem = warningDialogState.chemical;
                           setWarningDialogState(null);
-                          openDialog(false, chem.id, chem.name, 'ml', 100, 0.1);
+                          // Defer opening the next dialog to allow this one to close properly.
+                          setTimeout(() => {
+                            openDialog(false, chem.id, chem.name, 'ml', 100, 0.1);
+                          }, 50);
                         }
                     }}>Proceed</Button>
                 </AlertDialogFooter>
