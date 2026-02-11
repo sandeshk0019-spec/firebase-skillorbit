@@ -740,7 +740,7 @@ export default function ChemLabSimPage() {
                                     setDialogValue(Math.max(0, value));
                                 }
                             }}
-                            min={0}
+                            min="0"
                             step={dialogState?.step}
                             className="col-span-2"
                         />
