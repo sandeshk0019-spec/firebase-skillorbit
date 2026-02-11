@@ -44,14 +44,64 @@ interface LabState {
 const chemicals = [
     { id: 'water', formula: 'H₂O', name: 'Water', description: 'SOLVENT' },
     { id: 'acid', formula: 'HCl', name: 'Acid', description: 'STRONG' },
-    { id: 'base', formula: 'OH⁻', name: 'Base', description: 'SODIUM HYDROXIDE' },
+    { id: 'base', formula: 'NaOH', name: 'Base', description: 'SODIUM HYDROXIDE' },
     { id: 'sodium', formula: 'Na', name: 'Sodium', description: 'REACTIVE METAL' },
     { id: 'potassium', formula: 'K', name: 'Potassium', description: 'HIGHLY REACTIVE' },
     { id: 'magnesium', formula: 'Mg', name: 'Magnesium', description: 'METAL STRIP' },
     { id: 'universal_indicator', formula: 'UI', name: 'Universal Ind.', description: 'PH DETECTOR' },
     { id: 'phenolphthalein', formula: 'Ph', name: 'Phenolphthalein', description: 'BASE DETECTOR' },
-    { id: 'copper_sulfate', formula: 'Cu', name: 'Copper Sulfate', description: 'TRANSITION METAL', disabled: true },
-    { id: 'silver_nitrate', formula: 'Ag', name: 'Silver Nitrate', description: 'PRECIPITATE FORMER', disabled: true },
+    { id: 'copper_sulfate', formula: 'CuSO₄', name: 'Copper Sulfate', description: 'TRANSITION METAL' },
+    { id: 'silver_nitrate', formula: 'AgNO₃', name: 'Silver Nitrate', description: 'PRECIPITATE FORMER' },
+    { id: 'iron_chloride', formula: 'FeCl₃', name: 'Iron(III) Chloride', description: 'Yellow Solution' },
+    { id: 'ammonia', formula: 'NH₃', name: 'Ammonia', description: 'WEAK BASE' },
+    { id: 'vinegar', formula: 'CH₃COOH', name: 'Vinegar', description: 'WEAK ACID' },
+    { id: 'hydrogen_peroxide', formula: 'H₂O₂', name: 'Hydrogen Peroxide', description: 'OXIDIZER' },
+    { id: 'calcium_carbonate', formula: 'CaCO₃', name: 'Chalk', description: 'REACTS WITH ACID' },
+    { id: 'zinc', formula: 'Zn', name: 'Zinc', description: 'METAL' },
+    { id: 'lead_nitrate', formula: 'Pb(NO₃)₂', name: 'Lead Nitrate', description: 'TOXIC' },
+    { id: 'potassium_iodide', formula: 'KI', name: 'Potassium Iodide', description: 'FORMS PRECIPITATE' },
+    { id: 'sodium_bicarbonate', formula: 'NaHCO₃', name: 'Baking Soda', description: 'REACTS WITH ACID' },
+    { id: 'ethanol', formula: 'C₂H₅OH', name: 'Ethanol', description: 'ALCOHOL' },
+    { id: 'glucose', formula: 'C₆H₁₂O₆', name: 'Glucose', description: 'SUGAR' },
+    { id: 'starch', formula: '(C₆H₁₀O₅)n', name: 'Starch', description: 'POLYMER' },
+    { id: 'iodine_solution', formula: 'I₂', name: 'Iodine Solution', description: 'STARCH INDICATOR' },
+    { id: 'lithium', formula: 'Li', name: 'Lithium', description: 'REACTIVE METAL' },
+    { id: 'calcium', formula: 'Ca', name: 'Calcium', description: 'REACTIVE METAL' },
+    { id: 'aluminum', formula: 'Al', name: 'Aluminum', description: 'METAL FOIL' },
+    { id: 'sulfuric_acid', formula: 'H₂SO₄', name: 'Sulfuric Acid', description: 'STRONG ACID' },
+    { id: 'nitric_acid', formula: 'HNO₃', name: 'Nitric Acid', description: 'STRONG ACID' },
+    { id: 'potassium_hydroxide', formula: 'KOH', name: 'Potassium Hydroxide', description: 'STRONG BASE' },
+    { id: 'sodium_carbonate', formula: 'Na₂CO₃', name: 'Washing Soda', description: 'BASE' },
+    { id: 'barium_chloride', formula: 'BaCl₂', name: 'Barium Chloride', description: 'FORMS PRECIPITATE' },
+    { id: 'sodium_sulfate', formula: 'Na₂SO₄', name: 'Sodium Sulfate', description: 'SALT' },
+    { id: 'glowing_algae', formula: 'Bio-L', name: 'Bioluminescent Algae', description: 'GLOWS WHEN AGITATED', disabled: true },
+    { id: 'cryo_crystal', formula: 'Cry-X', name: 'Cryo Crystal', description: 'INSTANT COOLING', disabled: true },
+    { id: 'thermo_gel', formula: 'Th-G', name: 'Thermo-Gel', description: 'INSTANT HEATING', disabled: true },
+    { id: 'anti_gravity_dust', formula: 'AG-D', name: 'Anti-Grav Dust', description: 'MAKES BUBBLES FLOAT', disabled: true },
+    { id: 'chrono_particles', formula: 'T-p', name: 'Chrono Particles', description: 'SPEEDS UP TIME', disabled: true },
+    { id: 'dark_matter_slurry', formula: 'DM-S', name: 'Dark Matter Slurry', description: 'ABSORBS LIGHT', disabled: true },
+    { id: 'plasma_extract', formula: 'Pl-Ex', name: 'Plasma Extract', description: 'HIGH ENERGY', disabled: true },
+    { id: 'quantum_foam', formula: 'Q-Foam', name: 'Quantum Foam', description: 'UNPREDICTABLE', disabled: true },
+    { id: 'cobalt_chloride', formula: 'CoCl₂', name: 'Cobalt(II) Chloride', description: 'HYDRATION INDICATOR', disabled: true },
+    { id: 'manganese_dioxide', formula: 'MnO₂', name: 'Manganese Dioxide', description: 'CATALYST', disabled: true },
+    { id: 'glycerol', formula: 'C₃H₈O₃', name: 'Glycerol', description: 'VISCOUS LIQUID' },
+    { id: 'citric_acid', formula: 'C₆H₈O₇', name: 'Citric Acid', description: 'WEAK ACID' },
+    { id: 'borax', formula: 'Na₂B₄O₇', name: 'Borax', description: 'SLIME INGREDIENT', disabled: true },
+    { id: 'iron_filings', formula: 'Fe', name: 'Iron Filings', description: 'METAL POWDER' },
+    { id: 'sulfur_powder', formula: 'S', name: 'Sulfur Powder', description: 'YELLOW NON-METAL' },
+    { id: 'mercury', formula: 'Hg', name: 'Mercury', description: 'LIQUID METAL - TOXIC', disabled: true },
+    { id: 'hydrofluoric_acid', formula: 'HF', name: 'Hydrofluoric Acid', description: 'DISSOLVES GLASS', disabled: true },
+    { id: 'neon_gas', formula: 'Ne', name: 'Neon Gas', description: 'INERT GAS', disabled: true },
+    { id: 'neutronium_shard', formula: 'Nu-S', name: 'Neutronium Shard', description: 'EXTREMELY DENSE', disabled: true },
+    { id: 'phoenix_ash', formula: 'Ph-Ash', name: 'Phoenix Ash', description: 'REGENERATIVE', disabled: true },
+    { id: 'temporal_crystal', formula: 'T-Cry', name: 'Temporal Crystal', description: 'REWINDS REACTIONS', disabled: true },
+    { id: 'void_essence', formula: 'V-Es', name: 'Void Essence', description: 'ERASES MATTER', disabled: true },
+    { id: 'starlight_concentrate', formula: 'S-Con', name: 'Starlight', description: 'PURE ENERGY', disabled: true },
+    { id: 'dragon_breath', formula: 'DrBr', name: 'Dragon\'s Breath', description: 'HIGHLY FLAMMABLE', disabled: true },
+    { id: 'gorgon_blood', formula: 'Go-Bl', name: 'Gorgon\'s Blood', description: 'PETRIFIES', disabled: true },
+    { id: 'unicorn_tear', formula: 'U-Tr', name: 'Unicorn Tear', description: 'PURIFIES', disabled: true },
+    { id: 'chaos_orb', formula: 'Ch-O', name: 'Chaos Orb', description: 'RANDOM EFFECT', disabled: true },
+    { id: 'philosopher_stone', formula: 'P-St', name: 'Philosopher\'s Stone', description: 'TRANSMUTES', disabled: true },
 ];
 
 const tools = [
@@ -203,6 +253,7 @@ export default function ChemLabSimPage() {
         logToConsole(`Added ${chemical?.name || type}.`);
 
         state.volume = Math.min(450, state.volume + 50);
+        state.composition.push(type);
 
         let reactionOccurred = false;
 
@@ -210,23 +261,31 @@ export default function ChemLabSimPage() {
         switch(type) {
             case 'acid':
                 state.ph = Math.max(0, state.ph - 3);
-                state.composition.push('acid', 'Cl-');
+                state.composition.push('Cl-'); // Track chloride specifically
                 if (state.composition.includes('magnesium')) {
                     logToConsole('Reaction: Magnesium + Acid -> Bubbles (H₂)', 'warn');
                     spawnParticles(30, 'bubble', 400, 400);
                     reactionOccurred = true;
                 }
+                if (state.composition.includes('silver_nitrate')) {
+                    logToConsole('Reaction: Silver Nitrate + Chloride -> White precipitate (AgCl)', 'warn');
+                    state.precipitate = Math.min(100, state.precipitate + 40);
+                    reactionOccurred = true;
+                }
                 break;
             case 'base':
                 state.ph = Math.min(14, state.ph + 3);
-                state.composition.push('base');
+                if (state.composition.includes('copper_sulfate')) {
+                    logToConsole('Reaction: Copper Sulfate + Base -> Blue precipitate (Cu(OH)₂)', 'warn');
+                    state.precipitate = Math.min(100, state.precipitate + 30);
+                    reactionOccurred = true;
+                }
                 break;
             case 'water':
                 state.ph += (7 - state.ph) * 0.3; // Neutralize towards 7
-                if (state.composition.length === 0) { // First liquid added
+                if (state.composition.length === 1) { // If it's the only thing
                     state.color = { r: 173, g: 216, b: 230, a: 0.5 };
                 }
-                state.composition.push('water');
                 break;
             case 'sodium':
             case 'potassium':
@@ -239,18 +298,33 @@ export default function ChemLabSimPage() {
                     spawnParticles(50, 'smoke', 400, 350);
                     reactionOccurred = true;
                 }
-                state.composition.push(type);
                 break;
             case 'magnesium':
-                state.composition.push('magnesium');
                  if (state.composition.includes('acid')) {
                     logToConsole('Reaction: Magnesium + Acid -> Bubbles (H₂)', 'warn');
                     spawnParticles(30, 'bubble', 400, 400);
                     reactionOccurred = true;
                 }
                 break;
+            case 'copper_sulfate':
+                if (state.composition.includes('water')) {
+                    state.color = { r: 0, g: 120, b: 220, a: 0.5 };
+                }
+                if (state.composition.includes('base')) {
+                    logToConsole('Reaction: Copper Sulfate + Base -> Blue precipitate (Cu(OH)₂)', 'warn');
+                    state.precipitate = Math.min(100, state.precipitate + 30);
+                    reactionOccurred = true;
+                }
+                break;
+            case 'silver_nitrate':
+                 if (state.composition.includes('Cl-')) {
+                    logToConsole('Reaction: Silver Nitrate + Chloride -> White precipitate (AgCl)', 'warn');
+                    state.precipitate = Math.min(100, state.precipitate + 40);
+                    reactionOccurred = true;
+                }
+                break;
             default:
-                 state.composition.push(type);
+                 // No specific reaction for this chemical yet
                  break;
         }
 
@@ -258,10 +332,11 @@ export default function ChemLabSimPage() {
         if (state.composition.includes('universal_indicator')) {
             const { r, g, b } = getPhColor(state.ph);
             state.color = { r, g, b, a: 0.6 };
-        }
-        if (state.composition.includes('phenolphthalein')) {
+        } else if (state.composition.includes('phenolphthalein')) {
             if (state.ph >= 8.2) state.color = { r: 255, g: 20, b: 147, a: 0.6 }; // Pink
-            else if(state.composition.includes('water')) state.color = { r: 173, g: 216, b: 230, a: 0.5 }; // Colorless
+            else if (!state.composition.includes('copper_sulfate')) {
+                 state.color = { r: 173, g: 216, b: 230, a: 0.5 }; // Colorless in neutral/acidic
+            }
         }
 
         if(!reactionOccurred) spawnParticles(10, 'bubble', 400, 400);
@@ -496,8 +571,12 @@ export default function ChemLabSimPage() {
                                         onClick={() => labAdd(item.id)}
                                         disabled={item.disabled}
                                     >
-                                        <p className="font-bold text-lg">{item.formula}</p>
-                                        <p className="font-semibold text-sm text-white/90">{item.name}</p>
+                                        <div className="flex justify-between items-center mb-1">
+                                            <p className="font-semibold text-sm text-white/90 truncate pr-2">{item.name}</p>
+                                            <span className="text-xs font-mono bg-primary/20 text-primary-foreground py-0.5 px-1.5 rounded">
+                                                {item.formula}
+                                            </span>
+                                        </div>
                                         <p className="text-xs text-white/50 uppercase">{item.description}</p>
                                     </button>
                                 ))}
