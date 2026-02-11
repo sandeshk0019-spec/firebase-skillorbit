@@ -1,11 +1,10 @@
 
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Sparkles, RefreshCw, Volume2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { generateSpeechFromText } from '@/ai/flows/generate-speech-from-text';
 import { useToast } from '@/hooks/use-toast';
 
 const textMotivations = [
@@ -72,10 +71,7 @@ const textMotivations = [
 
 export default function AiMotivationPage() {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
-  const [audioUrl, setAudioUrl] = useState<string | null>(null);
-
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [isSpeaking, setIsSpeaking] = useState(false);
   const { toast } = useToast();
 
   // Set a random quote on initial load
@@ -83,39 +79,46 @@ export default function AiMotivationPage() {
     setCurrentIndex(Math.floor(Math.random() * textMotivations.length));
   }, []);
   
-  // Play audio when URL is set
-  useEffect(() => {
-    if (audioUrl && audioRef.current) {
-      audioRef.current.play().catch(e => console.error("Audio playback failed", e));
-    }
-  }, [audioUrl]);
-
   const handleNext = () => {
     setCurrentIndex((prevIndex) => (prevIndex + 1) % textMotivations.length);
-    setAudioUrl(null); // Reset audio for the new quote
+    // If speech is happening, stop it.
+    if (window.speechSynthesis.speaking) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+    }
   };
 
   const currentMotivation = textMotivations[currentIndex];
 
-  const handleListenToQuote = async () => {
-    if (!currentMotivation?.quote || isGeneratingAudio) return;
+  const handleListenToQuote = () => {
+    if (!currentMotivation?.quote || isSpeaking) return;
 
-    setIsGeneratingAudio(true);
-    setAudioUrl(null);
-
-    try {
-      const result = await generateSpeechFromText({ text: currentMotivation.quote });
-      setAudioUrl(result.audioDataUri);
-    } catch (error: any) {
-      console.error("Audio Generation Error:", error);
+    if (typeof window === 'undefined' || !window.speechSynthesis) {
       toast({
         variant: "destructive",
-        title: "Audio Generation Error",
-        description: "Failed to generate audio for the quote. Please try again.",
+        title: "Browser Not Supported",
+        description: "Your browser does not support speech synthesis.",
       });
-    } finally {
-      setIsGeneratingAudio(false);
+      return;
     }
+
+    const speech = new SpeechSynthesisUtterance(currentMotivation.quote);
+    speech.lang = "en-US";
+    speech.rate = 1;
+    speech.pitch = 1;
+    
+    speech.onstart = () => setIsSpeaking(true);
+    speech.onend = () => setIsSpeaking(false);
+    speech.onerror = () => {
+      setIsSpeaking(false);
+      toast({
+        variant: "destructive",
+        title: "Speech Error",
+        description: "An error occurred while playing the audio.",
+      });
+    };
+
+    window.speechSynthesis.speak(speech);
   };
 
   return (
@@ -140,8 +143,8 @@ export default function AiMotivationPage() {
                 A few words of encouragement to brighten your day.
                 </CardDescription>
               </div>
-              <Button onClick={handleListenToQuote} variant="outline" size="icon" disabled={isGeneratingAudio || !currentMotivation}>
-                  {isGeneratingAudio ? <Loader2 className="h-5 w-5 animate-spin" /> : <Volume2 className="h-5 w-5" />}
+              <Button onClick={handleListenToQuote} variant="outline" size="icon" disabled={isSpeaking || !currentMotivation}>
+                  {isSpeaking ? <Loader2 className="h-5 w-5 animate-spin" /> : <Volume2 className="h-5 w-5" />}
                   <span className="sr-only">Listen to Quote</span>
               </Button>
             </div>
@@ -152,7 +155,6 @@ export default function AiMotivationPage() {
             </CardContent>
         ) : (
             <CardContent className="space-y-6 text-center">
-                {audioUrl && <audio ref={audioRef} src={audioUrl} className="hidden" />}
                 <div className="bg-muted/50 p-6 rounded-lg flex flex-col items-center gap-4 min-h-[200px] justify-center animate-in fade-in">
                     <span className="text-4xl">{currentMotivation.emoji}</span>
                     <blockquote className="text-lg font-semibold text-primary">
@@ -170,5 +172,7 @@ export default function AiMotivationPage() {
     </div>
   )
 }
+
+    
 
     
