@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { XCircle, Flame, Snowflake, RotateCw, TestTube, Beaker, FlaskConical, Atom, Minus, Droplet } from 'lucide-react';
+import { XCircle, Flame, Snowflake, RotateCw, TestTube, Beaker, FlaskConical, Atom, Minus, Droplet, Trash2, SlidersHorizontal } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUser, useFirestore } from '@/firebase';
 import { collection, doc, addDoc, serverTimestamp, runTransaction } from 'firebase/firestore';
@@ -41,41 +41,29 @@ interface LabState {
   explosionTimer: number;
 }
 
-const chemicals = {
-    liquids: [
-        { id: 'water', name: 'Water (H₂O)', icon: Droplet },
-        { id: 'acid', name: 'Acid (HCl)', icon: TestTube },
-        { id: 'base', name: 'Base (NaOH)', icon: TestTube },
-        { id: 'hydrogen_peroxide', name: 'Peroxide (H₂O₂)', icon: TestTube },
-    ],
-    solids: [
-        { id: 'sodium', name: 'Sodium (Na)', icon: Atom },
-        { id: 'potassium', name: 'Potassium (K)', icon: Atom },
-        { id: 'magnesium', name: 'Magnesium (Mg)', icon: Atom },
-        { id: 'zinc', name: 'Zinc (Zn)', icon: Atom },
-        { id: 'iron', name: 'Iron (Fe)', icon: Atom },
-    ],
-    indicators: [
-        { id: 'universal_indicator', name: 'Universal Indicator', icon: FlaskConical },
-        { id: 'phenolphthalein', name: 'Phenolphthalein', icon: FlaskConical },
-        { id: 'copper_sulfate', name: 'Copper Sulfate', icon: Beaker },
-        { id: 'silver_nitrate', name: 'Silver Nitrate', icon: Beaker },
-        { id: 'salt', name: 'Salt (NaCl)', icon: Minus },
-        { id: 'potassium_iodide', name: 'Potassium Iodide (KI)', icon: Beaker },
-        { id: 'calcium_carbonate', name: 'Chalk (CaCO₃)', icon: Minus },
-    ]
-};
+const chemicals = [
+    { id: 'water', formula: 'H₂O', name: 'Water', description: 'SOLVENT' },
+    { id: 'acid', formula: 'HCl', name: 'Acid', description: 'STRONG' },
+    { id: 'base', formula: 'OH⁻', name: 'Base', description: 'SODIUM HYDROXIDE' },
+    { id: 'sodium', formula: 'Na', name: 'Sodium', description: 'REACTIVE METAL' },
+    { id: 'potassium', formula: 'K', name: 'Potassium', description: 'HIGHLY REACTIVE' },
+    { id: 'magnesium', formula: 'Mg', name: 'Magnesium', description: 'METAL STRIP' },
+    { id: 'universal_indicator', formula: 'UI', name: 'Universal Ind.', description: 'PH DETECTOR' },
+    { id: 'phenolphthalein', formula: 'Ph', name: 'Phenolphthalein', description: 'BASE DETECTOR' },
+    { id: 'copper_sulfate', formula: 'Cu', name: 'Copper Sulfate', description: 'TRANSITION METAL', disabled: true },
+    { id: 'silver_nitrate', formula: 'Ag', name: 'Silver Nitrate', description: 'PRECIPITATE FORMER', disabled: true },
+];
 
 const tools = [
-    { id: 'heat', name: 'Heat', icon: Flame },
-    { id: 'cool', name: 'Cool', icon: Snowflake },
-    { id: 'mix', name: 'Mix', icon: RotateCw },
+    { id: 'heat', name: 'HEAT', icon: Flame, color: 'bg-red-500/80 hover:bg-red-500' },
+    { id: 'cool', name: 'COOL', icon: Snowflake, color: 'bg-blue-500/80 hover:bg-blue-500' },
+    { id: 'mix', name: 'STIR', icon: RotateCw, color: 'bg-green-500/80 hover:bg-green-500' },
 ];
 
 export default function ChemLabSimPage() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [consoleLogs, setConsoleLogs] = useState<{ message: string; level: 'info' | 'warn' | 'danger' }[]>([
-        { message: '> Lab initialized. Ready for experimentation.', level: 'info' },
+        { message: '> Simulation initialized. Standard Pressure 1 atm.', level: 'info' },
     ]);
     const [isExploding, setIsExploding] = useState(false);
 
@@ -85,11 +73,11 @@ export default function ChemLabSimPage() {
     
     // Use useRef for lab state to prevent re-renders on every animation frame
     const labState = useRef<LabState>({
-        volume: 200,
+        volume: 0,
         ph: 7.0,
         temp: 25,
         color: { r: 173, g: 216, b: 230, a: 0.5 }, // Light blue for water
-        composition: ['water'],
+        composition: [],
         particles: [],
         precipitate: 0,
         isBoiling: false,
@@ -179,7 +167,7 @@ export default function ChemLabSimPage() {
     const handleAction = useCallback(() => {
         if (hasSessionBeenLogged.current) return;
         actionsInSession.current++;
-        if (actionsInSession.current >= 10) {
+        if (actionsInSession.current >= 5) { // Log after 5 actions
             logGameSession();
         }
     }, [logGameSession]);
@@ -211,10 +199,10 @@ export default function ChemLabSimPage() {
     const labAdd = useCallback((type: string) => {
         handleAction();
         const state = labState.current;
-        const chemical = [...chemicals.liquids, ...chemicals.solids, ...chemicals.indicators].find(c => c.id === type);
+        const chemical = chemicals.find(c => c.id === type);
         logToConsole(`Added ${chemical?.name || type}.`);
 
-        state.volume = Math.min(450, state.volume + 25);
+        state.volume = Math.min(450, state.volume + 50);
 
         let reactionOccurred = false;
 
@@ -228,26 +216,6 @@ export default function ChemLabSimPage() {
                     spawnParticles(30, 'bubble', 400, 400);
                     reactionOccurred = true;
                 }
-                if (state.composition.includes('zinc')) {
-                    logToConsole('Reaction: Zinc + Acid -> Bubbles (H₂)', 'warn');
-                    spawnParticles(40, 'bubble', 400, 400);
-                    reactionOccurred = true;
-                }
-                if (state.composition.includes('iron')) {
-                    logToConsole('Reaction: Iron + Acid -> Bubbles (H₂)', 'warn');
-                    spawnParticles(15, 'bubble', 400, 400);
-                    reactionOccurred = true;
-                }
-                if (state.composition.includes('calcium_carbonate')) {
-                    logToConsole('Reaction: Chalk + Acid -> Fizzing (CO₂)', 'warn');
-                    spawnParticles(60, 'bubble', 400, 400);
-                    reactionOccurred = true;
-                }
-                 if (state.composition.includes('silver_nitrate')) {
-                    logToConsole('Reaction: Acid (Cl-) + Silver Nitrate -> White Precipitate (AgCl)', 'warn');
-                    state.precipitate = Math.min(100, state.precipitate + 20);
-                    reactionOccurred = true;
-                }
                 break;
             case 'base':
                 state.ph = Math.min(14, state.ph + 3);
@@ -255,6 +223,9 @@ export default function ChemLabSimPage() {
                 break;
             case 'water':
                 state.ph += (7 - state.ph) * 0.3; // Neutralize towards 7
+                if (state.composition.length === 0) { // First liquid added
+                    state.color = { r: 173, g: 216, b: 230, a: 0.5 };
+                }
                 state.composition.push('water');
                 break;
             case 'sodium':
@@ -278,68 +249,6 @@ export default function ChemLabSimPage() {
                     reactionOccurred = true;
                 }
                 break;
-            case 'zinc':
-                state.composition.push('zinc');
-                 if (state.composition.includes('acid')) {
-                    logToConsole('Reaction: Zinc + Acid -> Bubbles (H₂)', 'warn');
-                    spawnParticles(40, 'bubble', 400, 400);
-                    reactionOccurred = true;
-                }
-                break;
-            case 'iron':
-                state.composition.push('iron');
-                 if (state.composition.includes('acid')) {
-                    logToConsole('Reaction: Iron + Acid -> Bubbles (H₂)', 'warn');
-                    spawnParticles(15, 'bubble', 400, 400);
-                    reactionOccurred = true;
-                }
-                break;
-            case 'calcium_carbonate':
-                state.composition.push('calcium_carbonate');
-                 if (state.composition.includes('acid')) {
-                    logToConsole('Reaction: Chalk + Acid -> Fizzing (CO₂)', 'warn');
-                    spawnParticles(60, 'bubble', 400, 400);
-                    reactionOccurred = true;
-                }
-                break;
-             case 'copper_sulfate':
-                state.color = { r: 0, g: 100, b: 255, a: 0.6 }; // Blue solution
-                state.composition.push('copper_sulfate');
-                break;
-            case 'salt':
-                state.composition.push('salt', 'Cl-');
-                if (state.composition.includes('silver_nitrate')) {
-                    logToConsole('Reaction: Salt (Cl-) + Silver Nitrate -> White Precipitate (AgCl)', 'warn');
-                    state.precipitate = Math.min(100, state.precipitate + 20);
-                    reactionOccurred = true;
-                }
-                break;
-            case 'silver_nitrate':
-                state.composition.push('silver_nitrate');
-                if (state.composition.includes('Cl-')) {
-                    logToConsole('Reaction: Silver Nitrate + Chloride -> White Precipitate (AgCl)', 'warn');
-                    state.precipitate = Math.min(100, state.precipitate + 20);
-                    reactionOccurred = true;
-                }
-                break;
-            case 'hydrogen_peroxide':
-                state.composition.push('hydrogen_peroxide');
-                if (state.composition.includes('potassium_iodide')) {
-                    logToConsole('Reaction: Peroxide + Iodide -> Rapid decomposition!', 'danger');
-                    state.temp += 40;
-                    spawnParticles(150, 'steam', 400, 400);
-                    reactionOccurred = true;
-                }
-                break;
-            case 'potassium_iodide':
-                state.composition.push('potassium_iodide');
-                if (state.composition.includes('hydrogen_peroxide')) {
-                    logToConsole('Reaction: Iodide + Peroxide -> Rapid decomposition!', 'danger');
-                    state.temp += 40;
-                    spawnParticles(150, 'steam', 400, 400);
-                    reactionOccurred = true;
-                }
-                break;
             default:
                  state.composition.push(type);
                  break;
@@ -352,7 +261,7 @@ export default function ChemLabSimPage() {
         }
         if (state.composition.includes('phenolphthalein')) {
             if (state.ph >= 8.2) state.color = { r: 255, g: 20, b: 147, a: 0.6 }; // Pink
-            else state.color = { r: 173, g: 216, b: 230, a: 0.5 }; // Colorless
+            else if(state.composition.includes('water')) state.color = { r: 173, g: 216, b: 230, a: 0.5 }; // Colorless
         }
 
         if(!reactionOccurred) spawnParticles(10, 'bubble', 400, 400);
@@ -364,10 +273,6 @@ export default function ChemLabSimPage() {
         logToConsole(`Action: ${action}.`);
         if (action === 'heat') {
             labState.current.temp += 20;
-            if (labState.current.composition.includes('hydrogen_peroxide')) {
-                logToConsole('Reaction: Peroxide decomposes with heat', 'warn');
-                spawnParticles(20, 'steam', 400, 400);
-            }
         } else if (action === 'cool') {
             labState.current.temp = Math.max(0, labState.current.temp - 20);
         } else if (action === 'mix') {
@@ -380,11 +285,11 @@ export default function ChemLabSimPage() {
         actionsInSession.current = 0;
         hasSessionBeenLogged.current = false;
         labState.current = {
-            volume: 200,
+            volume: 0,
             ph: 7.0,
             temp: 25,
             color: { r: 173, g: 216, b: 230, a: 0.5 },
-            composition: ['water'],
+            composition: [],
             particles: [],
             precipitate: 0,
             isBoiling: false,
@@ -404,8 +309,8 @@ export default function ChemLabSimPage() {
             // Update Logic
             if (state.temp > 100 && state.volume > 0) {
                 state.isBoiling = true;
-                state.volume -= 0.1;
-                if(frameCount.current % 5 === 0) spawnParticles(2, 'steam', 400, 500 - state.volume);
+                state.volume = Math.max(0, state.volume - 0.1);
+                if(frameCount.current % 5 === 0) spawnParticles(2, 'steam', canvas.width / 2, 500 - state.volume);
             } else {
                 state.isBoiling = false;
             }
@@ -429,8 +334,10 @@ export default function ChemLabSimPage() {
                 }
             }
             
-            // Draw Logic
+            // --- Draw Logic ---
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#1e1e2e'; // Dark navy background
+            ctx.fillRect(0,0, canvas.width, canvas.height);
             
             if (isExploding) {
                 ctx.save();
@@ -441,31 +348,30 @@ export default function ChemLabSimPage() {
 
             // Draw Beaker
             const beakerBottom = 550;
-            const beakerWidth = 200;
+            const beakerWidth = 250;
             const beakerHeight = 350;
             const beakerX = canvas.width / 2 - beakerWidth / 2;
             
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-            ctx.moveTo(beakerX - 20, beakerBottom - beakerHeight);
-            ctx.lineTo(beakerX, beakerBottom - beakerHeight + 30);
-            ctx.lineTo(beakerX, beakerBottom);
-            ctx.quadraticCurveTo(canvas.width / 2, beakerBottom + 20, beakerX + beakerWidth, beakerBottom);
-            ctx.lineTo(beakerX + beakerWidth, beakerBottom - beakerHeight + 30);
-            ctx.lineTo(beakerX + beakerWidth + 20, beakerBottom - beakerHeight);
-            ctx.stroke();
-
-             // Add highlights for glass effect
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+            ctx.strokeStyle = 'rgba(150, 160, 180, 0.4)';
             ctx.lineWidth = 2;
             ctx.beginPath();
-            ctx.moveTo(beakerX + 20, beakerBottom - beakerHeight + 50);
-            ctx.lineTo(beakerX + 20, beakerBottom - 40);
+            ctx.moveTo(beakerX, beakerBottom - beakerHeight);
+            ctx.lineTo(beakerX, beakerBottom);
+            ctx.quadraticCurveTo(canvas.width / 2, beakerBottom + 20, beakerX + beakerWidth, beakerBottom);
+            ctx.lineTo(beakerX + beakerWidth, beakerBottom - beakerHeight);
             ctx.stroke();
-            ctx.beginPath();
-            ctx.ellipse(beakerX + beakerWidth - 10, beakerBottom - beakerHeight + 120, 3, 50, 0, 0, Math.PI * 2);
-            ctx.stroke();
+
+            // Draw volume markings
+            ctx.lineWidth = 1;
+            ctx.strokeStyle = 'rgba(150, 160, 180, 0.2)';
+            for (let i = 1; i <= 5; i++) {
+                const y = beakerBottom - (i * (beakerHeight - 50) / 5);
+                ctx.beginPath();
+                ctx.moveTo(beakerX, y);
+                ctx.lineTo(beakerX + 15, y);
+                ctx.stroke();
+            }
+
 
             // Draw Liquid
             if (state.volume > 0) {
@@ -509,8 +415,6 @@ export default function ChemLabSimPage() {
                 
                 if (p.type === 'fire') {
                     ctx.fillStyle = `rgba(255, ${Math.random() * 150 + 50}, 0, ${alpha})`;
-                    ctx.shadowColor = 'rgba(255, 100, 0, 0.8)';
-                    ctx.shadowBlur = 10;
                 } else if (p.type === 'smoke') {
                     ctx.fillStyle = `rgba(100, 100, 100, ${alpha * 0.5})`;
                 } else if (p.type === 'steam') {
@@ -527,7 +431,6 @@ export default function ChemLabSimPage() {
                 ctx.beginPath();
                 ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
                 ctx.fill();
-                ctx.shadowBlur = 0; // reset shadow
             });
 
             if (isExploding) {
@@ -535,15 +438,27 @@ export default function ChemLabSimPage() {
             }
 
             // Draw HUD
-            ctx.fillStyle = 'rgba(220, 230, 255, 0.9)';
-            ctx.font = '16px "Courier New", monospace';
+            const hudX = canvas.width - 140;
+            const hudY = 20;
+            ctx.fillStyle = 'rgba(10, 15, 30, 0.7)';
+            ctx.strokeStyle = 'hsl(var(--primary) / 0.3)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.roundRect(hudX, hudY, 120, 85, 8);
+            ctx.fill();
+            ctx.stroke();
+            
+            ctx.fillStyle = 'hsl(var(--foreground))';
+            ctx.font = '14px "Courier New", monospace';
             ctx.textAlign = 'left';
-            ctx.shadowColor = 'hsl(var(--primary))';
-            ctx.shadowBlur = 5;
-            ctx.fillText(`Temp: ${state.temp.toFixed(1)}°C`, 20, 40);
-            ctx.fillText(`pH: ${state.ph.toFixed(1)}`, 20, 65);
-            ctx.fillText(`Volume: ${state.volume.toFixed(0)}ml`, 20, 90);
-            ctx.shadowBlur = 0;
+            ctx.fillText(`Temp:`, hudX + 15, hudY + 25);
+            ctx.fillText(`pH:`, hudX + 15, hudY + 50);
+            ctx.fillText(`Vol:`, hudX + 15, hudY + 75);
+
+            ctx.textAlign = 'right';
+            ctx.fillText(`${state.temp.toFixed(0)}°C`, hudX + 105, hudY + 25);
+            ctx.fillText(`${state.ph.toFixed(1)}`, hudX + 105, hudY + 50);
+            ctx.fillText(`${state.volume.toFixed(0)}ml`, hudX + 105, hudY + 75);
 
 
             animationFrameId.current = requestAnimationFrame(labGameLoop);
@@ -557,81 +472,78 @@ export default function ChemLabSimPage() {
             }
         };
 
-    }, [labAdd, spawnParticles, getPhColor, resetLab, labAction, isExploding]); // Only re-run if these functions change (they are memoized)
+    }, [labAdd, spawnParticles, getPhColor, resetLab, labAction, isExploding]);
 
   return (
-    <div className="flex flex-col h-[calc(100vh-120px)] w-full p-4 bg-background text-foreground animate-in fade-in duration-500">
-        <header className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-4">
-            <FlaskConical className="w-8 h-8 text-cyan-400 animate-glow" style={{animationDuration: '3s'}} />
-            <h1 className="font-headline text-3xl text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-blue-500">Chem Lab Pro</h1>
-          </div>
-          <Link href="/dashboard/game-zone">
-            <Button variant="ghost" size="icon">
-              <XCircle className="w-8 h-8" />
-            </Button>
-          </Link>
-        </header>
-        <div className="flex flex-1 flex-col md:flex-row gap-2">
+    <div className="flex h-[calc(100vh-80px)] w-full bg-[#0a0a1a] text-foreground animate-in fade-in duration-500">
+        <div className="flex flex-1 flex-col md:flex-row gap-4 p-4">
             {/* Left Panel: Shelf */}
-            <Card className="w-full md:w-1/4 bg-black/30 backdrop-blur-sm border-white/10 animate-in slide-in-from-left-5 duration-500">
-                <CardHeader><CardTitle className="font-headline text-primary">Reagent Shelf</CardTitle></CardHeader>
-                <CardContent className="flex flex-col h-[calc(100%-80px)]">
-                    <ScrollArea className="flex-grow pr-4">
-                        <div className="space-y-6">
-                            {Object.entries(chemicals).map(([group, items]) => (
-                                <div key={group}>
-                                    <h3 className="font-semibold text-muted-foreground uppercase text-sm mb-2 tracking-wider">{group}</h3>
-                                    <div className="grid grid-cols-2 gap-2">
-                                        {items.map(item => (
-                                            <Button 
-                                                key={item.id} 
-                                                variant="outline" 
-                                                className="flex flex-col items-center justify-center text-center p-2 transition-all hover:scale-105 hover:bg-accent/50 hover:border-primary/50" 
-                                                onClick={() => labAdd(item.id)}
-                                                style={{minHeight: '5.5rem'}}
-                                            >
-                                                <item.icon className="w-6 h-6 mb-1"/>
-                                                <span className="text-xs whitespace-normal leading-tight">{item.name}</span>
-                                            </Button>
-                                        ))}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </ScrollArea>
-                    <div className="mt-4 border-t border-white/10 pt-4">
-                        <h3 className="font-semibold text-muted-foreground uppercase text-sm mb-2 tracking-wider">Tools</h3>
-                        <div className="grid grid-cols-4 gap-2">
+            <div className="w-full md:w-[340px] flex flex-col gap-4">
+                <Card className="flex-1 flex flex-col bg-black/30 backdrop-blur-sm border-white/10">
+                    <CardHeader>
+                        <CardTitle className="font-headline text-lg text-primary tracking-widest">REAGENTS</CardTitle>
+                    </CardHeader>
+                    <CardContent className="flex-grow overflow-hidden">
+                        <ScrollArea className="h-full pr-3">
+                            <div className="grid grid-cols-2 gap-3">
+                                {chemicals.map(item => (
+                                    <button 
+                                        key={item.id} 
+                                        className={cn(
+                                            "relative text-left p-3 rounded-lg transition-all border border-white/10 bg-black/20 hover:bg-white/5 hover:border-white/20 disabled:opacity-50 disabled:cursor-not-allowed",
+                                            item.disabled && "line-through"
+                                        )}
+                                        onClick={() => labAdd(item.id)}
+                                        disabled={item.disabled}
+                                    >
+                                        <p className="font-bold text-lg">{item.formula}</p>
+                                        <p className="font-semibold text-sm text-white/90">{item.name}</p>
+                                        <p className="text-xs text-white/50 uppercase">{item.description}</p>
+                                    </button>
+                                ))}
+                            </div>
+                        </ScrollArea>
+                    </CardContent>
+                </Card>
+                <Card className="bg-black/30 backdrop-blur-sm border-white/10">
+                   <CardHeader>
+                        <CardTitle className="font-headline text-lg text-primary tracking-widest flex items-center gap-2">
+                           <SlidersHorizontal className="w-5 h-5"/> LAB CONTROLS
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                         <div className="grid grid-cols-4 gap-3">
                             {tools.map(tool => (
-                                <Button key={tool.id} variant="secondary" size="icon" className="h-14 w-full transition-transform hover:scale-105" onClick={() => labAction(tool.id)}>
-                                    <tool.icon className="w-6 h-6"/>
+                                <Button key={tool.id} variant="secondary" className={cn("h-16 w-full flex flex-col gap-1 text-xs transition-transform hover:scale-105", tool.color)} onClick={() => labAction(tool.id)}>
+                                    <tool.icon className="w-5 h-5"/>
+                                    {tool.name}
                                 </Button>
                             ))}
-                            <Button variant="destructive" size="icon" className="h-14 w-full transition-transform hover:scale-105" onClick={resetLab}>
-                                <XCircle className="w-6 h-6" />
-                                <span className="sr-only">Clear Lab</span>
+                            <Button variant="outline" className="h-16 w-full flex flex-col gap-1 text-xs transition-transform hover:scale-105 bg-muted/50 hover:bg-muted" onClick={resetLab}>
+                                <Trash2 className="w-5 h-5" />
+                                RESET
                             </Button>
                         </div>
-                    </div>
-                </CardContent>
-            </Card>
+                    </CardContent>
+                </Card>
+            </div>
+
 
             {/* Right Panel: Simulation */}
-            <div className="flex-1 flex flex-col gap-2 animate-in slide-in-from-right-5 duration-500">
+            <div className="flex-1 flex flex-col gap-4">
                 <div className={cn("flex-1 bg-[#1e1e2e] rounded-lg relative overflow-hidden border border-primary/20 shadow-[inset_0_0_20px_rgba(0,0,0,0.5)]", isExploding && 'animate-shake')}>
                     <canvas ref={canvasRef} width="800" height="600" className="absolute top-0 left-0 w-full h-full" />
                 </div>
-                <Card className="h-1/4 bg-black/60 backdrop-blur-sm border-white/10">
+                <Card className="h-[140px] bg-black/60 backdrop-blur-sm border-white/10 flex flex-col">
                     <CardHeader className="p-2 border-b border-white/10">
-                      <CardTitle className="text-sm font-mono text-green-300">Event Log</CardTitle>
+                      <CardTitle className="text-sm font-mono text-green-400/80 tracking-widest">EXPERIMENT LOG</CardTitle>
                     </CardHeader>
-                    <CardContent className="p-0">
-                        <ScrollArea className="h-[120px]">
+                    <CardContent className="p-0 flex-1 overflow-hidden">
+                        <ScrollArea className="h-full">
                             <div className="p-2">
                             {consoleLogs.map((log, i) => (
-                                <p key={i} className={cn("font-mono text-xs whitespace-nowrap", {
-                                    'text-green-400': log.level === 'info',
+                                <p key={i} className={cn("font-mono text-sm whitespace-nowrap", {
+                                    'text-green-400/90': log.level === 'info',
                                     'text-yellow-400': log.level === 'warn',
                                     'text-red-400 font-bold': log.level === 'danger',
                                 })}>{log.message}</p>
@@ -641,6 +553,11 @@ export default function ChemLabSimPage() {
                     </CardContent>
                 </Card>
             </div>
+             <div className="absolute top-4 right-4">
+                <Link href="/dashboard/game-zone" className="opacity-50 hover:opacity-100 transition-opacity">
+                    <XCircle className="w-8 h-8 text-white" />
+                </Link>
+             </div>
         </div>
     </div>
   );
