@@ -261,7 +261,7 @@ export default function ChemLabSimPage() {
         switch(type) {
             case 'acid':
                 state.ph = Math.max(0, state.ph - 3);
-                state.composition.push('Cl-'); // Track chloride specifically
+                if (!state.composition.includes('Cl-')) state.composition.push('Cl-');
                 if (state.composition.includes('magnesium')) {
                     logToConsole('Reaction: Magnesium + Acid -> Bubbles (H₂)', 'warn');
                     spawnParticles(30, 'bubble', 400, 400);
@@ -584,6 +584,14 @@ export default function ChemLabSimPage() {
                         </ScrollArea>
                     </CardContent>
                 </Card>
+            </div>
+
+
+            {/* Right Panel: Simulation */}
+            <div className="flex-1 flex flex-col gap-4">
+                <div className={cn("flex-1 bg-[#1e1e2e] rounded-lg relative overflow-hidden border border-primary/20 shadow-[inset_0_0_20px_rgba(0,0,0,0.5)]", isExploding && 'animate-shake')}>
+                    <canvas ref={canvasRef} width="800" height="600" className="absolute top-0 left-0 w-full h-full" />
+                </div>
                 <Card className="bg-black/30 backdrop-blur-sm border-white/10">
                    <CardHeader>
                         <CardTitle className="font-headline text-lg text-primary tracking-widest flex items-center gap-2">
@@ -605,14 +613,6 @@ export default function ChemLabSimPage() {
                         </div>
                     </CardContent>
                 </Card>
-            </div>
-
-
-            {/* Right Panel: Simulation */}
-            <div className="flex-1 flex flex-col gap-4">
-                <div className={cn("flex-1 bg-[#1e1e2e] rounded-lg relative overflow-hidden border border-primary/20 shadow-[inset_0_0_20px_rgba(0,0,0,0.5)]", isExploding && 'animate-shake')}>
-                    <canvas ref={canvasRef} width="800" height="600" className="absolute top-0 left-0 w-full h-full" />
-                </div>
                 <Card className="h-[140px] bg-black/60 backdrop-blur-sm border-white/10 flex flex-col">
                     <CardHeader className="p-2 border-b border-white/10">
                       <CardTitle className="text-sm font-mono text-green-400/80 tracking-widest">EXPERIMENT LOG</CardTitle>
