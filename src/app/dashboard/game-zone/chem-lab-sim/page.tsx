@@ -711,11 +711,10 @@ export default function ChemLabSimPage() {
                             value={dialogValue}
                             onChange={(e) => {
                                 const value = e.target.value === '' ? 0 : parseFloat(e.target.value);
-                                if (!isNaN(value) && dialogState) {
-                                    setDialogValue(Math.max(0, Math.min(dialogState.max, value)));
+                                if (!isNaN(value)) {
+                                    setDialogValue(Math.max(0, value));
                                 }
                             }}
-                            max={dialogState?.max}
                             min={0}
                             step={dialogState?.step}
                             className="col-span-2"
@@ -738,3 +737,5 @@ export default function ChemLabSimPage() {
     </div>
   );
 }
+
+    
