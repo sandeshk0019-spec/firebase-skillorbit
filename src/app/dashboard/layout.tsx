@@ -210,13 +210,15 @@ export default function DashboardLayout({
 
     const userDocRef = doc(firestore, 'users', user.uid);
 
-    const updateStudyTime = async (elapsedSeconds: number) => {
+    const updateStudyTime = (elapsedSeconds: number) => {
       if (elapsedSeconds <= 0) return;
       
       const todayStr = format(new Date(), 'yyyy-MM-dd');
 
-      try {
-        await runTransaction(firestore, async (transaction) => {
+      // This is now a non-blocking, fire-and-forget operation.
+      // The .catch() prevents unhandled promise rejections from crashing the app,
+      // which is especially important during component unmount on logout.
+      runTransaction(firestore, async (transaction) => {
           const userDoc = await transaction.get(userDocRef);
           if (!userDoc.exists()) return;
 
@@ -235,10 +237,11 @@ export default function DashboardLayout({
             lastActiveDate: todayStr,
             lastLogin: serverTimestamp(),
           });
+        }).catch(e => {
+            // Log as a warning, not a critical error. This can happen during
+            // logout and is not a user-facing issue.
+            console.warn("Non-critical error during study time update transaction:", e);
         });
-      } catch (e) {
-        console.error("Failed to update study time:", e);
-      }
     };
 
     const handleVisibilityChange = () => {
@@ -275,12 +278,7 @@ export default function DashboardLayout({
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       if (sessionStartTimeRef.current) {
         const elapsed = Math.round((Date.now() - sessionStartTimeRef.current) / 1000);
-        // This fire-and-forget call can cause an unhandled promise rejection on logout,
-        // as the auth state changes during the async operation.
-        // We catch it to prevent a crash, logging it as a warning.
-        updateStudyTime(elapsed).catch(error => {
-          console.warn("Non-critical error while saving final study time on unmount:", error);
-        });
+        updateStudyTime(elapsed);
       }
     };
 
