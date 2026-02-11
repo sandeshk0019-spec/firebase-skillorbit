@@ -54,15 +54,13 @@ const motivationalSpeechFlow = ai.defineFlow(
     // 2. Generate a motivational response in the same language
     const { text: responseText } = await ai.generate({
         model: googleAI.model('gemini-1.5-flash-latest'),
-        prompt: `You are a compassionate and wise motivational coach. A user has expressed the following feelings or problems.
-        Your task is to:
-        1.  Identify the language of the user's message (it will be English, Hindi, or Marathi).
-        2.  Provide a short, uplifting, and encouraging response in the *exact same language*.
-        3.  Keep your response concise and powerful, about 2-3 sentences long.
+        prompt: `You are a friendly and wise motivational coach, like a helpful friend. A user has said the following to you. 
+        
+        Your task is to respond in the *same language* (the user will speak English, Hindi, or Marathi) with a short, kind, and uplifting message. Make it sound natural and conversational.
 
         User's message: "${transcribedText}"
 
-        Your response (in the same language):`
+        Your encouraging response:`
     });
 
     if (!responseText) {
