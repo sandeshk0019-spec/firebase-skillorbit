@@ -240,7 +240,6 @@ export default function ChemLabSimPage() {
                 totalXp: newXp,
             });
         }).catch(error => {
-            console.error("Chem Lab Sim session transaction failed:", error);
             toast({ variant: "destructive", title: "Save Error", description: "Failed to save session data." });
         });
     }, [user, firestore, logToConsole, toast]);

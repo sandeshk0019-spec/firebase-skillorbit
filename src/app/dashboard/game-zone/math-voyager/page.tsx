@@ -108,7 +108,9 @@ export default function MathVoyagerPage() {
               ),
           });
       }
-    }).catch(error => console.error("Error checking achievement:", error));
+    }).catch(error => {
+      // Silently fail on achievement check error
+    });
   }, [user, firestore, toast]);
 
   const saveGameResult = useCallback(() => {
@@ -187,7 +189,6 @@ export default function MathVoyagerPage() {
         }
       }
     }).catch(error => {
-      console.error("Math Voyager save transaction failed:", error);
       toast({ variant: "destructive", title: "Save Error", description: "Could not save your game progress." });
     });
   }, [user, firestore, score, hasSaved, toast, checkAndUnlockAchievement]);

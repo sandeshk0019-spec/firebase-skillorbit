@@ -108,7 +108,7 @@ export default function CosmicTyperPage() {
             });
         }
     }).catch(error => {
-        console.error("Error checking for achievement:", error);
+        // Silently fail on achievement check error
     });
   }, [user, firestore, toast]);
 
@@ -190,7 +190,6 @@ export default function CosmicTyperPage() {
         }
       }
     }).catch(error => {
-      console.error("Cosmic Typer save transaction failed:", error);
       toast({ variant: "destructive", title: "Save Error", description: "Could not save game score." });
     });
   }, [user, firestore, score, hasSaved, toast, checkAndUnlockAchievement]);
