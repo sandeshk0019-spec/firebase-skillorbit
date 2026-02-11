@@ -134,7 +134,7 @@ export default function QuizPage() {
         });
 
         // 3. Update User Profile Stats in a Transaction
-        await runTransaction(firestore, async (transaction) => {
+        runTransaction(firestore, async (transaction) => {
             const userDoc = await transaction.get(userRef);
             if (!userDoc.exists()) {
                 throw "User document does not exist!";
@@ -150,6 +150,9 @@ export default function QuizPage() {
                 totalCorrectAnswers: oldTotalCorrect + score,
                 totalQuestionsAnswered: oldTotalAnswered + quiz.length,
             });
+        }).catch(error => {
+            console.error("Quiz result transaction failed:", error);
+            // This is a background task, so we just log the error.
         });
         
         // 4. Award XP
@@ -157,7 +160,7 @@ export default function QuizPage() {
         awardXp(firestore, user.uid, xpGained, toast);
 
         // 5. Update Streak & Check for achievements
-        await updateUserStreak(firestore, user.uid);
+        updateUserStreak(firestore, user.uid);
         await checkAndUnlockAchievement('FIRST_QUIZ');
         if(score === quiz.length) {
             await checkAndUnlockAchievement('PERFECT_SCORE');
@@ -348,3 +351,5 @@ export default function QuizPage() {
     </div>
   );
 }
+
+    

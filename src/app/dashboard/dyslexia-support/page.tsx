@@ -241,7 +241,7 @@ function ReadingChallengeTab() {
       if (user && firestore && result.totalWordsInTarget > 0) {
         const userRef = doc(firestore, "users", user.uid);
         
-        await runTransaction(firestore, async (transaction) => {
+        runTransaction(firestore, async (transaction) => {
           const userDoc = await transaction.get(userRef);
           if (!userDoc.exists()) return;
 
@@ -256,6 +256,8 @@ function ReadingChallengeTab() {
             totalCorrectAnswers: oldTotalCorrect + result.correctlyReadWords,
             totalQuestionsAnswered: oldTotalAnswered + result.totalWordsInTarget,
           });
+        }).catch(error => {
+            console.error("Dyslexia support stats transaction failed:", error);
         });
         
         const xpGained = result.accuracyScore * xpValues.READING_CHALLENGE_MULTIPLIER;
@@ -263,7 +265,7 @@ function ReadingChallengeTab() {
             await awardXp(firestore, user.uid, xpGained, toast);
         }
 
-        await updateUserStreak(firestore, user.uid);
+        updateUserStreak(firestore, user.uid);
       }
 
     } catch (error: any) {
@@ -488,3 +490,5 @@ export default function DyslexiaSupportPage() {
     </div>
   );
 }
+
+    

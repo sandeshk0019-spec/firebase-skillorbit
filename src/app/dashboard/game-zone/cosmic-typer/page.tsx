@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
@@ -149,7 +150,7 @@ export default function CosmicTyperPage() {
             }));
         });
 
-        await runTransaction(firestore, async (transaction) => {
+        runTransaction(firestore, async (transaction) => {
             const userDoc = await transaction.get(userRef);
             if (!userDoc.exists()) return;
             const data = userDoc.data();
@@ -158,12 +159,14 @@ export default function CosmicTyperPage() {
             transaction.update(userRef, {
                 gamesPlayed: currentGamesPlayed + 1,
             });
+        }).catch(error => {
+            console.error("Cosmic Typer gamesPlayed transaction failed:", error);
         });
         
         const xpGained = score * xpValues.COSMIC_TYPER_MULTIPLIER;
         awardXp(firestore, user.uid, xpGained, toast);
         
-        await updateUserStreak(firestore, user.uid);
+        updateUserStreak(firestore, user.uid);
         if (score > 100) {
             await checkAndUnlockAchievement('COSMIC_KEYMASTER');
         }
@@ -401,3 +404,5 @@ export default function CosmicTyperPage() {
     </div>
   );
 }
+
+    

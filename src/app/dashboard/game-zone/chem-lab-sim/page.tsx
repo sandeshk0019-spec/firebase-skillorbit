@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
@@ -128,7 +129,7 @@ export default function ChemLabSimPage() {
                 }));
             });
     
-            await runTransaction(firestore, async (transaction) => {
+            runTransaction(firestore, async (transaction) => {
                 const userDoc = await transaction.get(userRef);
                 if (!userDoc.exists()) return;
                 const data = userDoc.data();
@@ -137,10 +138,12 @@ export default function ChemLabSimPage() {
                 transaction.update(userRef, {
                     gamesPlayed: currentGamesPlayed + 1,
                 });
+            }).catch(error => {
+                console.error("Chem Lab Sim gamesPlayed transaction failed:", error);
             });
             
             await awardXp(firestore, user.uid, xpValues.CHEM_LAB_SESSION, toast);
-            await updateUserStreak(firestore, user.uid);
+            updateUserStreak(firestore, user.uid);
     
         } catch (error) {
              console.error("Error saving Chem Lab session:", error);
@@ -617,3 +620,5 @@ export default function ChemLabSimPage() {
     </div>
   );
 }
+
+    

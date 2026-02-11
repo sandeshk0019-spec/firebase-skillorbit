@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -121,7 +122,7 @@ export default function ZenMatchPage() {
                 requestResourceData: achievementData
             }));
         });
-
+        
         const activityData = {
             userId: user.uid,
             type: 'ACHIEVEMENT_UNLOCKED' as const,
@@ -225,7 +226,7 @@ export default function ZenMatchPage() {
             });
 
             // 3. Update User Profile Stats in a Transaction
-            await runTransaction(firestore, async (transaction) => {
+            runTransaction(firestore, async (transaction) => {
                 const userDoc = await transaction.get(userRef);
                 if (!userDoc.exists()) return;
                 const data = userDoc.data();
@@ -234,13 +235,15 @@ export default function ZenMatchPage() {
                 transaction.update(userRef, {
                     gamesPlayed: currentGamesPlayed + 1,
                 });
+            }).catch(error => {
+                console.error("Zen Match gamesPlayed transaction failed:", error);
             });
             
             // 4. Award XP
             awardXp(firestore, user.uid, xpValues.ZEN_MATCH, toast);
             
             // 5. Update Streak & Check Achievements
-            await updateUserStreak(firestore, user.uid);
+            updateUserStreak(firestore, user.uid);
             await checkAndUnlockAchievement('ZEN_MASTER');
 
         } catch (error) {
@@ -405,3 +408,5 @@ export default function ZenMatchPage() {
     </div>
   );
 }
+
+    
