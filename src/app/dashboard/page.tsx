@@ -113,36 +113,29 @@ export default function DashboardPage() {
   const [liveStudyTimeToday, setLiveStudyTimeToday] = useState(0);
 
   useEffect(() => {
-    // This effect synchronizes the local state with Firestore when it changes.
     if (userProfile?.studyTimeToday !== undefined) {
       const todayStr = format(new Date(), 'yyyy-MM-dd');
-      // Ensure the data from firestore is for today before setting it.
       if (userProfile.lastActiveDate === todayStr) {
         setLiveStudyTimeToday(userProfile.studyTimeToday);
       } else {
-        setLiveStudyTimeToday(0); // Data is stale, reset to 0
+        setLiveStudyTimeToday(0);
       }
     }
   }, [userProfile]);
 
   useEffect(() => {
-    // This effect handles the live ticking of the clock on the client side.
     const intervalId = setInterval(() => {
       if (!document.hidden) {
         setLiveStudyTimeToday((prevTime) => prevTime + 1);
       }
     }, 1000);
     return () => clearInterval(intervalId);
-  }, []); // Runs once on mount to start the client-side ticker.
+  }, []);
 
   const streak = userProfile?.currentStreak ?? 0;
   
   const todayStr = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
   const tasksDoneToday = userProfile?.lastActiveDate === todayStr ? (userProfile?.tasksDoneToday || 0) : 0;
-
-  const hours = Math.floor(liveStudyTimeToday / 3600);
-  const minutes = Math.floor((liveStudyTimeToday % 3600) / 60);
-  const studyTime = `${hours}h ${minutes}m`;
   
   const accuracy = (userProfile?.totalQuestionsAnswered ?? 0) > 0
     ? Math.round(((userProfile?.totalCorrectAnswers ?? 0) / userProfile.totalQuestionsAnswered) * 100)
@@ -179,7 +172,7 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
           {/* Hero Card */}
-          <HolographicCard className="lg:col-span-2 flex flex-col md:flex-row items-center justify-between gap-6 load-hidden delay-200">
+          <HolographicCard className="lg:col-span-2 flex flex-col md:flex-row items-center justify-between gap-6 load-hidden delay-200 overflow-visible">
             <div className="space-y-4">
               <h2 className="text-3xl font-headline text-secondary text-pulse">Personalized Orbit Active</h2>
               <p className="text-muted-foreground max-w-md">
@@ -222,7 +215,7 @@ export default function DashboardPage() {
         {/* Stats Row */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
           <StatCard icon={CheckSquare} label="Tasks Done Today" value={isProfileLoading ? "..." : String(tasksDoneToday)} delay="delay-300" />
-          <StatCard icon={Clock} label="Today's Study Time" value={isProfileLoading ? "..." : studyTime} delay="delay-400" />
+          <StatCard icon={Clock} label="Today's Study Time" value={isProfileLoading ? "..." : `${Math.floor(liveStudyTimeToday / 3600)}h ${Math.floor((liveStudyTimeToday % 3600) / 60)}m`} delay="delay-400" />
           <StatCard icon={Percent} label="Average Accuracy" value={isProfileLoading ? "..." : `${accuracy}%`} delay="delay-500" />
         </div>
 
