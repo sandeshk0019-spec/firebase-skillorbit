@@ -1,9 +1,12 @@
+
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Sparkles, RefreshCw } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Sparkles, RefreshCw, Volume2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { generateSpeechFromText } from '@/ai/flows/generate-speech-from-text';
+import { useToast } from '@/hooks/use-toast';
 
 const textMotivations = [
   { quote: "Believe you can and you're halfway there.", author: "Theodore Roosevelt", emoji: "🌟" },
@@ -69,17 +72,51 @@ const textMotivations = [
 
 export default function AiMotivationPage() {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const { toast } = useToast();
 
   // Set a random quote on initial load
   useEffect(() => {
     setCurrentIndex(Math.floor(Math.random() * textMotivations.length));
   }, []);
+  
+  // Play audio when URL is set
+  useEffect(() => {
+    if (audioUrl && audioRef.current) {
+      audioRef.current.play().catch(e => console.error("Audio playback failed", e));
+    }
+  }, [audioUrl]);
 
   const handleNext = () => {
     setCurrentIndex((prevIndex) => (prevIndex + 1) % textMotivations.length);
+    setAudioUrl(null); // Reset audio for the new quote
   };
 
   const currentMotivation = textMotivations[currentIndex];
+
+  const handleListenToQuote = async () => {
+    if (!currentMotivation?.quote || isGeneratingAudio) return;
+
+    setIsGeneratingAudio(true);
+    setAudioUrl(null);
+
+    try {
+      const result = await generateSpeechFromText({ text: currentMotivation.quote });
+      setAudioUrl(result.audioDataUri);
+    } catch (error: any) {
+      console.error("Audio Generation Error:", error);
+      toast({
+        variant: "destructive",
+        title: "Audio Generation Error",
+        description: "Failed to generate audio for the quote. Please try again.",
+      });
+    } finally {
+      setIsGeneratingAudio(false);
+    }
+  };
 
   return (
     <div className="container mx-auto max-w-3xl">
@@ -96,10 +133,18 @@ export default function AiMotivationPage() {
       </div>
       <Card className="bg-card/50">
         <CardHeader>
-            <CardTitle className="font-headline">Daily Spark</CardTitle>
-            <CardDescription>
-            A few words of encouragement to brighten your day.
-            </CardDescription>
+            <div className="flex justify-between items-center">
+              <div>
+                <CardTitle className="font-headline">Daily Spark</CardTitle>
+                <CardDescription>
+                A few words of encouragement to brighten your day.
+                </CardDescription>
+              </div>
+              <Button onClick={handleListenToQuote} variant="outline" size="icon" disabled={isGeneratingAudio || !currentMotivation}>
+                  {isGeneratingAudio ? <Loader2 className="h-5 w-5 animate-spin" /> : <Volume2 className="h-5 w-5" />}
+                  <span className="sr-only">Listen to Quote</span>
+              </Button>
+            </div>
         </CardHeader>
         {!currentMotivation ? (
             <CardContent>
@@ -107,6 +152,7 @@ export default function AiMotivationPage() {
             </CardContent>
         ) : (
             <CardContent className="space-y-6 text-center">
+                {audioUrl && <audio ref={audioRef} src={audioUrl} className="hidden" />}
                 <div className="bg-muted/50 p-6 rounded-lg flex flex-col items-center gap-4 min-h-[200px] justify-center animate-in fade-in">
                     <span className="text-4xl">{currentMotivation.emoji}</span>
                     <blockquote className="text-lg font-semibold text-primary">
@@ -124,3 +170,5 @@ export default function AiMotivationPage() {
     </div>
   )
 }
+
+    
