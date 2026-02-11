@@ -371,7 +371,7 @@ export default function ChemLabSimPage() {
         } else if (action === 'cool') {
             const coolAmount = amount || 20;
             logToConsole(`Action: ${action} by ${coolAmount}°C.`);
-            labState.current.temp = Math.max(0, labState.current.temp - coolAmount);
+            labState.current.temp = Math.max(-100, labState.current.temp - coolAmount);
         } else if (action === 'mix') {
             logToConsole(`Action: ${action}.`);
             spawnParticles(20, 'bubble', 400, 400);
@@ -606,7 +606,7 @@ export default function ChemLabSimPage() {
                                             "relative text-left p-3 rounded-lg transition-all border border-white/10 bg-black/20 hover:bg-white/5 hover:border-white/20 disabled:opacity-50 disabled:cursor-not-allowed",
                                             item.disabled && "line-through"
                                         )}
-                                        onClick={() => openDialog(false, item.id, item.name, 'ml', 50, 0.1)}
+                                        onClick={() => openDialog(false, item.id, item.name, 'ml', 100, 0.1)}
                                         disabled={item.disabled}
                                     >
                                         <div className="flex justify-between items-center mb-1">
@@ -653,7 +653,7 @@ export default function ChemLabSimPage() {
                                     onClick={() =>
                                         tool.id === 'mix'
                                             ? labAction(tool.id)
-                                            : openDialog(true, tool.id, tool.name, '°C', 50, 1)
+                                            : openDialog(true, tool.id, tool.name, '°C', 200, 1)
                                     }
                                 >
                                     <tool.icon className="w-5 h-5"/>
@@ -716,6 +716,7 @@ export default function ChemLabSimPage() {
                                 }
                             }}
                             max={dialogState?.max}
+                            min={0}
                             step={dialogState?.step}
                             className="col-span-2"
                         />
@@ -724,6 +725,7 @@ export default function ChemLabSimPage() {
                         value={[dialogValue]}
                         onValueChange={(value) => setDialogValue(value[0])}
                         max={dialogState?.max}
+                        min={0}
                         step={dialogState?.step}
                     />
                 </div>
