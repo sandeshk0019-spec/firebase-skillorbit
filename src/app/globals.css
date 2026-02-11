@@ -162,7 +162,7 @@
     background: rgba(20, 20, 40, 0.4);
     backdrop-filter: blur(10px);
     border: 1px solid hsl(var(--primary) / 0.2);
-    overflow: hidden;
+    /* overflow: hidden; -- This was clipping the animation */
   }
 
   .holographic-card::after {
@@ -175,6 +175,9 @@
     background: linear-gradient(to right, transparent, hsl(var(--primary) / 0.15), transparent);
     transform: skewY(45deg);
     animation: scanline 8s infinite linear;
+    border-radius: inherit;
+    overflow: hidden;
+    pointer-events: none;
   }
 
   @keyframes scanline {

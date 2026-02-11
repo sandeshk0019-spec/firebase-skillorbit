@@ -172,7 +172,7 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
           {/* Hero Card */}
-          <HolographicCard className="lg:col-span-2 flex flex-col md:flex-row items-center justify-between gap-6 load-hidden delay-200 overflow-visible">
+          <HolographicCard className="lg:col-span-2 flex flex-col md:flex-row items-center justify-between gap-6 load-hidden delay-200">
             <div className="space-y-4">
               <h2 className="text-3xl font-headline text-secondary text-pulse">Personalized Orbit Active</h2>
               <p className="text-muted-foreground max-w-md">
@@ -224,3 +224,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+
