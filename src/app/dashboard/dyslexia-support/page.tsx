@@ -262,7 +262,7 @@ function ReadingChallengeTab() {
         
         const xpGained = result.accuracyScore * xpValues.READING_CHALLENGE_MULTIPLIER;
         if (xpGained > 0) {
-            await awardXp(firestore, user.uid, xpGained, toast);
+            awardXp(firestore, user.uid, xpGained, toast);
         }
 
         updateUserStreak(firestore, user.uid);
@@ -490,5 +490,3 @@ export default function DyslexiaSupportPage() {
     </div>
   );
 }
-
-    

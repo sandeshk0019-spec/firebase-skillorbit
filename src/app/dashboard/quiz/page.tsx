@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -88,40 +88,83 @@ export default function QuizPage() {
   const score = quiz ? userAnswers.reduce((acc, answer, index) => {
     return answer === quiz[index].correctAnswer ? acc + 1 : acc;
   }, 0) : 0;
+  
+  const checkAndUnlockAchievement = useCallback((achievementId: keyof typeof achievements) => {
+      if (!user || !firestore) return;
+      const achRef = doc(firestore, 'users', user.uid, 'achievements', achievementId);
+      
+      getDoc(achRef).then(achDoc => {
+        if (!achDoc.exists()) {
+            const achData = achievements[achievementId];
+            const achievementData = {
+                userId: user.uid,
+                achievementId: achievementId,
+                unlockedAt: serverTimestamp(),
+            };
+            setDoc(achRef, achievementData).catch(error => {
+                errorEmitter.emit('permission-error', new FirestorePermissionError({
+                    path: achRef.path,
+                    operation: 'create',
+                    requestResourceData: achievementData
+                }));
+            });
+            
+            const activityData = {
+                userId: user.uid,
+                type: 'ACHIEVEMENT_UNLOCKED' as const,
+                description: `Unlocked: ${achData.name}`,
+                createdAt: serverTimestamp(),
+            };
+            const activitiesColRef = collection(firestore, 'users', user.uid, 'activities');
+            addDoc(activitiesColRef, activityData).catch(error => {
+                errorEmitter.emit('permission-error', new FirestorePermissionError({
+                    path: activitiesColRef.path,
+                    operation: 'create',
+                    requestResourceData: activityData
+                }));
+            });
 
-  const handleFinishQuiz = async () => {
+            toast({
+                title: "Achievement Unlocked!",
+                description: (
+                    <div className="flex items-center gap-3">
+                        <Trophy className="w-8 h-8 text-yellow-400" />
+                        <div>
+                            <p className="font-semibold">{achData.name}</p>
+                            <p className="text-xs">{achData.description}</p>
+                        </div>
+                    </div>
+                ),
+            });
+        }
+      }).catch(error => console.error("Error checking for achievement:", error));
+  }, [user, firestore, toast]);
+
+  const handleFinishQuiz = () => {
     if (!quiz || !user || !firestore) return;
     
     setIsSubmitting(true);
 
-    try {
-        const userRef = doc(firestore, "users", user.uid);
-        const now = serverTimestamp();
+    const userRef = doc(firestore, "users", user.uid);
+    const now = serverTimestamp();
 
-        // 1. Save Quiz Attempt
-        const quizAttemptData: Omit<QuizAttempt, 'id'> = {
-            userId: user.uid,
-            subject: form.getValues("subject"),
-            topic: form.getValues("topic"),
-            score: score,
-            totalQuestions: quiz.length,
-            createdAt: now as any,
-        };
-        const attemptsColRef = collection(userRef, "quizAttempts");
-        const attemptRef = await addDoc(attemptsColRef, quizAttemptData).catch(error => {
-            errorEmitter.emit('permission-error', new FirestorePermissionError({
-                path: attemptsColRef.path,
-                operation: 'create',
-                requestResourceData: quizAttemptData
-            }));
-        });
-
-        // 2. Save Activity
+    // 1. Save Quiz Attempt (and chain activity log)
+    const quizAttemptData: Omit<QuizAttempt, 'id'> = {
+        userId: user.uid,
+        subject: form.getValues("subject"),
+        topic: form.getValues("topic"),
+        score: score,
+        totalQuestions: quiz.length,
+        createdAt: now as any,
+    };
+    const attemptsColRef = collection(userRef, "quizAttempts");
+    addDoc(attemptsColRef, quizAttemptData).then(attemptRef => {
+        // 2. Save Activity (chained)
         const activityData: Omit<Activity, 'id'> = {
             userId: user.uid,
             type: 'QUIZ_COMPLETED',
             description: `Scored ${score}/${quiz.length} on a quiz about ${quizAttemptData.topic}.`,
-            refId: attemptRef?.id,
+            refId: attemptRef.id,
             createdAt: now as any,
         };
         const activitiesColRef = collection(userRef, "activities");
@@ -132,102 +175,49 @@ export default function QuizPage() {
                 requestResourceData: activityData
             }));
         });
+    }).catch(error => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: attemptsColRef.path,
+            operation: 'create',
+            requestResourceData: quizAttemptData
+        }));
+    });
 
-        // 3. Update User Profile Stats in a Transaction
-        runTransaction(firestore, async (transaction) => {
-            const userDoc = await transaction.get(userRef);
-            if (!userDoc.exists()) {
-                throw "User document does not exist!";
-            }
-            const data = userDoc.data();
-            
-            const oldTotalQuizzes = data.totalQuizzes || 0;
-            const oldTotalCorrect = data.totalCorrectAnswers || 0;
-            const oldTotalAnswered = data.totalQuestionsAnswered || 0;
-
-            transaction.update(userRef, {
-                totalQuizzes: oldTotalQuizzes + 1,
-                totalCorrectAnswers: oldTotalCorrect + score,
-                totalQuestionsAnswered: oldTotalAnswered + quiz.length,
-            });
-        }).catch(error => {
-            console.error("Quiz result transaction failed:", error);
-            // This is a background task, so we just log the error.
-        });
-        
-        // 4. Award XP
-        const xpGained = (score * xpValues.QUIZ_CORRECT_ANSWER) + (score === quiz.length ? xpValues.QUIZ_PERFECT_BONUS : 0);
-        awardXp(firestore, user.uid, xpGained, toast);
-
-        // 5. Update Streak & Check for achievements
-        updateUserStreak(firestore, user.uid);
-        await checkAndUnlockAchievement('FIRST_QUIZ');
-        if(score === quiz.length) {
-            await checkAndUnlockAchievement('PERFECT_SCORE');
+    // 3. Update User Profile Stats in a Transaction (non-blocking)
+    runTransaction(firestore, async (transaction) => {
+        const userDoc = await transaction.get(userRef);
+        if (!userDoc.exists()) {
+            throw "User document does not exist!";
         }
+        const data = userDoc.data();
+        
+        const oldTotalQuizzes = data.totalQuizzes || 0;
+        const oldTotalCorrect = data.totalCorrectAnswers || 0;
+        const oldTotalAnswered = data.totalQuestionsAnswered || 0;
 
-    } catch (error) {
-        console.error("Error saving quiz results:", error);
-        toast({
-            variant: "destructive",
-            title: "Submission Error",
-            description: "Could not save your quiz results. Please try again.",
+        transaction.update(userRef, {
+            totalQuizzes: oldTotalQuizzes + 1,
+            totalCorrectAnswers: oldTotalCorrect + score,
+            totalQuestionsAnswered: oldTotalAnswered + quiz.length,
         });
-    } finally {
-        setIsSubmitting(false);
-        setShowResults(true);
+    }).catch(error => {
+        console.error("Quiz result transaction failed:", error);
+    });
+    
+    // 4. Award XP (non-blocking)
+    const xpGained = (score * xpValues.QUIZ_CORRECT_ANSWER) + (score === quiz.length ? xpValues.QUIZ_PERFECT_BONUS : 0);
+    awardXp(firestore, user.uid, xpGained, toast);
+
+    // 5. Update Streak & Check for achievements (non-blocking)
+    updateUserStreak(firestore, user.uid);
+    checkAndUnlockAchievement('FIRST_QUIZ');
+    if(score === quiz.length) {
+        checkAndUnlockAchievement('PERFECT_SCORE');
     }
+    
+    setIsSubmitting(false);
+    setShowResults(true);
   }
-
-  const checkAndUnlockAchievement = async (achievementId: keyof typeof achievements) => {
-      if (!user || !firestore) return;
-      const achRef = doc(firestore, 'users', user.uid, 'achievements', achievementId);
-      const achDoc = await getDoc(achRef);
-
-      if (!achDoc.exists()) {
-          const achData = achievements[achievementId];
-          const achievementData = {
-              userId: user.uid,
-              achievementId: achievementId,
-              unlockedAt: serverTimestamp(),
-          };
-          setDoc(achRef, achievementData).catch(error => {
-              errorEmitter.emit('permission-error', new FirestorePermissionError({
-                  path: achRef.path,
-                  operation: 'create',
-                  requestResourceData: achievementData
-              }));
-          });
-          
-          const activityData = {
-              userId: user.uid,
-              type: 'ACHIEVEMENT_UNLOCKED' as const,
-              description: `Unlocked: ${achData.name}`,
-              createdAt: serverTimestamp(),
-          };
-          const activitiesColRef = collection(firestore, 'users', user.uid, 'activities');
-          addDoc(activitiesColRef, activityData).catch(error => {
-              errorEmitter.emit('permission-error', new FirestorePermissionError({
-                  path: activitiesColRef.path,
-                  operation: 'create',
-                  requestResourceData: activityData
-              }));
-          });
-
-          toast({
-              title: "Achievement Unlocked!",
-              description: (
-                  <div className="flex items-center gap-3">
-                      <Trophy className="w-8 h-8 text-yellow-400" />
-                      <div>
-                          <p className="font-semibold">{achData.name}</p>
-                          <p className="text-xs">{achData.description}</p>
-                      </div>
-                  </div>
-              ),
-          });
-      }
-  };
 
   const handleNextQuestion = () => {
     if (quiz && currentQuestionIndex < quiz.length - 1) {
@@ -351,5 +341,3 @@ export default function QuizPage() {
     </div>
   );
 }
-
-    

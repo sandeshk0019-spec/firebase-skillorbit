@@ -103,54 +103,55 @@ export default function ZenMatchPage() {
     }
   }, [selectedSet]);
 
-  const checkAndUnlockAchievement = useCallback(async (achievementId: keyof typeof achievements) => {
+  const checkAndUnlockAchievement = useCallback((achievementId: keyof typeof achievements) => {
     if (!user || !firestore) return;
     const achRef = doc(firestore, 'users', user.uid, 'achievements', achievementId);
-    const achDoc = await getDoc(achRef);
+    
+    getDoc(achRef).then(achDoc => {
+        if (!achDoc.exists()) {
+            const achData = achievements[achievementId];
+            const achievementData = {
+                userId: user.uid,
+                achievementId: achievementId,
+                unlockedAt: serverTimestamp(),
+            };
+            setDoc(achRef, achievementData).catch(error => {
+                errorEmitter.emit('permission-error', new FirestorePermissionError({
+                    path: achRef.path,
+                    operation: 'create',
+                    requestResourceData: achievementData
+                }));
+            });
+            
+            const activityData = {
+                userId: user.uid,
+                type: 'ACHIEVEMENT_UNLOCKED' as const,
+                description: `Unlocked: ${achData.name}`,
+                createdAt: serverTimestamp(),
+            };
+            const activitiesColRef = collection(firestore, 'users', user.uid, 'activities');
+            addDoc(activitiesColRef, activityData).catch(error => {
+                errorEmitter.emit('permission-error', new FirestorePermissionError({
+                    path: activitiesColRef.path,
+                    operation: 'create',
+                    requestResourceData: activityData
+                }));
+            });
 
-    if (!achDoc.exists()) {
-        const achData = achievements[achievementId];
-        const achievementData = {
-            userId: user.uid,
-            achievementId: achievementId,
-            unlockedAt: serverTimestamp(),
-        };
-        setDoc(achRef, achievementData).catch(error => {
-            errorEmitter.emit('permission-error', new FirestorePermissionError({
-                path: achRef.path,
-                operation: 'create',
-                requestResourceData: achievementData
-            }));
-        });
-        
-        const activityData = {
-            userId: user.uid,
-            type: 'ACHIEVEMENT_UNLOCKED' as const,
-            description: `Unlocked: ${achData.name}`,
-            createdAt: serverTimestamp(),
-        };
-        const activitiesColRef = collection(firestore, 'users', user.uid, 'activities');
-        addDoc(activitiesColRef, activityData).catch(error => {
-            errorEmitter.emit('permission-error', new FirestorePermissionError({
-                path: activitiesColRef.path,
-                operation: 'create',
-                requestResourceData: activityData
-            }));
-        });
-
-        toast({
-            title: "Achievement Unlocked!",
-            description: (
-                <div className="flex items-center gap-3">
-                    <Trophy className="w-8 h-8 text-yellow-400" />
-                    <div>
-                        <p className="font-semibold">{achData.name}</p>
-                        <p className="text-xs">{achData.description}</p>
+            toast({
+                title: "Achievement Unlocked!",
+                description: (
+                    <div className="flex items-center gap-3">
+                        <Trophy className="w-8 h-8 text-yellow-400" />
+                        <div>
+                            <p className="font-semibold">{achData.name}</p>
+                            <p className="text-xs">{achData.description}</p>
+                        </div>
                     </div>
-                </div>
-            ),
-        });
-    }
+                ),
+            });
+        }
+    }).catch(error => console.error("Error checking achievement:", error));
   }, [user, firestore, toast]);
 
   // Check for match
@@ -184,36 +185,28 @@ export default function ZenMatchPage() {
     if (isComplete && !hasSaved) {
       setHasSaved(true);
       
-      const saveGameResult = async () => {
+      const saveGameResult = () => {
         if (!user || !firestore) return;
 
-        try {
-            const userRef = doc(firestore, "users", user.uid);
-            const now = serverTimestamp();
+        const userRef = doc(firestore, "users", user.uid);
+        const now = serverTimestamp();
 
-            // 1. Save Game Score
-            const gameScoreData: Omit<GameScore, 'id'> = {
-                userId: user.uid,
-                gameId: 'zen-match',
-                gameName: 'Zen Match',
-                score: moves,
-                createdAt: now as any,
-            };
-            const scoresColRef = collection(userRef, "gameScores");
-            const scoreRef = await addDoc(scoresColRef, gameScoreData).catch(error => {
-                errorEmitter.emit('permission-error', new FirestorePermissionError({
-                    path: scoresColRef.path,
-                    operation: 'create',
-                    requestResourceData: gameScoreData
-                }));
-            });
-
-            // 2. Save Activity
+        // 1. Save Game Score
+        const gameScoreData: Omit<GameScore, 'id'> = {
+            userId: user.uid,
+            gameId: 'zen-match',
+            gameName: 'Zen Match',
+            score: moves,
+            createdAt: now as any,
+        };
+        const scoresColRef = collection(userRef, "gameScores");
+        addDoc(scoresColRef, gameScoreData).then(scoreRef => {
+            // 2. Save Activity (chained)
             const activityData: Omit<Activity, 'id'> = {
                 userId: user.uid,
                 type: 'GAME_PLAYED',
                 description: `Completed a game of Zen Match in ${moves} moves.`,
-                refId: scoreRef?.id,
+                refId: scoreRef.id,
                 createdAt: now as any,
             };
             const activitiesColRef = collection(userRef, "activities");
@@ -224,41 +217,39 @@ export default function ZenMatchPage() {
                     requestResourceData: activityData
                 }));
             });
+        }).catch(error => {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+                path: scoresColRef.path,
+                operation: 'create',
+                requestResourceData: gameScoreData
+            }));
+        });
 
-            // 3. Update User Profile Stats in a Transaction
-            runTransaction(firestore, async (transaction) => {
-                const userDoc = await transaction.get(userRef);
-                if (!userDoc.exists()) return;
-                const data = userDoc.data();
-                const currentGamesPlayed = data.gamesPlayed || 0;
+        // 3. Update User Profile Stats in a Transaction (non-blocking)
+        runTransaction(firestore, async (transaction) => {
+            const userDoc = await transaction.get(userRef);
+            if (!userDoc.exists()) return;
+            const data = userDoc.data();
+            const currentGamesPlayed = data.gamesPlayed || 0;
 
-                transaction.update(userRef, {
-                    gamesPlayed: currentGamesPlayed + 1,
-                });
-            }).catch(error => {
-                console.error("Zen Match gamesPlayed transaction failed:", error);
+            transaction.update(userRef, {
+                gamesPlayed: currentGamesPlayed + 1,
             });
-            
-            // 4. Award XP
-            awardXp(firestore, user.uid, xpValues.ZEN_MATCH, toast);
-            
-            // 5. Update Streak & Check Achievements
-            updateUserStreak(firestore, user.uid);
-            await checkAndUnlockAchievement('ZEN_MASTER');
-
-        } catch (error) {
-             console.error("Error saving game results:", error);
-             toast({
-                variant: "destructive",
-                title: "Save Error",
-                description: "Could not save your game progress.",
-            });
-        }
+        }).catch(error => {
+            console.error("Zen Match gamesPlayed transaction failed:", error);
+        });
+        
+        // 4. Award XP (non-blocking)
+        awardXp(firestore, user.uid, xpValues.ZEN_MATCH, toast);
+        
+        // 5. Update Streak & Check Achievements (non-blocking)
+        updateUserStreak(firestore, user.uid);
+        checkAndUnlockAchievement('ZEN_MASTER');
       };
 
       saveGameResult();
     }
-  }, [isComplete, hasSaved, user, firestore, moves, checkAndUnlockAchievement, toast]);
+  }, [isComplete, hasSaved, user, firestore, moves, checkAndUnlockAchievement, toast, selectedSet]);
 
 
   const handleCardClick = (index: number) => {
@@ -408,5 +399,3 @@ export default function ZenMatchPage() {
     </div>
   );
 }
-
-    

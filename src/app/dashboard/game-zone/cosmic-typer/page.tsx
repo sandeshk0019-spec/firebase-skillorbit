@@ -58,87 +58,82 @@ export default function CosmicTyperPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
 
-  const checkAndUnlockAchievement = useCallback(async (achievementId: keyof typeof achievements) => {
+  const checkAndUnlockAchievement = useCallback((achievementId: keyof typeof achievements) => {
     if (!user || !firestore) return;
     const achRef = doc(firestore, 'users', user.uid, 'achievements', achievementId);
-    const achDoc = await getDoc(achRef);
+    
+    getDoc(achRef).then(achDoc => {
+        if (!achDoc.exists()) {
+            const achData = achievements[achievementId];
+            const achievementData = {
+                userId: user.uid,
+                achievementId: achievementId,
+                unlockedAt: serverTimestamp(),
+            };
+            setDoc(achRef, achievementData).catch(error => {
+                errorEmitter.emit('permission-error', new FirestorePermissionError({
+                    path: achRef.path,
+                    operation: 'create',
+                    requestResourceData: achievementData
+                }));
+            });
+            
+            const activityData = {
+                userId: user.uid,
+                type: 'ACHIEVEMENT_UNLOCKED' as const,
+                description: `Unlocked: ${achData.name}`,
+                createdAt: serverTimestamp(),
+            };
+            const activitiesColRef = collection(firestore, 'users', user.uid, 'activities');
+            addDoc(activitiesColRef, activityData).catch(error => {
+                errorEmitter.emit('permission-error', new FirestorePermissionError({
+                    path: activitiesColRef.path,
+                    operation: 'create',
+                    requestResourceData: activityData
+                }));
+            });
 
-    if (!achDoc.exists()) {
-        const achData = achievements[achievementId];
-        const achievementData = {
-            userId: user.uid,
-            achievementId: achievementId,
-            unlockedAt: serverTimestamp(),
-        };
-        setDoc(achRef, achievementData).catch(error => {
-            errorEmitter.emit('permission-error', new FirestorePermissionError({
-                path: achRef.path,
-                operation: 'create',
-                requestResourceData: achievementData
-            }));
-        });
-        
-        const activityData = {
-            userId: user.uid,
-            type: 'ACHIEVEMENT_UNLOCKED' as const,
-            description: `Unlocked: ${achData.name}`,
-            createdAt: serverTimestamp(),
-        };
-        const activitiesColRef = collection(firestore, 'users', user.uid, 'activities');
-        addDoc(activitiesColRef, activityData).catch(error => {
-            errorEmitter.emit('permission-error', new FirestorePermissionError({
-                path: activitiesColRef.path,
-                operation: 'create',
-                requestResourceData: activityData
-            }));
-        });
-
-        toast({
-            title: "Achievement Unlocked!",
-            description: (
-                <div className="flex items-center gap-3">
-                    <Trophy className="w-8 h-8 text-yellow-400" />
-                    <div>
-                        <p className="font-semibold">{achData.name}</p>
-                        <p className="text-xs">{achData.description}</p>
+            toast({
+                title: "Achievement Unlocked!",
+                description: (
+                    <div className="flex items-center gap-3">
+                        <Trophy className="w-8 h-8 text-yellow-400" />
+                        <div>
+                            <p className="font-semibold">{achData.name}</p>
+                            <p className="text-xs">{achData.description}</p>
+                        </div>
                     </div>
-                </div>
-            ),
-        });
-    }
+                ),
+            });
+        }
+    }).catch(error => {
+        console.error("Error checking for achievement:", error);
+    });
   }, [user, firestore, toast]);
 
-  const saveGameResult = useCallback(async () => {
+  const saveGameResult = useCallback(() => {
     if (!user || !firestore || hasSaved) return;
 
     setHasSaved(true);
 
-    try {
-        const userRef = doc(firestore, "users", user.uid);
-        const now = serverTimestamp();
+    const userRef = doc(firestore, "users", user.uid);
+    const now = serverTimestamp();
 
-        const gameScoreData: Omit<GameScore, 'id'> = {
-            userId: user.uid,
-            gameId: 'cosmic-typer',
-            gameName: 'Cosmic Typer',
-            score: score,
-            createdAt: now as any,
-        };
-        
-        const scoresColRef = collection(userRef, "gameScores");
-        const scoreRef = await addDoc(scoresColRef, gameScoreData).catch(error => {
-            errorEmitter.emit('permission-error', new FirestorePermissionError({
-                path: scoresColRef.path,
-                operation: 'create',
-                requestResourceData: gameScoreData
-            }));
-        });
-
+    const gameScoreData: Omit<GameScore, 'id'> = {
+        userId: user.uid,
+        gameId: 'cosmic-typer',
+        gameName: 'Cosmic Typer',
+        score: score,
+        createdAt: now as any,
+    };
+    
+    const scoresColRef = collection(userRef, "gameScores");
+    addDoc(scoresColRef, gameScoreData).then(scoreRef => {
         const activityData: Omit<Activity, 'id'> = {
             userId: user.uid,
             type: 'GAME_PLAYED',
             description: `Scored ${score} in Cosmic Typer.`,
-            refId: scoreRef?.id,
+            refId: scoreRef.id,
             createdAt: now as any,
         };
         const activitiesColRef = collection(userRef, "activities");
@@ -149,35 +144,33 @@ export default function CosmicTyperPage() {
                 requestResourceData: activityData
             }));
         });
+    }).catch(error => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: scoresColRef.path,
+            operation: 'create',
+            requestResourceData: gameScoreData
+        }));
+    });
 
-        runTransaction(firestore, async (transaction) => {
-            const userDoc = await transaction.get(userRef);
-            if (!userDoc.exists()) return;
-            const data = userDoc.data();
-            const currentGamesPlayed = data.gamesPlayed || 0;
+    runTransaction(firestore, async (transaction) => {
+        const userDoc = await transaction.get(userRef);
+        if (!userDoc.exists()) return;
+        const data = userDoc.data();
+        const currentGamesPlayed = data.gamesPlayed || 0;
 
-            transaction.update(userRef, {
-                gamesPlayed: currentGamesPlayed + 1,
-            });
-        }).catch(error => {
-            console.error("Cosmic Typer gamesPlayed transaction failed:", error);
+        transaction.update(userRef, {
+            gamesPlayed: currentGamesPlayed + 1,
         });
-        
-        const xpGained = score * xpValues.COSMIC_TYPER_MULTIPLIER;
-        awardXp(firestore, user.uid, xpGained, toast);
-        
-        updateUserStreak(firestore, user.uid);
-        if (score > 100) {
-            await checkAndUnlockAchievement('COSMIC_KEYMASTER');
-        }
-
-    } catch (error) {
-         console.error("Error saving game results:", error);
-         toast({
-            variant: "destructive",
-            title: "Save Error",
-            description: "Could not save your game progress.",
-        });
+    }).catch(error => {
+        console.error("Cosmic Typer gamesPlayed transaction failed:", error);
+    });
+    
+    const xpGained = score * xpValues.COSMIC_TYPER_MULTIPLIER;
+    awardXp(firestore, user.uid, xpGained, toast);
+    
+    updateUserStreak(firestore, user.uid);
+    if (score > 100) {
+        checkAndUnlockAchievement('COSMIC_KEYMASTER');
     }
   }, [user, firestore, score, hasSaved, toast, checkAndUnlockAchievement]);
 
@@ -404,5 +397,3 @@ export default function CosmicTyperPage() {
     </div>
   );
 }
-
-    

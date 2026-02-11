@@ -60,48 +60,45 @@ service cloud.firestore {
 
     // ----------------------------------------------------------------------
     //
-    // Collection Rules (Flat Structure)
+    // Collection Rules (Nested Structure)
     //
     // ----------------------------------------------------------------------
 
-    // USER PROFILE
     match /users/{userId} {
       allow get: if isOwner(userId);
       allow create: if isOwner(userId) && hasValidIdOnCreate(userId);
       allow update: if isOwner(userId) && isUserIdImmutable();
       allow list, delete: if false;
-    }
 
-    // --- SUBCOLLECTIONS ---
+      // --- SUBCOLLECTIONS ---
 
-    // QUIZ ATTEMPTS
-    match /users/{userId}/quizAttempts/{attemptId} {
-      allow get, list, create: if isOwner(userId);
-      allow update, delete: if false;
-    }
+      // QUIZ ATTEMPTS
+      match /quizAttempts/{attemptId} {
+        allow get, list, create: if isOwner(userId);
+        allow update, delete: if false;
+      }
 
-    // GAME SCORES
-    match /users/{userId}/gameScores/{scoreId} {
-      allow get, list, create: if isOwner(userId);
-      allow update, delete: if false;
-    }
-    
-    // ACTIVITIES
-    match /users/{userId}/activities/{activityId} {
-      allow get, list, create: if isOwner(userId);
-      allow update, delete: if false;
-    }
+      // GAME SCORES
+      match /gameScores/{scoreId} {
+        allow get, list, create: if isOwner(userId);
+        allow update, delete: if false;
+      }
+      
+      // ACTIVITIES
+      match /activities/{activityId} {
+        allow get, list, create: if isOwner(userId);
+        allow update, delete: if false;
+      }
 
-    // ACHIEVEMENTS
-    // Allow owner to get a specific achievement, and create one (setDoc with ID).
-    match /users/{userId}/achievements/{achievementId} {
-      allow get, create: if isOwner(userId);
-      allow update, delete: if false;
-    }
-    // Allow owner to list their achievements. Deny create (addDoc) on the collection.
-    match /users/{userId}/achievements {
-      allow list: if isOwner(userId);
-      allow create: if false;
+      // ACHIEVEMENTS
+      match /achievements/{achievementId} {
+        allow get, create: if isOwner(userId);
+        allow update, delete: if false;
+      }
+      match /achievements {
+        allow list: if isOwner(userId);
+        allow create: if false;
+      }
     }
   }
 }
