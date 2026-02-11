@@ -20,8 +20,6 @@ import { format, differenceInCalendarDays } from 'date-fns';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
   AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
@@ -740,7 +738,7 @@ export default function ChemLabSimPage() {
                                     setDialogValue(value);
                                 }
                             }}
-                            min="0"
+                            min={dialogState?.isTool ? undefined : "0"}
                             step={dialogState?.step}
                             className="col-span-2"
                         />
@@ -749,7 +747,7 @@ export default function ChemLabSimPage() {
                         value={[dialogValue]}
                         onValueChange={(value) => setDialogValue(value[0])}
                         max={dialogState?.max}
-                        min="0"
+                        min={dialogState?.isTool ? -200 : 0}
                         step={dialogState?.step}
                     />
                 </div>
@@ -778,15 +776,15 @@ export default function ChemLabSimPage() {
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                     <Button variant="outline" onClick={() => setWarningDialogState(null)}>Cancel</Button>
-                    <AlertDialogAction 
+                    <Button
                         className="bg-yellow-500 hover:bg-yellow-600 text-black"
                         onClick={() => {
                         if (warningDialogState) {
                           const chem = warningDialogState.chemical;
-                          openDialog(false, chem.id, chem.name, 'ml', 100, 0.1);
                           setWarningDialogState(null);
+                          openDialog(false, chem.id, chem.name, 'ml', 100, 0.1);
                         }
-                    }}>Proceed</AlertDialogAction>
+                    }}>Proceed</Button>
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
