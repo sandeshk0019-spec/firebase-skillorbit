@@ -191,9 +191,13 @@ export default function QuizPage() {
         if (lastActiveDateStr === todayStr) {
           newTasksDoneToday += 1;
         } else {
-          const lastActiveDate = lastActiveDateStr ? new Date(lastActiveDateStr) : new Date(0);
-          const daysDifference = differenceInCalendarDays(today, lastActiveDate);
-          newStreak = daysDifference === 1 ? currentStreak + 1 : 1;
+            if (lastActiveDateStr) {
+                const lastActiveDate = new Date(lastActiveDateStr);
+                const daysDifference = differenceInCalendarDays(today, lastActiveDate);
+                newStreak = daysDifference === 1 ? currentStreak + 1 : 1;
+            } else {
+                newStreak = 1;
+            }
           newTasksDoneToday = 1;
         }
         
