@@ -155,7 +155,7 @@ export default function QuizPage() {
         if (!userDoc.exists()) {
             throw "User document does not exist!";
         }
-        const userData = userDoc.data();
+        const userData = userDoc.data() || {};
         
         // --- 1. Quiz Attempt & Activity Log ---
         const quizAttemptData: Omit<QuizAttempt, 'id'> = {
@@ -182,43 +182,44 @@ export default function QuizPage() {
         // --- 2. User Stats Update (Streak, XP, etc.) ---
         const today = new Date();
         const todayStr = format(today, 'yyyy-MM-dd');
-        const lastActiveDateStr = userData.lastActiveDate || '';
+        
+        const lastActiveDateStr = userData.lastActiveDate || null;
         const currentStreak = userData.currentStreak || 0;
         
-        let newStreak;
+        let newStreak = 1;
 
-        if (!lastActiveDateStr || new Date(lastActiveDateStr).toString() === 'Invalid Date') {
-          newStreak = 1;
-        } else {
-          const lastActiveDate = new Date(lastActiveDateStr);
-          const daysDifference = differenceInCalendarDays(today, lastActiveDate);
+        if (lastActiveDateStr) {
+            const lastActiveDate = new Date(lastActiveDateStr);
+            if (!isNaN(lastActiveDate.getTime())) {
+                const daysDifference = differenceInCalendarDays(today, lastActiveDate);
 
-          if (daysDifference === 0) {
-            newStreak = currentStreak || 1;
-          } else if (daysDifference === 1) {
-            newStreak = currentStreak + 1;
-          } else {
-            newStreak = 1;
-          }
+                if (daysDifference === 0) {
+                    newStreak = currentStreak || 1;
+                } else if (daysDifference === 1) {
+                    newStreak = currentStreak + 1;
+                }
+            }
         }
-
-        const tasksDoneToday = lastActiveDateStr === todayStr ? (userData.tasksDoneToday || 0) : 0;
-        const newTasksDoneToday = tasksDoneToday + 1;
         
-        const oldTotalQuizzes = userData.totalQuizzes || 0;
-        const oldTotalCorrect = userData.totalCorrectAnswers || 0;
-        const oldTotalAnswered = userData.totalQuestionsAnswered || 0;
+        const tasksDoneToday = (lastActiveDateStr === todayStr) 
+            ? (userData.tasksDoneToday || 0) + 1 
+            : 1;
+        
+        const totalQuizzes = (userData.totalQuizzes || 0) + 1;
+        const totalCorrectAnswers = (userData.totalCorrectAnswers || 0) + score;
+        const totalQuestionsAnswered = (userData.totalQuestionsAnswered || 0) + quiz.length;
+        const totalXp = (userData.totalXp || 0) + xpGained;
+        const newXp = totalXp;
         const currentXp = userData.totalXp || 0;
-        const newXp = currentXp + xpGained;
 
         transaction.update(userRef, {
-            totalQuizzes: oldTotalQuizzes + 1,
-            totalCorrectAnswers: oldTotalCorrect + score,
-            totalQuestionsAnswered: oldTotalAnswered + quiz.length,
+            totalQuizzes,
+            totalCorrectAnswers,
+            totalQuestionsAnswered,
             currentStreak: newStreak,
             lastActiveDate: todayStr,
-            tasksDoneToday: newTasksDoneToday,
-            totalXp: newXp,
+            tasksDoneToday,
+            totalXp,
         });
 
         return { newXp, currentXp }; // Pass out for post-transaction actions

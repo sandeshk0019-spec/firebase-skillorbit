@@ -164,14 +164,13 @@ export default function ZenMatchPage() {
     setHasSaved(true);
     const userRef = doc(firestore, "users", user.uid);
     const now = serverTimestamp();
-    const xpGained = xpValues.ZEN_MATCH;
 
     runTransaction(firestore, async (transaction) => {
       const userDoc = await transaction.get(userRef);
       if (!userDoc.exists()) {
         throw "User document does not exist!";
       }
-      const userData = userDoc.data();
+      const userData = userDoc.data() || {};
 
       // --- 1. Game Score & Activity Log ---
       const gameScoreData: Omit<GameScore, 'id'> = {
@@ -197,39 +196,41 @@ export default function ZenMatchPage() {
       // --- 2. User Stats Update (Streak, XP, etc.) ---
       const today = new Date();
       const todayStr = format(today, 'yyyy-MM-dd');
-      const lastActiveDateStr = userData.lastActiveDate || '';
+      
+      const lastActiveDateStr = userData.lastActiveDate || null;
       const currentStreak = userData.currentStreak || 0;
       
-      let newStreak;
+      let newStreak = 1;
 
-      if (!lastActiveDateStr || new Date(lastActiveDateStr).toString() === 'Invalid Date') {
-        newStreak = 1;
-      } else {
-        const lastActiveDate = new Date(lastActiveDateStr);
-        const daysDifference = differenceInCalendarDays(today, lastActiveDate);
+      if (lastActiveDateStr) {
+          const lastActiveDate = new Date(lastActiveDateStr);
+          if (!isNaN(lastActiveDate.getTime())) {
+              const daysDifference = differenceInCalendarDays(today, lastActiveDate);
 
-        if (daysDifference === 0) {
-          newStreak = currentStreak || 1;
-        } else if (daysDifference === 1) {
-          newStreak = currentStreak + 1;
-        } else {
-          newStreak = 1;
-        }
+              if (daysDifference === 0) {
+                  newStreak = currentStreak || 1;
+              } else if (daysDifference === 1) {
+                  newStreak = currentStreak + 1;
+              }
+          }
       }
+      
+      const tasksDoneToday = (lastActiveDateStr === todayStr) 
+          ? (userData.tasksDoneToday || 0) + 1 
+          : 1;
 
-      const tasksDoneToday = lastActiveDateStr === todayStr ? (userData.tasksDoneToday || 0) : 0;
-      const newTasksDoneToday = tasksDoneToday + 1;
-
-      const currentGamesPlayed = userData.gamesPlayed || 0;
+      const gamesPlayed = (userData.gamesPlayed || 0) + 1;
+      const xpGained = xpValues.ZEN_MATCH;
+      const totalXp = (userData.totalXp || 0) + xpGained;
+      const newXp = totalXp;
       const currentXp = userData.totalXp || 0;
-      const newXp = currentXp + xpGained;
 
       transaction.update(userRef, {
-        gamesPlayed: currentGamesPlayed + 1,
+        gamesPlayed,
         currentStreak: newStreak,
         lastActiveDate: todayStr,
-        tasksDoneToday: newTasksDoneToday,
-        totalXp: newXp,
+        tasksDoneToday,
+        totalXp,
       });
 
       return { newXp, currentXp };

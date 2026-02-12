@@ -221,54 +221,53 @@ function ReadingChallengeTab() {
 
       if (user && firestore && result.totalWordsInTarget > 0) {
         const userRef = doc(firestore, "users", user.uid);
-        const xpGained = Math.round(result.accuracyScore * xpValues.READING_CHALLENGE_MULTIPLIER);
         
         runTransaction(firestore, async (transaction) => {
           const userDoc = await transaction.get(userRef);
           if (!userDoc.exists()) throw "User document does not exist!";
-
-          const userData = userDoc.data();
+          const userData = userDoc.data() || {};
           
-          // Stats
-          const oldTotalCorrect = userData.totalCorrectAnswers || 0;
-          const oldTotalAnswered = userData.totalQuestionsAnswered || 0;
-          const gamesPlayed = userData.gamesPlayed || 0;
-          const currentXp = userData.totalXp || 0;
+          const xpGained = Math.round(result.accuracyScore * xpValues.READING_CHALLENGE_MULTIPLIER);
           
-          // Streak
+          // --- User Stats Update ---
           const today = new Date();
           const todayStr = format(today, 'yyyy-MM-dd');
-          const lastActiveDateStr = userData.lastActiveDate || '';
+          
+          const lastActiveDateStr = userData.lastActiveDate || null;
           const currentStreak = userData.currentStreak || 0;
           
-          let newStreak;
+          let newStreak = 1;
 
-          if (!lastActiveDateStr || new Date(lastActiveDateStr).toString() === 'Invalid Date') {
-            newStreak = 1;
-          } else {
-            const lastActiveDate = new Date(lastActiveDateStr);
-            const daysDifference = differenceInCalendarDays(today, lastActiveDate);
+          if (lastActiveDateStr) {
+              const lastActiveDate = new Date(lastActiveDateStr);
+              if (!isNaN(lastActiveDate.getTime())) {
+                  const daysDifference = differenceInCalendarDays(today, lastActiveDate);
 
-            if (daysDifference === 0) {
-              newStreak = currentStreak || 1;
-            } else if (daysDifference === 1) {
-              newStreak = currentStreak + 1;
-            } else {
-              newStreak = 1;
-            }
+                  if (daysDifference === 0) {
+                      newStreak = currentStreak || 1;
+                  } else if (daysDifference === 1) {
+                      newStreak = currentStreak + 1;
+                  }
+              }
           }
+          
+          const tasksDoneToday = (lastActiveDateStr === todayStr) 
+              ? (userData.tasksDoneToday || 0) + 1 
+              : 1;
 
-          const tasksDoneToday = lastActiveDateStr === todayStr ? (userData.tasksDoneToday || 0) : 0;
-          const newTasksDoneToday = tasksDoneToday + 1;
-
+          const gamesPlayed = (userData.gamesPlayed || 0) + 1;
+          const totalCorrectAnswers = (userData.totalCorrectAnswers || 0) + result.correctlyReadWords;
+          const totalQuestionsAnswered = (userData.totalQuestionsAnswered || 0) + result.totalWordsInTarget;
+          const totalXp = (userData.totalXp || 0) + xpGained;
+          
           transaction.update(userRef, {
-            gamesPlayed: gamesPlayed + 1,
-            totalCorrectAnswers: oldTotalCorrect + result.correctlyReadWords,
-            totalQuestionsAnswered: oldTotalAnswered + result.totalWordsInTarget,
-            totalXp: currentXp + xpGained,
+            gamesPlayed,
+            totalCorrectAnswers,
+            totalQuestionsAnswered,
+            totalXp,
             currentStreak: newStreak,
             lastActiveDate: todayStr,
-            tasksDoneToday: newTasksDoneToday,
+            tasksDoneToday,
           });
         }).catch(error => {
             console.error("Dyslexia support stats transaction failed:", error);

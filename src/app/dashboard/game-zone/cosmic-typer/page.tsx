@@ -118,14 +118,13 @@ export default function CosmicTyperPage() {
     setHasSaved(true);
     const userRef = doc(firestore, "users", user.uid);
     const now = serverTimestamp();
-    const xpGained = score * xpValues.COSMIC_TYPER_MULTIPLIER;
-
+    
     runTransaction(firestore, async (transaction) => {
       const userDoc = await transaction.get(userRef);
       if (!userDoc.exists()) {
         throw "User document does not exist!";
       }
-      const userData = userDoc.data();
+      const userData = userDoc.data() || {};
 
       // --- Game Score & Activity ---
       const gameScoreData: Omit<GameScore, 'id'> = {
@@ -149,37 +148,43 @@ export default function CosmicTyperPage() {
       transaction.set(activityRef, activityData);
 
       // --- User Stats Update ---
-      const currentStreak: number = userData.currentStreak || 0;
-      const lastActiveDateStr: string = userData.lastActiveDate || '';
-      const tasksDoneToday: number = userData.tasksDoneToday || 0;
       const today = new Date();
       const todayStr = format(today, 'yyyy-MM-dd');
-      let newStreak = currentStreak;
-      let newTasksDoneToday = tasksDoneToday;
+      
+      const lastActiveDateStr = userData.lastActiveDate || null;
+      const currentStreak = userData.currentStreak || 0;
+      
+      let newStreak = 1;
 
-      if (lastActiveDateStr === todayStr) {
-        newTasksDoneToday += 1;
-      } else {
-        if (lastActiveDateStr) {
-            const lastActiveDate = new Date(lastActiveDateStr);
-            const daysDifference = differenceInCalendarDays(today, lastActiveDate);
-            newStreak = daysDifference === 1 ? currentStreak + 1 : 1;
-        } else {
-            newStreak = 1;
-        }
-        newTasksDoneToday = 1;
+      if (lastActiveDateStr) {
+          const lastActiveDate = new Date(lastActiveDateStr);
+          if (!isNaN(lastActiveDate.getTime())) {
+              const daysDifference = differenceInCalendarDays(today, lastActiveDate);
+
+              if (daysDifference === 0) {
+                  newStreak = currentStreak || 1;
+              } else if (daysDifference === 1) {
+                  newStreak = currentStreak + 1;
+              }
+          }
       }
+      
+      const tasksDoneToday = (lastActiveDateStr === todayStr) 
+          ? (userData.tasksDoneToday || 0) + 1 
+          : 1;
 
-      const currentGamesPlayed = userData.gamesPlayed || 0;
+      const gamesPlayed = (userData.gamesPlayed || 0) + 1;
+      const xpGained = score * xpValues.COSMIC_TYPER_MULTIPLIER;
+      const totalXp = (userData.totalXp || 0) + xpGained;
+      const newXp = totalXp;
       const currentXp = userData.totalXp || 0;
-      const newXp = currentXp + xpGained;
 
       transaction.update(userRef, {
-        gamesPlayed: currentGamesPlayed + 1,
+        gamesPlayed,
         currentStreak: newStreak,
         lastActiveDate: todayStr,
-        tasksDoneToday: newTasksDoneToday,
-        totalXp: newXp,
+        tasksDoneToday,
+        totalXp,
       });
 
       return { newXp, currentXp };
