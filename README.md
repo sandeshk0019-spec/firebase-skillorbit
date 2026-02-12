@@ -92,9 +92,9 @@ To push your project to your own GitHub repository, follow these steps:
     ```
 
 6.  **Link your local repository to the one on GitHub.**
-    Replace `<YOUR_REPOSITORY_URL>` with the URL you copied from GitHub (it should look like `https://github.com/your-username/your-repo-name.git`).
+    Your repository URL has been added below.
     ```bash
-    git remote add origin <YOUR_REPOSITORY_URL>
+    git remote add origin https://github.com/sandeshk0019-spec/skill_orbit.git
     ```
 
 7.  **Push your code to GitHub.**
