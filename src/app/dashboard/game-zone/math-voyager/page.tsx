@@ -148,26 +148,30 @@ export default function MathVoyagerPage() {
       transaction.set(activityRef, activityData);
 
       // --- User Stats Update ---
-      const currentStreak: number = userData.currentStreak || 0;
-      const lastActiveDateStr: string = userData.lastActiveDate || '';
-      const tasksDoneToday: number = userData.tasksDoneToday || 0;
       const today = new Date();
       const todayStr = format(today, 'yyyy-MM-dd');
-      let newStreak = currentStreak;
-      let newTasksDoneToday = tasksDoneToday;
+      const lastActiveDateStr = userData.lastActiveDate || '';
+      const currentStreak = userData.currentStreak || 0;
+      
+      let newStreak;
 
-      if (lastActiveDateStr === todayStr) {
-        newTasksDoneToday += 1;
+      if (!lastActiveDateStr || new Date(lastActiveDateStr).toString() === 'Invalid Date') {
+        newStreak = 1;
       } else {
-        if (lastActiveDateStr) {
-            const lastActiveDate = new Date(lastActiveDateStr);
-            const daysDifference = differenceInCalendarDays(today, lastActiveDate);
-            newStreak = daysDifference === 1 ? currentStreak + 1 : 1;
+        const lastActiveDate = new Date(lastActiveDateStr);
+        const daysDifference = differenceInCalendarDays(today, lastActiveDate);
+
+        if (daysDifference === 0) {
+          newStreak = currentStreak || 1;
+        } else if (daysDifference === 1) {
+          newStreak = currentStreak + 1;
         } else {
-            newStreak = 1;
+          newStreak = 1;
         }
-        newTasksDoneToday = 1;
       }
+
+      const tasksDoneToday = lastActiveDateStr === todayStr ? (userData.tasksDoneToday || 0) : 0;
+      const newTasksDoneToday = tasksDoneToday + 1;
 
       const currentGamesPlayed = userData.gamesPlayed || 0;
       const currentXp = userData.totalXp || 0;
