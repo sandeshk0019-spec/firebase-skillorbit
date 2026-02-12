@@ -253,6 +253,7 @@ export default function ZenMatchPage() {
         }
       }
     }).catch(error => {
+      console.error("Zen Match save error:", error);
       toast({
         variant: "destructive",
         title: "Save Error",

@@ -197,6 +197,7 @@ export default function MathVoyagerPage() {
         }
       }
     }).catch(error => {
+      console.error("Math Voyager save error:", error);
       toast({ variant: "destructive", title: "Save Error", description: "Could not save your game progress." });
     });
   }, [user, firestore, score, hasSaved, toast, checkAndUnlockAchievement]);

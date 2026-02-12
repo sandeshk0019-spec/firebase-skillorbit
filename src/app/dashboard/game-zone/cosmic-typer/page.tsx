@@ -197,6 +197,7 @@ export default function CosmicTyperPage() {
         }
       }
     }).catch(error => {
+      console.error("Cosmic Typer save error:", error);
       toast({ variant: "destructive", title: "Save Error", description: "Could not save game score." });
     });
   }, [user, firestore, score, hasSaved, toast, checkAndUnlockAchievement]);

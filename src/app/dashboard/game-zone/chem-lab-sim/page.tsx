@@ -243,6 +243,7 @@ export default function ChemLabSimPage() {
                 totalXp: newXp,
             });
         }).catch(error => {
+            console.error("Chem Lab Sim session save error:", error);
             // This is not a user-facing error. Do not toast.
         });
     }, [user, firestore, logToConsole]);
