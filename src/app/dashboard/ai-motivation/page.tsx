@@ -1,11 +1,12 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Sparkles, RefreshCw, Volume2, Loader2 } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Sparkles, RefreshCw, Volume2, Loader2, PlayCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
+import { generateSpeechFromText } from '@/ai/flows/generate-speech-from-text';
 
 const textMotivations = [
   { quote: "Believe you can and you're halfway there.", author: "Theodore Roosevelt", emoji: "🌟" },
@@ -71,7 +72,9 @@ const textMotivations = [
 
 export default function AiMotivationPage() {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isAudioLoading, setIsAudioLoading] = useState(false);
+  const [audioDataUri, setAudioDataUri] = useState<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
   const { toast } = useToast();
 
   // Set a random quote on initial load
@@ -80,46 +83,46 @@ export default function AiMotivationPage() {
   }, []);
   
   const handleNext = () => {
-    setCurrentIndex((prevIndex) => (prevIndex + 1) % textMotivations.length);
-    // If speech is happening, stop it.
-    if (window.speechSynthesis.speaking) {
-      window.speechSynthesis.cancel();
-      setIsSpeaking(false);
+    const nextIndex = (currentIndex + 1) % textMotivations.length;
+    setCurrentIndex(nextIndex);
+    setAudioDataUri(null); // Clear old audio
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
     }
   };
 
   const currentMotivation = textMotivations[currentIndex];
 
-  const handleListenToQuote = () => {
-    if (!currentMotivation?.quote || isSpeaking) return;
+  const handleListenToQuote = async () => {
+    if (isAudioLoading || !currentMotivation?.quote) return;
 
-    if (typeof window === 'undefined' || !window.speechSynthesis) {
-      toast({
-        variant: "destructive",
-        title: "Browser Not Supported",
-        description: "Your browser does not support speech synthesis.",
-      });
+    if (audioDataUri) {
+      audioRef.current?.play();
       return;
     }
 
-    const speech = new SpeechSynthesisUtterance(currentMotivation.quote);
-    speech.lang = "en-US";
-    speech.rate = 1;
-    speech.pitch = 1;
-    
-    speech.onstart = () => setIsSpeaking(true);
-    speech.onend = () => setIsSpeaking(false);
-    speech.onerror = () => {
-      setIsSpeaking(false);
+    setIsAudioLoading(true);
+    try {
+      const result = await generateSpeechFromText({ text: currentMotivation.quote });
+      setAudioDataUri(result.audioDataUri);
+    } catch (error) {
+      console.error("Text-to-speech error:", error);
       toast({
         variant: "destructive",
-        title: "Speech Error",
-        description: "An error occurred while playing the audio.",
+        title: "Audio Generation Failed",
+        description: "Could not generate audio for this quote. Please try again.",
       });
-    };
-
-    window.speechSynthesis.speak(speech);
+    } finally {
+      setIsAudioLoading(false);
+    }
   };
+  
+  useEffect(() => {
+    if (audioDataUri && audioRef.current) {
+        audioRef.current.play();
+    }
+  }, [audioDataUri]);
 
   return (
     <div className="container mx-auto max-w-3xl">
@@ -143,10 +146,11 @@ export default function AiMotivationPage() {
                 A few words of encouragement to brighten your day.
                 </CardDescription>
               </div>
-              <Button onClick={handleListenToQuote} variant="outline" size="icon" disabled={isSpeaking || !currentMotivation}>
-                  {isSpeaking ? <Loader2 className="h-5 w-5 animate-spin" /> : <Volume2 className="h-5 w-5" />}
+              <Button onClick={handleListenToQuote} variant="outline" size="icon" disabled={isAudioLoading || !currentMotivation}>
+                  {isAudioLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : (audioDataUri ? <PlayCircle className="h-5 w-5"/> : <Volume2 className="h-5 w-5" />)}
                   <span className="sr-only">Listen to Quote</span>
               </Button>
+              {audioDataUri && <audio ref={audioRef} src={audioDataUri} className="hidden" />}
             </div>
         </CardHeader>
         {!currentMotivation ? (
@@ -172,7 +176,3 @@ export default function AiMotivationPage() {
     </div>
   )
 }
-
-    
-
-    

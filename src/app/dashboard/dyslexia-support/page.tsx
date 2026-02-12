@@ -20,7 +20,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { useUser, useFirestore } from "@/firebase";
-import { doc, runTransaction } from 'firebase/firestore';
+import { doc, runTransaction, serverTimestamp } from 'firebase/firestore';
 import { xpValues } from '@/lib/rewards';
 import { format, differenceInCalendarDays } from 'date-fns';
 
@@ -486,7 +486,7 @@ export default function DyslexiaSupportPage() {
     <div className="container mx-auto max-w-3xl">
       <div className="flex items-center gap-4 mb-6">
         <div className="bg-primary/10 p-3 rounded-lg animate-pulse-glow">
-          <Webhook className="w-6 h-6 text-primary" />
+          <Eye className="w-6 h-6 text-primary" />
         </div>
         <div>
           <h1 className="font-headline text-2xl">Dyslexia Support</h1>

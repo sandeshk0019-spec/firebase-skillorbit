@@ -278,7 +278,6 @@ export default function MathVoyagerPage() {
                     gameSpeed.current += 0.1;
                     items.current = [];
                     generateQuestion();
-                    // NOTE: The return statement was removed from here to fix the bug
                 } else {
                     setLives(l => l - 1);
                     setIsShaking(true);

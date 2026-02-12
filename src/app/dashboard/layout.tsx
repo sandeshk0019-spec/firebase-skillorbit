@@ -49,7 +49,11 @@ function AppSidebar({ userProfile, isLoading }: { userProfile: UserProfile | nul
   }
 
   const isActive = (path: string) => {
-    return pathname === path
+    return pathname === path || (path.startsWith('/dashboard/game-zone') && pathname.startsWith('/dashboard/game-zone'));
+  }
+  
+  const isGameZoneActive = (path: string) => {
+    return path.startsWith('/dashboard/game-zone');
   }
 
   const totalXp = userProfile?.totalXp ?? 0;
@@ -85,7 +89,7 @@ function AppSidebar({ userProfile, isLoading }: { userProfile: UserProfile | nul
         <SidebarContent className="p-0 flex flex-col">
           <SidebarMenu className="space-y-2">
             <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={isActive('/dashboard')} tooltip="Dashboard">
+              <SidebarMenuButton asChild isActive={isActive('/dashboard') && !isGameZoneActive(pathname)} tooltip="Dashboard">
                 <Link href="/dashboard">
                   <LayoutGrid />
                   <span>Dashboard</span>
@@ -93,7 +97,7 @@ function AppSidebar({ userProfile, isLoading }: { userProfile: UserProfile | nul
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={isActive('/dashboard/game-zone')} tooltip="Game Zone">
+              <SidebarMenuButton asChild isActive={isGameZoneActive(pathname)} tooltip="Game Zone">
                 <Link href="/dashboard/game-zone">
                   <Gamepad2 />
                   <span>Game Zone</span>
