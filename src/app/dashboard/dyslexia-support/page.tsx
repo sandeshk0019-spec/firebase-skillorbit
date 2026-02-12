@@ -5,7 +5,8 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { analyzeSpeechForDyslexia } from "@/ai/flows/analyze-speech-for-dyslexia";
 import { compareSpeechWithTargetText, type CompareSpeechWithTargetTextOutput } from "@/ai/flows/compare-speech-with-target-text";
-import { Webhook, Loader2, BookOpen, Mic, Square, Send, Target, Lightbulb, Smile, Volume2 } from "lucide-react";
+import { generateSpeechFromText } from "@/ai/flows/generate-speech-from-text";
+import { Webhook, Loader2, BookOpen, Mic, Square, Send, Target, Lightbulb, Smile, Volume2, PlayCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -137,7 +138,10 @@ function ReadingChallengeTab() {
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const [isSpeechRecognitionSupported, setIsSpeechRecognitionSupported] = useState(false);
   
-  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isAudioLoading, setIsAudioLoading] = useState(false);
+  const [audioDataUri, setAudioDataUri] = useState<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
+
 
   const { toast } = useToast();
   const { user } = useUser();
@@ -147,6 +151,7 @@ function ReadingChallengeTab() {
     // Select a random paragraph when the component mounts
     const randomIndex = Math.floor(Math.random() * challengeParagraphs.length);
     setChallengeText(challengeParagraphs[randomIndex]);
+    setAudioDataUri(null); // Clear previous audio
 
     // Set up Speech Recognition
     const SpeechRecognition = window.SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -229,33 +234,22 @@ function ReadingChallengeTab() {
           
           const xpGained = Math.round(result.accuracyScore * xpValues.READING_CHALLENGE_MULTIPLIER);
           
-          // --- User Stats Update ---
           const today = new Date();
           const todayStr = format(today, 'yyyy-MM-dd');
-          
           const lastActiveDateStr = userData.lastActiveDate || '';
           const currentStreak = userData.currentStreak || 0;
-          
-          let newStreak = 1; // Default to 1 for new users or broken streaks.
 
-          if (lastActiveDateStr) {
+          let newStreak = 1;
+          if (lastActiveDateStr && !isNaN(new Date(lastActiveDateStr).getTime())) {
               const lastActiveDate = new Date(lastActiveDateStr);
-              // Only proceed if the last active date is a valid date
-              if (!isNaN(lastActiveDate.getTime())) {
-                  const daysDifference = differenceInCalendarDays(today, lastActiveDate);
-                  
-                  if (daysDifference === 0) {
-                    // Same day, streak is unchanged. If it was 0 for some reason, it becomes 1.
-                    newStreak = currentStreak > 0 ? currentStreak : 1;
-                  } else if (daysDifference === 1) {
-                    // Consecutive day, increment streak.
-                    newStreak = currentStreak + 1;
-                  }
-                  // If daysDifference > 1, the streak is broken and resets to 1 (the default).
+              const daysDifference = differenceInCalendarDays(today, lastActiveDate);
+              if (daysDifference === 0) {
+                  newStreak = currentStreak || 1;
+              } else if (daysDifference === 1) {
+                  newStreak = (currentStreak || 0) + 1;
               }
           }
           
-          // If it's a new day, tasksDoneToday is 1, otherwise increment.
           const tasksDoneToday = (lastActiveDateStr === todayStr) 
               ? (userData.tasksDoneToday || 0) + 1 
               : 1;
@@ -292,41 +286,45 @@ function ReadingChallengeTab() {
     }
   };
   
-  const handleListenToParagraph = () => {
-    if (!challengeText || isSpeaking) return;
+  const handleListenToParagraph = async () => {
+    if (isAudioLoading) return;
 
-    if (typeof window === 'undefined' || !window.speechSynthesis) {
+    if (audioDataUri) {
+      audioRef.current?.play();
+      return;
+    }
+
+    if (!challengeText) {
       toast({
         variant: "destructive",
-        title: "Browser Not Supported",
-        description: "Your browser does not support speech synthesis.",
+        title: "No Text",
+        description: "There is no challenge text to read.",
       });
       return;
     }
-    
-    // If speech is already happening from a previous click, cancel it.
-    if (window.speechSynthesis.speaking) {
-      window.speechSynthesis.cancel();
-    }
 
-    const speech = new SpeechSynthesisUtterance(challengeText);
-    speech.lang = "en-US";
-    speech.rate = 1;
-    speech.pitch = 1;
-    
-    speech.onstart = () => setIsSpeaking(true);
-    speech.onend = () => setIsSpeaking(false);
-    speech.onerror = () => {
-      setIsSpeaking(false);
+    setIsAudioLoading(true);
+    try {
+      const result = await generateSpeechFromText({ text: challengeText });
+      setAudioDataUri(result.audioDataUri);
+    } catch (error) {
+      console.error("Text-to-speech error:", error);
       toast({
         variant: "destructive",
-        title: "Speech Error",
-        description: "An error occurred while playing the audio.",
+        title: "Audio Generation Failed",
+        description: "Could not generate audio for this text. Please try again.",
       });
-    };
-
-    window.speechSynthesis.speak(speech);
+    } finally {
+      setIsAudioLoading(false);
+    }
   };
+
+  useEffect(() => {
+    if (audioDataUri && audioRef.current) {
+        audioRef.current.play();
+    }
+  }, [audioDataUri]);
+
 
   if (!isSpeechRecognitionSupported) {
     return (
@@ -360,10 +358,11 @@ function ReadingChallengeTab() {
                 Read the text below aloud. Our AI will turn your speech into text and then offer feedback.
               </CardDescription>
             </div>
-            <Button onClick={handleListenToParagraph} variant="outline" size="icon" disabled={isSpeaking || !challengeText}>
-                {isSpeaking ? <Loader2 className="h-5 w-5 animate-spin" /> : <Volume2 className="h-5 w-5" />}
+            <Button onClick={handleListenToParagraph} variant="outline" size="icon" disabled={isAudioLoading || !challengeText}>
+                {isAudioLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : (audioDataUri ? <PlayCircle className="h-5 w-5"/> : <Volume2 className="h-5 w-5" />)}
                 <span className="sr-only">Listen to Paragraph</span>
             </Button>
+            {audioDataUri && <audio ref={audioRef} src={audioDataUri} className="hidden" />}
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -491,7 +490,7 @@ export default function DyslexiaSupportPage() {
           </p>
         </div>
       </div>
-      <Tabs defaultValue="speech-analysis" className="w-full">
+      <Tabs defaultValue="reading-challenge" className="w-full">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="speech-analysis">
             <Webhook className="w-4 h-4 mr-2" />

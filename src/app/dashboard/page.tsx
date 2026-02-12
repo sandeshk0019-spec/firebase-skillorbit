@@ -137,8 +137,9 @@ export default function DashboardPage() {
   const todayStr = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
   const tasksDoneToday = userProfile?.lastActiveDate === todayStr ? (userProfile?.tasksDoneToday || 0) : 0;
   
-  const accuracy = (userProfile?.totalQuestionsAnswered ?? 0) > 0
-    ? Math.round(((userProfile?.totalCorrectAnswers ?? 0) / userProfile.totalQuestionsAnswered) * 100)
+  const totalQuestions = userProfile?.totalQuestionsAnswered ?? 0;
+  const accuracy = totalQuestions > 0
+    ? Math.round(((userProfile?.totalCorrectAnswers ?? 0) / totalQuestions) * 100)
     : 0;
 
   const totalXp = userProfile?.totalXp ?? 0;

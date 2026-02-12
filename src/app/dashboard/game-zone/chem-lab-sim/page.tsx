@@ -208,30 +208,20 @@ export default function ChemLabSimPage() {
             // --- User Stats Update ---
             const today = new Date();
             const todayStr = format(today, 'yyyy-MM-dd');
-            
             const lastActiveDateStr = userData.lastActiveDate || '';
             const currentStreak = userData.currentStreak || 0;
-            
-            let newStreak = 1; // Default to 1 for new users or broken streaks.
 
-            if (lastActiveDateStr) {
+            let newStreak = 1;
+            if (lastActiveDateStr && !isNaN(new Date(lastActiveDateStr).getTime())) {
                 const lastActiveDate = new Date(lastActiveDateStr);
-                // Only proceed if the last active date is a valid date
-                if (!isNaN(lastActiveDate.getTime())) {
-                    const daysDifference = differenceInCalendarDays(today, lastActiveDate);
-                    
-                    if (daysDifference === 0) {
-                      // Same day, streak is unchanged. If it was 0 for some reason, it becomes 1.
-                      newStreak = currentStreak > 0 ? currentStreak : 1;
-                    } else if (daysDifference === 1) {
-                      // Consecutive day, increment streak.
-                      newStreak = currentStreak + 1;
-                    }
-                    // If daysDifference > 1, the streak is broken and resets to 1 (the default).
+                const daysDifference = differenceInCalendarDays(today, lastActiveDate);
+                if (daysDifference === 0) {
+                    newStreak = currentStreak || 1;
+                } else if (daysDifference === 1) {
+                    newStreak = (currentStreak || 0) + 1;
                 }
             }
             
-            // If it's a new day, tasksDoneToday is 1, otherwise increment.
             const tasksDoneToday = (lastActiveDateStr === todayStr) 
                 ? (userData.tasksDoneToday || 0) + 1 
                 : 1;
