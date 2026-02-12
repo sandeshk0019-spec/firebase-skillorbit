@@ -118,13 +118,14 @@ export default function CosmicTyperPage() {
     setHasSaved(true);
     const userRef = doc(firestore, "users", user.uid);
     const now = serverTimestamp();
-    
+    const xpGained = score * xpValues.COSMIC_TYPER_MULTIPLIER;
+
     runTransaction(firestore, async (transaction) => {
       const userDoc = await transaction.get(userRef);
       if (!userDoc.exists()) {
         throw "User document does not exist!";
       }
-      const userData = userDoc.data() || {};
+      const userData = userDoc.data();
 
       // --- Game Score & Activity ---
       const gameScoreData: Omit<GameScore, 'id'> = {
@@ -147,39 +148,41 @@ export default function CosmicTyperPage() {
       const activityRef = doc(collection(userRef, "activities"));
       transaction.set(activityRef, activityData);
 
-      // --- User Stats Update ---
+      // --- Robust User Stats Update ---
       const today = new Date();
       const todayStr = format(today, 'yyyy-MM-dd');
       const lastActiveDateStr = userData.lastActiveDate || '';
       const currentStreak = userData.currentStreak || 0;
 
-      let newStreak = 1;
+      let newStreak: number;
       if (lastActiveDateStr && !isNaN(new Date(lastActiveDateStr).getTime())) {
           const lastActiveDate = new Date(lastActiveDateStr);
           const daysDifference = differenceInCalendarDays(today, lastActiveDate);
           if (daysDifference === 0) {
               newStreak = currentStreak || 1;
           } else if (daysDifference === 1) {
-              newStreak = (currentStreak || 0) + 1;
+              newStreak = currentStreak + 1;
+          } else {
+              newStreak = 1;
           }
+      } else {
+          newStreak = 1;
       }
-      
-      const tasksDoneToday = (lastActiveDateStr === todayStr) 
-          ? (userData.tasksDoneToday || 0) + 1 
+
+      const tasksDoneToday = (lastActiveDateStr === todayStr)
+          ? (userData.tasksDoneToday || 0) + 1
           : 1;
 
-      const gamesPlayed = (userData.gamesPlayed || 0) + 1;
-      const xpGained = score * xpValues.COSMIC_TYPER_MULTIPLIER;
-      const totalXp = (userData.totalXp || 0) + xpGained;
-      const newXp = totalXp;
+      const currentGamesPlayed = userData.gamesPlayed || 0;
       const currentXp = userData.totalXp || 0;
+      const newXp = currentXp + xpGained;
 
       transaction.update(userRef, {
-        gamesPlayed,
+        gamesPlayed: currentGamesPlayed + 1,
         currentStreak: newStreak,
         lastActiveDate: todayStr,
-        tasksDoneToday,
-        totalXp,
+        tasksDoneToday: tasksDoneToday,
+        totalXp: newXp,
       });
 
       return { newXp, currentXp };
@@ -197,98 +200,6 @@ export default function CosmicTyperPage() {
       toast({ variant: "destructive", title: "Save Error", description: "Could not save game score." });
     });
   }, [user, firestore, score, hasSaved, toast, checkAndUnlockAchievement]);
-
-  const draw = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    // Trail effect
-    ctx.fillStyle = 'rgba(10, 10, 26, 0.3)';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // Draw stars
-    ctx.fillStyle = 'white';
-    stars.current.forEach(star => {
-      ctx.beginPath();
-      ctx.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
-      ctx.fill();
-    });
-
-    // Draw words
-    ctx.fillStyle = '#10b981';
-    ctx.font = '20px "Montserrat", sans-serif';
-    ctx.shadowColor = '#10b981';
-    ctx.shadowBlur = 10;
-    
-    words.current.forEach(word => {
-      ctx.fillText(word.text, word.x, word.y);
-    });
-
-    ctx.shadowBlur = 0;
-  }, []);
-
-  const gameLoop = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    frameCount.current++;
-
-    if (frameCount.current % SPAWN_RATE === 0) {
-        const text = WORD_LIST[Math.floor(Math.random() * WORD_LIST.length)];
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return;
-        ctx.font = '20px "Montserrat", sans-serif';
-        const textWidth = ctx.measureText(text).width;
-        const x = Math.random() * (canvas.width - textWidth);
-        const speed = BASE_SPEED + (score / 100);
-        words.current.push({ text, x, y: -30, speed });
-    }
-
-    const newWords: Word[] = [];
-    let livesLost = 0;
-    for (const word of words.current) {
-      word.y += word.speed;
-      if (word.y > canvas.height) {
-        livesLost++;
-      } else {
-        newWords.push(word);
-      }
-    }
-    words.current = newWords;
-    
-    if (livesLost > 0) {
-        setLives(prev => {
-            const newLives = prev - livesLost;
-            if (newLives <= 0) {
-                setIsGameOver(true);
-                setIsPlaying(false);
-                return 0;
-            }
-            return newLives;
-        });
-    }
-    
-    draw();
-    gameLoopId.current = requestAnimationFrame(gameLoop);
-  }, [draw, score]);
-
-  useEffect(() => {
-    if (isPlaying && !isGameOver) {
-        gameLoopId.current = requestAnimationFrame(gameLoop);
-    } else {
-        if (gameLoopId.current) {
-            cancelAnimationFrame(gameLoopId.current);
-        }
-    }
-    return () => {
-        if (gameLoopId.current) {
-            cancelAnimationFrame(gameLoopId.current);
-        }
-    };
-  }, [isPlaying, isGameOver, gameLoop]);
-
 
   useEffect(() => {
     if (isGameOver && !hasSaved) {
@@ -331,7 +242,102 @@ export default function CosmicTyperPage() {
     resetGame();
     setIsPlaying(true);
     inputRef.current?.focus();
+    gameLoopId.current = requestAnimationFrame(gameLoop);
   };
+  
+  const spawnWord = (canvas: HTMLCanvasElement) => {
+    const text = WORD_LIST[Math.floor(Math.random() * WORD_LIST.length)];
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.font = '20px "Montserrat", sans-serif';
+    const textWidth = ctx.measureText(text).width;
+    const x = Math.random() * (canvas.width - textWidth);
+    const speed = BASE_SPEED + (score / 100); // Speed increases with score
+    words.current.push({ text, x, y: -30, speed });
+  };
+  
+  const draw = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Trail effect
+    ctx.fillStyle = 'rgba(10, 10, 26, 0.3)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Draw stars
+    ctx.fillStyle = 'white';
+    stars.current.forEach(star => {
+      ctx.beginPath();
+      ctx.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    // Draw words
+    ctx.fillStyle = '#10b981';
+    ctx.font = '20px "Montserrat", sans-serif';
+    ctx.shadowColor = '#10b981';
+    ctx.shadowBlur = 10;
+    
+    words.current.forEach(word => {
+      ctx.fillText(word.text, word.x, word.y);
+    });
+
+    ctx.shadowBlur = 0;
+  }, []);
+
+
+  const gameLoop = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    if (!isPlaying || isGameOver) {
+        if (gameLoopId.current) cancelAnimationFrame(gameLoopId.current);
+        return;
+    }
+
+    frameCount.current++;
+
+    if (frameCount.current % SPAWN_RATE === 0) {
+      spawnWord(canvas);
+    }
+
+    const newWords: Word[] = [];
+    let livesLost = 0;
+    for (const word of words.current) {
+      word.y += word.speed;
+      if (word.y > canvas.height) {
+        livesLost++;
+      } else {
+        newWords.push(word);
+      }
+    }
+    words.current = newWords;
+    
+    if (livesLost > 0) {
+        setLives(prev => {
+            const newLives = prev - livesLost;
+            if (newLives <= 0) {
+                setIsGameOver(true);
+                setIsPlaying(false);
+                return 0;
+            }
+            return newLives;
+        });
+    }
+    
+    draw();
+    gameLoopId.current = requestAnimationFrame(gameLoop);
+  }, [draw, isPlaying, isGameOver]);
+  
+  useEffect(() => {
+    return () => {
+      if (gameLoopId.current) {
+        cancelAnimationFrame(gameLoopId.current);
+      }
+    };
+  }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const typedValue = e.target.value.toUpperCase();

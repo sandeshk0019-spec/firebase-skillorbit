@@ -230,28 +230,33 @@ function ReadingChallengeTab() {
         runTransaction(firestore, async (transaction) => {
           const userDoc = await transaction.get(userRef);
           if (!userDoc.exists()) throw "User document does not exist!";
-          const userData = userDoc.data() || {};
+          const userData = userDoc.data();
           
           const xpGained = Math.round(result.accuracyScore * xpValues.READING_CHALLENGE_MULTIPLIER);
           
+          // --- Robust User Stats Update ---
           const today = new Date();
           const todayStr = format(today, 'yyyy-MM-dd');
           const lastActiveDateStr = userData.lastActiveDate || '';
           const currentStreak = userData.currentStreak || 0;
 
-          let newStreak = 1;
+          let newStreak: number;
           if (lastActiveDateStr && !isNaN(new Date(lastActiveDateStr).getTime())) {
               const lastActiveDate = new Date(lastActiveDateStr);
               const daysDifference = differenceInCalendarDays(today, lastActiveDate);
               if (daysDifference === 0) {
                   newStreak = currentStreak || 1;
               } else if (daysDifference === 1) {
-                  newStreak = (currentStreak || 0) + 1;
+                  newStreak = currentStreak + 1;
+              } else {
+                  newStreak = 1;
               }
+          } else {
+              newStreak = 1;
           }
-          
-          const tasksDoneToday = (lastActiveDateStr === todayStr) 
-              ? (userData.tasksDoneToday || 0) + 1 
+
+          const tasksDoneToday = (lastActiveDateStr === todayStr)
+              ? (userData.tasksDoneToday || 0) + 1
               : 1;
 
           const gamesPlayed = (userData.gamesPlayed || 0) + 1;

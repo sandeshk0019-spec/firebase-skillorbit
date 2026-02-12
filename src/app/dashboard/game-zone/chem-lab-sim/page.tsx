@@ -178,11 +178,12 @@ export default function ChemLabSimPage() {
     
         const userRef = doc(firestore, "users", user.uid);
         const now = serverTimestamp();
-        
+        const xpGained = xpValues.CHEM_LAB_SESSION;
+
         runTransaction(firestore, async (transaction) => {
             const userDoc = await transaction.get(userRef);
             if (!userDoc.exists()) throw "User document does not exist!";
-            const userData = userDoc.data() || {};
+            const userData = userDoc.data();
 
             // --- Game Score & Activity ---
             const gameScoreData: Omit<GameScore, 'id'> = {
@@ -205,37 +206,41 @@ export default function ChemLabSimPage() {
             const activityRef = doc(collection(userRef, "activities"));
             transaction.set(activityRef, activityData);
 
-            // --- User Stats Update ---
+            // --- Robust User Stats Update ---
             const today = new Date();
             const todayStr = format(today, 'yyyy-MM-dd');
             const lastActiveDateStr = userData.lastActiveDate || '';
             const currentStreak = userData.currentStreak || 0;
 
-            let newStreak = 1;
+            let newStreak: number;
             if (lastActiveDateStr && !isNaN(new Date(lastActiveDateStr).getTime())) {
                 const lastActiveDate = new Date(lastActiveDateStr);
                 const daysDifference = differenceInCalendarDays(today, lastActiveDate);
                 if (daysDifference === 0) {
                     newStreak = currentStreak || 1;
                 } else if (daysDifference === 1) {
-                    newStreak = (currentStreak || 0) + 1;
+                    newStreak = currentStreak + 1;
+                } else {
+                    newStreak = 1;
                 }
+            } else {
+                newStreak = 1;
             }
-            
-            const tasksDoneToday = (lastActiveDateStr === todayStr) 
-                ? (userData.tasksDoneToday || 0) + 1 
-                : 1;
 
-            const gamesPlayed = (userData.gamesPlayed || 0) + 1;
-            const xpGained = xpValues.CHEM_LAB_SESSION;
-            const totalXp = (userData.totalXp || 0) + xpGained;
+            const tasksDoneToday = (lastActiveDateStr === todayStr)
+                ? (userData.tasksDoneToday || 0) + 1
+                : 1;
+            
+            const currentGamesPlayed = userData.gamesPlayed || 0;
+            const currentXp = userData.totalXp || 0;
+            const newXp = currentXp + xpGained;
 
             transaction.update(userRef, {
-                gamesPlayed,
+                gamesPlayed: currentGamesPlayed + 1,
                 currentStreak: newStreak,
                 lastActiveDate: todayStr,
-                tasksDoneToday,
-                totalXp,
+                tasksDoneToday: tasksDoneToday,
+                totalXp: newXp,
             });
         }).catch(error => {
             // This is not a user-facing error. Do not toast.
