@@ -151,28 +151,28 @@ export default function CosmicTyperPage() {
       // --- Robust User Stats Update ---
       const today = new Date();
       const todayStr = format(today, 'yyyy-MM-dd');
-      const lastActiveDateStr = userData.lastActiveDate || '';
+      const lastActiveDateStr = userData.lastActiveDate; // Can be string or undefined
       const currentStreak = userData.currentStreak || 0;
 
-      let newStreak: number;
-      if (lastActiveDateStr && !isNaN(new Date(lastActiveDateStr).getTime())) {
-          const lastActiveDate = new Date(lastActiveDateStr);
+      let newStreak = 1; // Default to 1 for new activity or reset
+      if (lastActiveDateStr) {
+        const lastActiveDate = new Date(lastActiveDateStr);
+        // Check if the date is valid before doing calculations
+        if (!isNaN(lastActiveDate.getTime())) {
           const daysDifference = differenceInCalendarDays(today, lastActiveDate);
+
           if (daysDifference === 0) {
-              newStreak = currentStreak || 1;
+            // Activity on the same day, streak doesn't change
+            newStreak = currentStreak || 1;
           } else if (daysDifference === 1) {
-              newStreak = currentStreak + 1;
-          } else {
-              newStreak = 1;
+            // Consecutive day
+            newStreak = currentStreak + 1;
           }
-      } else {
-          newStreak = 1;
+          // If daysDifference > 1, streak resets to 1 (which is the default)
+        }
       }
-
-      const tasksDoneToday = (lastActiveDateStr === todayStr)
-          ? (userData.tasksDoneToday || 0) + 1
-          : 1;
-
+      
+      const tasksDoneToday = lastActiveDateStr === todayStr ? (userData.tasksDoneToday || 0) + 1 : 1;
       const currentGamesPlayed = userData.gamesPlayed || 0;
       const currentXp = userData.totalXp || 0;
       const newXp = currentXp + xpGained;

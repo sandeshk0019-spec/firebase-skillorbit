@@ -6,7 +6,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { analyzeSpeechForDyslexia } from "@/ai/flows/analyze-speech-for-dyslexia";
 import { compareSpeechWithTargetText, type CompareSpeechWithTargetTextOutput } from "@/ai/flows/compare-speech-with-target-text";
 import { generateSpeechFromText } from "@/ai/flows/generate-speech-from-text";
-import { Webhook, Loader2, BookOpen, Mic, Square, Send, Target, Lightbulb, Smile, Volume2, PlayCircle } from "lucide-react";
+import { Webhook, Loader2, BookOpen, Mic, Square, Send, Target, Lightbulb, Smile, Volume2, PlayCircle, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -232,36 +232,36 @@ function ReadingChallengeTab() {
           if (!userDoc.exists()) throw "User document does not exist!";
           const userData = userDoc.data();
           
-          const xpGained = Math.round(result.accuracyScore * xpValues.READING_CHALLENGE_MULTIPLIER);
+          const xpGained = Math.round((result.accuracyScore || 0) * xpValues.READING_CHALLENGE_MULTIPLIER);
           
           // --- Robust User Stats Update ---
           const today = new Date();
           const todayStr = format(today, 'yyyy-MM-dd');
-          const lastActiveDateStr = userData.lastActiveDate || '';
+          const lastActiveDateStr = userData.lastActiveDate; // Can be string or undefined
           const currentStreak = userData.currentStreak || 0;
 
-          let newStreak: number;
-          if (lastActiveDateStr && !isNaN(new Date(lastActiveDateStr).getTime())) {
-              const lastActiveDate = new Date(lastActiveDateStr);
+          let newStreak = 1; // Default to 1 for new activity or reset
+          if (lastActiveDateStr) {
+            const lastActiveDate = new Date(lastActiveDateStr);
+            // Check if the date is valid before doing calculations
+            if (!isNaN(lastActiveDate.getTime())) {
               const daysDifference = differenceInCalendarDays(today, lastActiveDate);
+
               if (daysDifference === 0) {
-                  newStreak = currentStreak || 1;
+                // Activity on the same day, streak doesn't change
+                newStreak = currentStreak || 1;
               } else if (daysDifference === 1) {
-                  newStreak = currentStreak + 1;
-              } else {
-                  newStreak = 1;
+                // Consecutive day
+                newStreak = currentStreak + 1;
               }
-          } else {
-              newStreak = 1;
+              // If daysDifference > 1, streak resets to 1 (which is the default)
+            }
           }
-
-          const tasksDoneToday = (lastActiveDateStr === todayStr)
-              ? (userData.tasksDoneToday || 0) + 1
-              : 1;
-
+          
+          const tasksDoneToday = lastActiveDateStr === todayStr ? (userData.tasksDoneToday || 0) + 1 : 1;
           const gamesPlayed = (userData.gamesPlayed || 0) + 1;
-          const totalCorrectAnswers = (userData.totalCorrectAnswers || 0) + result.correctlyReadWords;
-          const totalQuestionsAnswered = (userData.totalQuestionsAnswered || 0) + result.totalWordsInTarget;
+          const totalCorrectAnswers = (userData.totalCorrectAnswers || 0) + (result.correctlyReadWords || 0);
+          const totalQuestionsAnswered = (userData.totalQuestionsAnswered || 0) + (result.totalWordsInTarget || 0);
           const totalXp = (userData.totalXp || 0) + xpGained;
           
           transaction.update(userRef, {
