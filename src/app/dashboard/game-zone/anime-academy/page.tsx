@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { BookOpen, XCircle, ChevronRight, Video, Loader2, AlertTriangle } from 'lucide-react';
+import { BookOpen, XCircle, ChevronRight, Video, Loader2, AlertTriangle, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -333,8 +333,16 @@ export default function AnimeAcademyPage() {
                                     <p className="text-muted-foreground max-w-md">Our AI is rendering your video. This mission can take a couple of minutes. Please wait.</p>
                                 </div>
                             ) : videoUrl ? (
-                                <div className="aspect-video bg-black rounded-lg overflow-hidden border border-primary/50">
-                                    <video src={videoUrl} controls autoPlay className="w-full h-full" />
+                                <div className="space-y-4">
+                                    <div className="aspect-video bg-black rounded-lg overflow-hidden border border-primary/50">
+                                        <video src={videoUrl} controls autoPlay className="w-full h-full" />
+                                    </div>
+                                    <a href={videoUrl} download={`${selectedTopic || 'anime-episode'}.mp4`}>
+                                        <Button>
+                                            <Download className="mr-2 h-4 w-4" />
+                                            Download Video
+                                        </Button>
+                                    </a>
                                 </div>
                             ) : (
                                 <div className="flex flex-col items-center justify-center p-8 gap-4">
