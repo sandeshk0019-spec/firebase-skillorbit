@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { generateAnimeVideo } from '@/ai/flows/generate-anime-video';
+import { Menubar, MenubarContent, MenubarItem, MenubarMenu, MenubarTrigger } from '@/components/ui/menubar';
 
 const topics = {
   'newtons-third-law': {
@@ -221,7 +222,6 @@ function VideoPlayer({ src }: { src: string }) {
 export default function AnimeAcademyPage() {
     const [selectedTopic, setSelectedTopic] = useState<TopicKey | null>(null);
     
-    // New state for video generation
     const [videoUrl, setVideoUrl] = useState<string | null>(null);
     const [isVideoLoading, setIsVideoLoading] = useState(false);
     const [videoError, setVideoError] = useState<string | null>(null);
@@ -240,7 +240,6 @@ export default function AnimeAcademyPage() {
         setVideoUrl(null);
         setVideoError(null);
     
-        // Construct the script from scenes
         const script = episodeData.scenes.map(scene => `**${scene.title}**\n${scene.content}`).join('\n\n');
         
         try {
@@ -260,7 +259,6 @@ export default function AnimeAcademyPage() {
       } else {
         setSelectedTopic(null);
       }
-      // Reset video state when topic changes
       setVideoUrl(null);
       setIsVideoLoading(false);
       setVideoError(null);
@@ -272,6 +270,16 @@ export default function AnimeAcademyPage() {
         setIsVideoLoading(false);
         setVideoError(null);
     }
+
+    const handleSaveAs = () => {
+        if (!videoUrl) return;
+        const link = document.createElement("a");
+        link.href = videoUrl;
+        link.download = `${selectedTopic || "anime-episode"}.mp4`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[calc(100vh-120px)] p-4 bg-background text-foreground relative">
@@ -334,15 +342,19 @@ export default function AnimeAcademyPage() {
                                 </div>
                             ) : videoUrl ? (
                                 <div className="space-y-4">
+                                    <Menubar className="bg-transparent border-none w-fit mx-auto md:mx-0">
+                                        <MenubarMenu>
+                                            <MenubarTrigger className="cursor-pointer">File</MenubarTrigger>
+                                            <MenubarContent>
+                                                <MenubarItem onClick={handleSaveAs} className="cursor-pointer gap-2">
+                                                    <Download /> Save As...
+                                                </MenubarItem>
+                                            </MenubarContent>
+                                        </MenubarMenu>
+                                    </Menubar>
                                     <div className="aspect-video bg-black rounded-lg overflow-hidden border border-primary/50">
                                         <video src={videoUrl} controls autoPlay className="w-full h-full" />
                                     </div>
-                                    <a href={videoUrl} download={`${selectedTopic || 'anime-episode'}.mp4`}>
-                                        <Button>
-                                            <Download className="mr-2 h-4 w-4" />
-                                            Download Video
-                                        </Button>
-                                    </a>
                                 </div>
                             ) : (
                                 <div className="flex flex-col items-center justify-center p-8 gap-4">
